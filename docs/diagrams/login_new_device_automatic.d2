@@ -1,0 +1,157 @@
+...@themes/default
+
+shape: sequence_diagram
+
+admin: {
+    label: "Admin"
+    shape: image
+    icon: "./icons/admin.svg"
+    width: 20
+}
+
+user: {
+    label: "User"
+    shape: image
+    icon: "./icons/user.svg"
+}
+
+iframe: {
+    label: "iFrame"
+    shape: image
+    icon: "./icons/iframe.svg"
+}
+
+local: {
+    label: "Cache"
+    shape: image
+    icon: "./icons/db.svg"
+}
+
+hot: {
+    label: "Hot Storage"
+    shape: image
+    icon: "./icons/db.svg"
+}
+
+cold: {
+    label: "Cold Storage"
+    shape: image
+    icon: "./icons/db.svg"
+}
+
+auth: {
+    label: "Auth Service"
+    shape: image
+    icon: "./icons/identity.svg"
+}
+
+user -> auth: {
+    label: "login"
+}
+
+auth -> user: {
+    label: "JWT"
+}
+
+user -> hot: {
+    label: "GET /v2/accounts\nAuthorization: Bearer JWT"
+}
+
+hot -> auth: {
+    label: "validate JWT"
+}
+
+hot -> user: {
+    label: "{\"id\": <id: UUID>, \n\"address\": <address: string>, ...}"
+}
+
+user -> iframe: {
+    label: "recover(accountId)"
+}
+
+iframe -> local: {
+    label: "get(\"deviceId\")"
+}
+
+local -> iframe: {
+    label: "<deviceId: UUID> // will be null"
+}
+
+iframe -> hot: {
+    label: "POST /v2/devices/recover\nAuthorization: Bearer JWT"
+}
+
+hot -> auth: {
+    label: "validate JWT"
+}
+
+hot -> iframe: {
+    label: "{\"id\": <id: UUID>,\n\"share\": <share: string>, ...}"
+    icon: "./icons/key_share_2.png"
+}
+
+Create encrypted session: {
+    admin -> cold: {
+        label: "POST /project/encryption_session\n{\"encryptionPart\": <encKeyShare2>}"
+        icon: "./icons/key_share_2_alt.png"
+    }
+
+    cold."Maps the encryption key\nshare to a sessionId that\ncan only be used once."
+
+    cold -> admin: {
+        label: "sessionId: UUID"
+    }
+
+    admin -> user {
+        label: "sessionId"
+    }
+}
+
+user -> iframe: {
+    label: "sessionId"
+}
+
+iframe -> cold: {
+    label: "GET /cold_storage/sessionId\nAuthorization: Bearer JWT\nX-User-ID: userId\nX-Encryption-Session: sessionId"
+}
+
+cold -> auth: {
+    label: "validate JWT"
+}
+
+cold -> cold: {
+    label: "Reconstruct cold share\n(see next diagram)"
+    icon: "./icons/key_share_3.png"
+}
+
+cold -> cold: {
+    label: "delete"
+    icon: "./icons/key_share_2_alt.png"
+}
+
+cold -> iframe: {
+    label: "cold_share"
+    icon: "./icons/key_share_3.png"
+}
+
+iframe -> iframe: {
+    label: "key = reconstruct(hot_share, cold_share)"
+    icon: "./icons/key.png"
+}
+
+iframe -> iframe: {
+    label: "local, hot, cold = split(key)"
+}
+
+iframe."The new shares are different\nfrom the ones used to sign up\n(called primary shares),\nthey are specific to this device.\nThe cold share is discarded."
+
+iframe -> local: {
+    label: "put(\"share\", local)"
+    icon: "./icons/key_share_1.png"
+}
+
+iframe -> hot: {
+    label: "/v2/devices/register\nAuthorization: Bearer JWT\n{\"share\": <hot_share>,\n\"account\": accountId}"
+    icon: "./icons/key_share_2.png"
+}
+

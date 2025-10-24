@@ -1,0 +1,430 @@
+{
+	"info": {
+		"_postman_id": "7f77ccfa-beea-4284-8972-810667b1b3ad",
+		"name": "OpenSigner Auth Service",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "45481332"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "OK",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{auth_server}}/api/auth/ok",
+							"host": [
+								"{{auth_server}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"ok"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var res = pm.response.json();",
+									"pm.environment.set('userId', res.user.id)",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "email",
+									"value": "{{email}}",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "{{password}}",
+									"type": "text"
+								},
+								{
+									"key": "name",
+									"value": "{{displayname}}",
+									"type": "text"
+								},
+								{
+									"key": "username",
+									"value": "{{username}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{auth_server}}/api/auth/sign-up/email",
+							"host": [
+								"{{auth_server}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"sign-up",
+								"email"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var res = pm.response.json();",
+									"pm.environment.set('token', res.token);",
+									"pm.environment.set('userId', res.user.id)",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "username",
+									"value": "{{username}}",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "{{password}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{auth_server}}/api/auth/sign-in/username",
+							"host": [
+								"{{auth_server}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"sign-in",
+								"username"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get JWT",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var res = pm.response.json();",
+									"pm.environment.set('jwt', res.token);",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{auth_server}}/api/auth/token",
+							"host": [
+								"{{auth_server}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"token"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Hot Storage",
+			"item": [
+				{
+					"name": "Switch Chain",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"chainId\": {{chainIdAlt}},\n    \"deviceId\": \"{{deviceId}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{hot_storage_server}}/v1/devices/switch-chain",
+							"host": [
+								"{{hot_storage_server}}"
+							],
+							"path": [
+								"v1",
+								"devices",
+								"switch-chain"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create device",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"accountType\": \"Smart Account\",\n  \"chainType\": \"EVM\",\n  \"address\": \"0xf7b4c54cca21cccf42796502bf94e2838fbd44c4\",\n  \"chainId\": {{chainId}},\n  \"share\": \"7d526b7e99fbf52850a183\"\n}"
+						},
+						"url": {
+							"raw": "{{hot_storage_server}}/v2/devices/create",
+							"host": [
+								"{{hot_storage_server}}"
+							],
+							"path": [
+								"v2",
+								"devices",
+								"create"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List accounts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{hot_storage_server}}/v2/accounts",
+							"host": [
+								"{{hot_storage_server}}"
+							],
+							"path": [
+								"v2",
+								"accounts"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Recover device",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"account\": \"ade7b750-9b52-4831-8507-14b25dbc4a7b\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{hot_storage_server}}/v2/devices/recover",
+							"host": [
+								"{{hot_storage_server}}"
+							],
+							"path": [
+								"v2",
+								"devices",
+								"recover"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register device",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"account\": \"ade7b750-9b52-4831-8507-14b25dbc4a7b\",\n  \"share\": \"7d526b7e99fbf52850a183\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{hot_storage_server}}/v2/devices/register",
+							"host": [
+								"{{hot_storage_server}}"
+							],
+							"path": [
+								"v2",
+								"devices",
+								"register"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{jwt}}",
+						"type": "string"
+					}
+				]
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"exec": [
+							""
+						]
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "auth_server",
+			"value": ""
+		},
+		{
+			"key": "email",
+			"value": ""
+		},
+		{
+			"key": "password",
+			"value": ""
+		},
+		{
+			"key": "displayname",
+			"value": ""
+		},
+		{
+			"key": "username",
+			"value": ""
+		},
+		{
+			"key": "token",
+			"value": ""
+		},
+		{
+			"key": "jwt",
+			"value": ""
+		},
+		{
+			"key": "hot_storage_server",
+			"value": ""
+		},
+		{
+			"key": "chainId",
+			"value": ""
+		},
+		{
+			"key": "address",
+			"value": ""
+		},
+		{
+			"key": "share",
+			"value": ""
+		},
+		{
+			"key": "deviceId",
+			"value": ""
+		},
+		{
+			"key": "cookieFieldName",
+			"value": ""
+		},
+		{
+			"key": "chainIdAlt",
+			"value": ""
+		}
+	]
+}

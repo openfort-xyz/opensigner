@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+
+<head>
+	<title>OpenSigner Demo</title>
+	<link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+	<h1>OpenSigner Demo</h1>
+
+	<!-- Iframe -->
+	<!-- <iframe
+			id="worker-iframe"
+			src="http://localhost:7050/iframe/pk_test_63d4052c-d4eb-5e74-a3bd-7682d9c462e7"
+			style="display: none"
+		></iframe> -->
+
+	<!-- Auth -->
+	<div class="section auth-section">
+		<h2>Authentication</h2>
+		<div class="tabs">
+			<div class="tab active" onclick="showTab('login')">Login</div>
+			<div class="tab" onclick="showTab('register')">Register</div>
+		</div>
+
+		<!-- Login -->
+		<div id="login" class="tab-content active">
+			<div class="form-group">
+				<label>Username:</label>
+				<input type="text" id="loginUsername" placeholder="Enter username" />
+			</div>
+			<div class="form-group">
+				<label>Password:</label>
+				<input type="password" id="loginPassword" placeholder="Enter password" />
+			</div>
+			<button onclick="login()">Login</button>
+		</div>
+
+		<!-- Register-->
+		<div id="register" class="tab-content">
+			<div class="form-group">
+				<label>Email:</label>
+				<input type="email" id="registerEmail" placeholder="Enter email" />
+			</div>
+			<div class="form-group">
+				<label>Username:</label>
+				<input type="text" id="registerUsername" placeholder="Enter username" />
+			</div>
+			<div class="form-group">
+				<label>Name:</label>
+				<input type="text" id="registerName" placeholder="Enter display name" />
+			</div>
+			<div class="form-group">
+				<label>Password:</label>
+				<input type="password" id="registerPassword" placeholder="Enter password" />
+			</div>
+			<button onclick="register()">Register</button>
+		</div>
+
+		<div id="authStatus"></div>
+		<button onclick="getJWT()" id="getJwtBtn" style="display: none">
+			Get JWT Token
+		</button>
+		<button onclick="logout()" id="logoutBtn" style="display: none">
+			Logout
+		</button>
+	</div>
+
+	<div class="section">
+		<h2>Create Shield Project</h2>
+		<div id="create-shield-project-status">
+			<div class="form-group">
+				<label>Shield Project Name:</label>
+				<input type="text" id="shieldProjectName" placeholder="Your project's name" />
+			</div>
+			<button onclick="createShieldProject()" id="createShieldProjectBtn">
+				Create Project
+			</button>
+		</div>
+		<div id="shieldProjectStatus"></div>
+	</div>
+
+	<div class="section">
+		<h2>Setup Shield Auth Provider</h2>
+		<div id="setup-shield-auth-provider">
+			<button onclick="setupShieldAuthProvider()" id="setupShieldAuthProviderBtn">
+				Setup Auth Provider
+			</button>
+		</div>
+		<div id="authProviderStatus"></div>
+	</div>
+
+	<div class="section">
+		<h2>Register Shield Share for User</h2>
+		<label>Share Contents</label>
+		<input type="text" id="shieldRegisterShareContent" placeholder="Contents of your share">
+		<div id="register-shield-share-for-user">
+			<button onclick="registerShieldShareForUser()" id="registerShieldShareForUserBtn">
+				Register Shield Share for User
+			</button>
+		</div>
+		<div id="shieldShareRegistrationStatus"></div>
+	</div>
+
+	<div class="section">
+		<h2>Get Shield Share for User</h2>
+		<div id="get-shield-share-for-user">
+			<button onclick="getShieldShareForUser()" id="getShieldShareForUserBtn">
+				Get Shield Share for User
+			</button>
+		</div>
+		<div id="shieldShareStatus"></div>
+	</div>
+
+	<div class="section">
+		<h2>Delete Shield Share for User</h2>
+		<div id="delete-shield-share-for-user">
+			<button onclick="deleteShieldShareForUser()" id="getShieldShareForUserBtn">
+				Delete Shield Share for User
+			</button>
+		</div>
+		<div id="shieldDeleteShareStatus"></div>
+	</div>
+
+
+
+
+	<!-- Openfort API Demo -->
+	<div class="section">
+		<h2>Openfort iFrame Demo</h2>
+		<div>
+			<h3>Publishable key</h3>
+			<input type="text" id="publishableKey" placeholder="Enter your publishable key" style="width: 300px"
+				value="pk_test_your_key_here" />
+			<h3>Chain ID</h3>
+			<input type="text" id="chainId" placeholder="Chain ID" style="width: 100px" value="1" />
+			<h3>Address</h3>
+			<input type="text" id="address" placeholder="0x... (address)" style="width: 400px"
+				value="0xcafecafecafecafecafecafecafecafecafe" />
+			<h3>Share</h3>
+			<input type="text" id="share" placeholder="0x... (share)" style="width: 200px" value="021c0293d686bd9d" />
+		</div>
+		<br />
+		<button onclick="initializeClient()">Initialize Client</button>
+		<button onclick="initDevice()" id="initBtn" disabled>
+			Init Device
+		</button>
+		<button onclick="listDevices()" id="listBtn" disabled>
+			List Devices
+		</button>
+		<button onclick="listAccounts()" id="listAccountsBtn" disabled>
+			List Accounts
+		</button>
+		<button onclick="getPrimaryDevice()" id="primaryBtn" disabled>
+			Get Primary Device
+		</button>
+		<button onclick="registerDevice()" id="registerBtn" disabled>
+			Register Device
+		</button>
+		<br /><br />
+
+		<h3>iFrame Communication</h3>
+		<button onclick="configureIframe()" id="configureIframeBtn" disabled>
+			Configure (iFrame)
+		</button>
+		<button onclick="signMessage()" id="signIframeBtn" disabled>
+			Sign Message (iFrame)
+		</button>
+		<button onclick="switchChainIframe()" id="switchChainIframeBtn" disabled>
+			Switch Chain (iFrame)
+		</button>
+		<button onclick="createAccountIframe()" id="createIframeBtn" disabled>
+			Create (iFrame)
+		</button>
+		<button onclick="recoverAccIframe()" id="recoverIframeBtn" disabled>
+			Recover (iFrame)
+		</button>
+		<br />
+		<div>
+			<label>Message to Sign:</label>
+			<input type="text" id="messageToSign" placeholder="0x1234..." style="width: 400px"
+				value="0x1234567890abcdef" />
+		</div>
+		<br /><br />
+		<strong>iFrame Output:</strong>
+		<div id="output">
+			Initialize client and authenticate to start...
+		</div>
+	</div>
+
+	<!-- Modal for Account ID Input -->
+	<div id="accountIdModal"
+		style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4);">
+		<div
+			style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 300px; border-radius: 5px;">
+			<span onclick="closeAccountIdModal()"
+				style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+			<h3>Enter Account ID</h3>
+			<input type="text" id="accountIdInput" placeholder="Account ID"
+				style="width: 100%; padding: 8px; margin: 10px 0; box-sizing: border-box;">
+			<div style="text-align: right; margin-top: 10px;">
+				<button onclick="closeAccountIdModal()" style="margin-right: 10px;">Cancel</button>
+				<button onclick="confirmRecover()">Recover</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Include Penpal for iframe communication -->
+	<script src="https://unpkg.com/penpal@^7/dist/penpal.js"></script>
+	<!-- Include the Openfort client -->
+	<script src="keys-client.js"></script>
+
+	<script>
+		const IFRAME_SERVER = "http://localhost:7050/index.html?debug=true";
+		const SAMPLE_URL = "http://localhost:7051";
+		const AUTH_SERVER = "http://localhost:7052";
+		const HOT_STORAGE_SERVER = "http://localhost:7054";
+		const COLD_STORAGE_SERVER = "http://localhost:7053";
+		const WORKER_IFRAME = "worker-iframe";
+
+		let authToken = null;
+		let jwtToken = null;
+		let shieldProjectId = null;
+		let shieldProjectApiKey = null;
+		let shieldProjectApiSecret = null;
+		let shieldProjectEncryptionShare = null;
+		let shieldAuthProviderId = null;
+		let openfortClient = null;
+		let userId = null;
+		let iframeConnection = null;
+		// let iframeRemote = null;
+
+		async function deleteShieldShareForUser() {
+			if (!shieldProjectId || !shieldProjectApiKey || !shieldProjectApiSecret) {
+				showStatus("Please create a shield project first", "error", "shieldDeleteShareStatus");
+				return;
+			}
+
+			const response = await fetch(
+				`${COLD_STORAGE_SERVER}/shares`,
+				{
+					method: "DELETE",
+					headers: {
+						"Authorization": `Bearer ${jwtToken}`,
+						"X-API-Key": shieldProjectApiKey,
+						"X-API-Secret": shieldProjectApiSecret,
+						"X-Auth-Provider": "custom",
+					},
+				}
+			);
+
+			if (response.ok) {
+				showStatus(`Shield share deleted successfully!`, "success", "shieldDeleteShareStatus");
+			} else {
+				const errorData = await response.json();
+				showStatus(`Failed to delete shield share: ${errorData.message || "Unknown error"}`, "error", "shieldDeleteShareStatus");
+			}
+		}
+
+		async function registerShieldShareForUser() {
+			if (!shieldProjectId || !shieldProjectApiKey || !shieldProjectApiSecret || !shieldProjectEncryptionShare) {
+				showStatus("Please create a shield project first", "error", "shieldShareRegistrationStatus");
+				return;
+			}
+
+			const shareContent = document.getElementById("shieldRegisterShareContent").value;
+
+			if (!shareContent) {
+				showStatus("Please enter share content", "error", "shieldShareRegistrationStatus");
+				return;
+			}
+
+			const response = await fetch(
+				`${COLD_STORAGE_SERVER}/shares`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						"Authorization": `Bearer ${jwtToken}`,
+						"X-API-Key": shieldProjectApiKey,
+						"X-Auth-Provider": "custom",
+					},
+					body: JSON.stringify({
+						secret: shareContent,
+						encryption_part: shieldProjectEncryptionShare,
+						entropy: "project"
+					}),
+				}
+			);
+
+			if (response.ok) {
+				showStatus(`Shield share registered successfully!`, "success", "shieldShareRegistrationStatus");
+			} else {
+				const errorData = await response.json();
+				showStatus(`Failed to register shield share: ${errorData.message || "Unknown error"}`, "error", "shieldShareRegistrationStatus");
+			}
+		}
+
+
+		async function getShieldShareForUser() {
+			if (!shieldProjectId || !shieldProjectApiKey || !shieldProjectApiSecret) {
+				showStatus("Please create a shield project first", "error", "shieldShareStatus");
+				return;
+			}
+
+			const response = await fetch(
+				`${COLD_STORAGE_SERVER}/shares`,
+				{
+					method: "GET",
+					headers: {
+						"Authorization": `Bearer ${jwtToken}`,
+						"X-API-Key": shieldProjectApiKey,
+						"X-API-Secret": shieldProjectApiSecret,
+						"X-Auth-Provider": "custom",
+						"X-Encryption-Part": shieldProjectEncryptionShare,
+					},
+				}
+			);
+
+			if (response.ok) {
+				const data = await response.json();
+				showStatus(`Shield share for user: ${JSON.stringify(data)}`, "success", "shieldShareStatus");
+			} else {
+				const errorData = await response.json();
+				showStatus(`Failed to get shield share: ${errorData.message || "Unknown error"}`, "error", "shieldShareStatus");
+			}
+		}
+
+
+		async function setupShieldAuthProvider() {
+			if (!shieldProjectId || !shieldProjectApiKey || !shieldProjectApiSecret || !shieldProjectEncryptionShare) {
+				showStatus("Please create a shield project first", "error", "authProviderStatus");
+				return;
+			}
+
+			const response = await fetch(
+				`${COLD_STORAGE_SERVER}/project/providers`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						"X-API-Key": shieldProjectApiKey,
+						"X-API-Secret": shieldProjectApiSecret,
+					},
+					body: JSON.stringify({
+						"providers": {
+							"custom": {
+								"jwk": "http://authservice:3000/.well-known/jwks.json"
+							}
+						}
+					})
+				}
+			);
+
+			if (response.ok) {
+				const data = await response.json();
+				shieldAuthProviderId = data["providers"][0]["provider_id"];
+				showStatus(`Auth provider setup successful!<br>Provider ID: ${shieldAuthProviderId}`, "success", "authProviderStatus");
+			} else {
+				const errorData = await response.json();
+				showStatus(`Auth provider setup failed: ${errorData.message || "Unknown error"}`, "error", "authProviderStatus");
+			}
+		}
+
+		async function createShieldProject() {
+
+			const projectName = document.getElementById("shieldProjectName").value;
+
+			if (!projectName) {
+				showStatus("Please enter a project name", "error");
+				return;
+			}
+
+			const response = await fetch(
+				`${COLD_STORAGE_SERVER}/register`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						"name": projectName,
+						"generate_encryption_key": true
+					}),
+				},
+			);
+
+			const data = await response.json();
+
+			if (response.ok) {
+				shieldProjectId = data.id;
+				shieldProjectApiKey = data.api_key;
+				shieldProjectApiSecret = data.api_secret;
+				shieldProjectEncryptionShare = data.encryption_part;
+
+				showStatus(`Shield project created!<br>ID:\t${shieldProjectId}<br>API Key:\t${shieldProjectApiKey}<br>API Secret:\t${shieldProjectApiSecret}<br>Encryption Share:\t${shieldProjectEncryptionShare}`, "success", "shieldProjectStatus");
+				log(`Shield project created: ${shieldProjectId}`);
+			} else {
+				showStatus(
+					`Shield project creation failed: ${data.message || "Unknown error"}`,
+					"error",
+					"shieldProjectStatus"
+				);
+			}
+		}
+
+		function showTab(tabName) {
+			// Hide all tab contents
+			document.querySelectorAll(".tab-content").forEach((content) => {
+				content.classList.remove("active");
+			});
+
+			// Remove active class from all tabs
+			document.querySelectorAll(".tab").forEach((tab) => {
+				tab.classList.remove("active");
+			});
+
+			// Show selected tab content
+			document.getElementById(tabName).classList.add("active");
+
+			// Add active class to clicked tab
+			event.target.classList.add("active");
+		}
+
+		function showStatus(message, type = "success", statusDivId = "authStatus") {
+			const statusDiv = document.getElementById(statusDivId);
+			statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+		}
+
+		function log(message) {
+			const output = document.getElementById("output");
+			output.textContent +=
+				new Date().toLocaleTimeString() + ": " + message + "\n";
+			output.scrollTop = output.scrollHeight;
+		}
+
+		async function register() {
+			const email = document.getElementById("registerEmail").value;
+			const username =
+				document.getElementById("registerUsername").value;
+			const name = document.getElementById("registerName").value;
+			const password =
+				document.getElementById("registerPassword").value;
+
+			if (!email || !username || !name || !password) {
+				showStatus("Please fill in all fields", "error");
+				return;
+			}
+
+			try {
+				const formData = new FormData();
+				formData.append("email", email);
+				formData.append("username", username);
+				formData.append("name", name);
+				formData.append("password", password);
+
+				const response = await fetch(
+					`${AUTH_SERVER}/api/auth/sign-up/email`,
+					{
+						method: "POST",
+						body: formData,
+					},
+				);
+
+				const data = await response.json();
+
+				if (response.ok) {
+					userId = data.user.id;
+					showStatus(
+						`Registration successful! User ID: ${userId}`,
+					);
+					log(`User registered: ${username} (ID: ${userId})`);
+				} else {
+					showStatus(
+						`Registration failed: ${data.message || "Unknown error"}`,
+						"error",
+					);
+				}
+			} catch (error) {
+				showStatus(`Registration error: ${error.message}`, "error");
+				log(`Registration error: ${error.message}`);
+			}
+		}
+
+		async function login() {
+			const username = document.getElementById("loginUsername").value;
+			const password = document.getElementById("loginPassword").value;
+
+			if (!username || !password) {
+				showStatus("Please enter username and password", "error");
+				return;
+			}
+
+			try {
+				const formData = new FormData();
+				formData.append("username", username);
+				formData.append("password", password);
+
+				const response = await fetch(
+					`${AUTH_SERVER}/api/auth/sign-in/username`,
+					{
+						method: "POST",
+						body: formData,
+					},
+				);
+
+				const data = await response.json();
+
+				if (response.ok) {
+					authToken = data.token;
+					userId = data.user.id;
+					showStatus(`Login successful! Welcome ${username}`);
+					log(`User logged in: ${username} (ID: ${userId})`);
+
+					document.getElementById("getJwtBtn").style.display =
+						"inline-block";
+					document.getElementById("logoutBtn").style.display =
+						"inline-block";
+				} else {
+					showStatus(
+						`Login failed: ${data.message || "Unknown error"}`,
+						"error",
+					);
+				}
+			} catch (error) {
+				showStatus(`Login error: ${error.message}`, "error");
+				log(`Login error: ${error.message}`);
+			}
+		}
+
+		async function getJWT() {
+			if (!authToken) {
+				showStatus("Please login first", "error");
+				return;
+			}
+
+			try {
+				const response = await fetch(
+					`${AUTH_SERVER}/api/auth/token`,
+					{
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${authToken}`,
+						},
+					},
+				);
+
+				const data = await response.json();
+
+				if (response.ok) {
+					jwtToken = data.token;
+					showStatus("JWT token obtained successfully!");
+					log("JWT token obtained for storage calls");
+
+					// Enable API buttons
+					document.getElementById("initBtn").disabled = false;
+					document.getElementById("listBtn").disabled = false;
+					document.getElementById("listAccountsBtn").disabled = false;
+					document.getElementById("primaryBtn").disabled = false;
+					document.getElementById("registerBtn").disabled = false;
+
+					// Enable iframe buttons as well
+					document.getElementById("configureIframeBtn").disabled = false;
+					document.getElementById("signIframeBtn").disabled = false;
+					document.getElementById("switchChainIframeBtn").disabled = false;
+					document.getElementById("createIframeBtn").disabled = false;
+					document.getElementById("recoverIframeBtn").disabled = false;
+
+				} else {
+					showStatus(
+						`JWT error: ${data.message || "Unknown error"}`,
+						"error",
+					);
+				}
+			} catch (error) {
+				showStatus(`JWT error: ${error.message}`, "error");
+				log(`JWT error: ${error.message}`);
+			}
+		}
+
+		function logout() {
+			authToken = null;
+			jwtToken = null;
+			userId = null;
+			openfortClient = null;
+
+			document.getElementById("getJwtBtn").style.display = "none";
+			document.getElementById("logoutBtn").style.display = "none";
+			document.getElementById("initBtn").disabled = true;
+			document.getElementById("listBtn").disabled = true;
+			document.getElementById("listAccountsBtn").disabled = true;
+			document.getElementById("primaryBtn").disabled = true;
+			document.getElementById("registerBtn").disabled = true;
+			document.getElementById("configureIframeBtn").disabled = true;
+			document.getElementById("signIframeBtn").disabled = true;
+			document.getElementById("switchChainIframeBtn").disabled = true;
+			document.getElementById("createIframeBtn").disabled = true;
+			document.getElementById("recoverIframeBtn").disabled = true;
+
+			showStatus("Logged out successfully");
+			log("User logged out");
+		}
+
+		function initializeClient() {
+			const publishableKey =
+				document.getElementById("publishableKey").value;
+			if (!publishableKey) {
+				log("ERROR: Please enter a publishable key");
+				return;
+			}
+
+			if (!jwtToken) {
+				log("ERROR: Please authenticate and get JWT token first");
+				return;
+			}
+
+			try {
+				// Use JWT token as the access token
+				openfortClient = new Openfort(
+					publishableKey,
+					jwtToken,
+					undefined,
+					undefined,
+					HOT_STORAGE_SERVER,
+				);
+				log("Openfort client initialized successfully");
+				log(
+					`Using publishable key: ${publishableKey.substring(0, 10)}...`,
+				);
+				log(`Using JWT token for authentication`);
+				log(`Client initialized`);
+			} catch (error) {
+				log("ERROR initializing client: " + error.message);
+			}
+		}
+
+		async function initDevice() {
+			if (!openfortClient) {
+				log("ERROR: Please initialize the client first");
+				return;
+			}
+
+			const chainId =
+				parseInt(document.getElementById("chainId").value) || 1;
+
+			try {
+				log(`Calling init with chainId ${chainId}...`);
+				const result = await openfortClient.init(chainId);
+				log("init result: " + JSON.stringify(result, null, 2));
+			} catch (error) {
+				log("ERROR init: " + error.message);
+			}
+		}
+
+		async function listDevices() {
+			if (!openfortClient) {
+				log("ERROR: Please initialize the client first");
+				return;
+			}
+
+			try {
+				log("Calling list devices...");
+				const result = await openfortClient._makeRequest(
+					"GET",
+					"/v1/devices",
+				);
+				log(
+					"list devices result: " +
+					JSON.stringify(result, null, 2),
+				);
+			} catch (error) {
+				log("ERROR list devices: " + error.message);
+			}
+		}
+
+		async function listAccounts() {
+			if (!openfortClient) {
+				log("ERROR: Please initialize the client first");
+				return;
+			}
+
+			try {
+				log("Calling list accounts...");
+				const result = await openfortClient._makeRequest(
+					"GET",
+					"/v2/accounts",
+				);
+				log(
+					"list accounts result: " +
+					JSON.stringify(result, null, 2),
+				);
+			} catch (error) {
+				log("ERROR list accounts: " + error.message);
+			}
+		}
+
+		async function getPrimaryDevice() {
+			if (!openfortClient) {
+				log("ERROR: Please initialize the client first");
+				return;
+			}
+
+			try {
+				log("Calling get primary device...");
+				const result = await openfortClient._makeRequest(
+					"GET",
+					"/v1/devices/primary",
+				);
+				log(
+					"primary device result: " +
+					JSON.stringify(result, null, 2),
+				);
+			} catch (error) {
+				log("ERROR get primary device: " + error.message);
+			}
+		}
+
+		async function registerDevice() {
+			if (!openfortClient) {
+				log("ERROR: Please initialize the client first");
+				return;
+			}
+
+			const chainId =
+				parseInt(document.getElementById("chainId").value) || 1;
+			const address =
+				document.getElementById("address").value || null;
+			const share =
+				document.getElementById("share").value || null;
+
+			if (!address || !share) {
+				log(
+					"ERROR: Address and share are required for registration",
+				);
+				return;
+			}
+
+			try {
+				log(
+					`Calling register with chainId ${chainId}, address ${address}...`,
+				);
+				const result = await openfortClient.register(
+					chainId,
+					address,
+					share,
+				);
+				log("register result: " + JSON.stringify(result, null, 2));
+			} catch (error) {
+				log("ERROR register: " + error.message);
+			}
+		}
+
+		function createIframe(url) {
+			// Remove any existing iframe
+			const existingIframe = document.getElementById(WORKER_IFRAME);
+			if (existingIframe) {
+				existingIframe.remove();
+			}
+
+			const iframe = document.createElement('iframe');
+			iframe.style.display = 'none';
+			iframe.id = WORKER_IFRAME;
+			iframe.src = url;
+
+			document.body.appendChild(iframe);
+			log('iFrame created and appended to document');
+
+			return iframe;
+		}
+
+		async function connectToIframe() {
+			const iframe = document.getElementById(WORKER_IFRAME);
+			const messenger = new Penpal.WindowMessenger({
+				remoteWindow: iframe.contentWindow,
+				allowedOrigins: ["*"],
+			});
+			const conn = Penpal.connect({
+				messenger: messenger,
+				timeout: 5000,
+				methods: {
+					configure: async (request) => {
+						// Called by parent window to configure iframe
+						return await window.configure(request);
+					},
+					sign: async (request) => {
+						return await window.sign(request);
+					},
+					switchChain: async (request) => {
+						return await window.switchChain(request);
+					},
+					updateAuthentication: async (request) => {
+						return await window.updateAuthentication(request);
+					},
+					logout: async (request) => {
+						return await window.logout(request);
+					},
+					export: async (request) => {
+						return await window.export(request);
+					},
+					setRecoveryMethod: async (request) => {
+						return await window.setRecoveryMethod(request);
+					},
+					getCurrentDevice: async (request) => {
+						return await window.getCurrentDevice(request);
+					}
+				}
+			});
+			iframeConnection = await conn.promise;
+			log("iFrame connection established");
+		}
+
+
+		async function configureIframe() {
+			// Initialize iframe connection
+			console.log("Initializing iframe connection...");
+			let iframe = createIframe(IFRAME_SERVER);
+			await connectToIframe();
+
+			if (!iframeConnection) {
+				log("ERROR: iFrame connection not established");
+				return;
+			}
+
+			const publishableKey = document.getElementById("publishableKey").value;
+			const chainId = parseInt(document.getElementById("chainId").value) || 1;
+			// const address = document.getElementById("address").value;
+			// const share = document.getElementById("share").value;
+
+			// if (!publishableKey || !address || !share) {
+			// 	log("ERROR: Please fill in publishableKey, address, and share");
+			// 	return;
+			// }
+
+			try {
+				log(`Calling configure via iframe...`);
+				const request = {
+					uuid: generateUUID(),
+					action: "configure",
+					publishableKey: jwtToken, // TODO: should Hot Storage check this field instead of Authorization?
+					accessToken: jwtToken,
+					chainId: chainId,
+					userEntropy: "TODO",
+					projectEntropy: "TODO",
+					playerID: userId,
+					thirdPartyProvider: null, // TODO: configure in shield
+					thirdPartyTokenType: "jwt",
+					encryptionKey: null, // TODO ?
+					encryptionPart: shieldProjectEncryptionShare,
+					encryptionSession: null,
+					openfortURL: HOT_STORAGE_SERVER,
+					shieldURL: COLD_STORAGE_SERVER,
+					shieldAPIKey: shieldProjectApiKey,
+					recovery: {
+						// Whether its using Openfort (either third-party or not) or a custom provider to verify the access token
+						auth: "custom",
+						// The auth token, either idToken or accessToken
+						token: jwtToken,
+						// When using a third party auth provider, the provider name
+						authProvider: "authservice",
+						// When using a third party auth provider, the token type
+						tokenType: "jwt",
+						// When using encryption sessions, the session ID
+						encryptionSession: null,
+					}
+				};
+
+				// const config: ConfigureRequest = {
+				// uuid: randomUUID(),
+				// action: Event.CONFIGURE,
+				// chainId: iframeConfiguration.chainId,
+				// recovery: iframeConfiguration.recovery,
+				// publishableKey: this.sdkConfiguration.baseConfiguration.publishableKey,
+				// shieldAPIKey:
+				// this.sdkConfiguration.shieldConfiguration?.shieldPublishableKey || '',
+				// accessToken: iframeConfiguration.accessToken,
+				// playerID: iframeConfiguration.playerID,
+				// thirdPartyProvider: iframeConfiguration.thirdPartyProvider,
+				// thirdPartyTokenType: iframeConfiguration.thirdPartyTokenType,
+				// encryptionKey: iframeConfiguration.password,
+				// encryptionPart:
+				// this.sdkConfiguration?.shieldConfiguration?.shieldEncryptionKey ?? null,
+				// encryptionSession:
+				// iframeConfiguration.recovery?.encryptionSession ?? null,
+				// openfortURL: this.sdkConfiguration.backendUrl,
+				// shieldURL: this.sdkConfiguration.shieldUrl,
+				// };
+
+				const result = await iframeConnection.configure(request);
+				log("configure result: " + JSON.stringify(result, null, 2));
+			} catch (error) {
+				log("ERROR configure iframe: " + error.message);
+			}
+		}
+
+		async function signMessage() {
+			if (!iframeConnection) {
+				log("ERROR: iFrame connection not established");
+				return;
+			}
+
+			const message = document.getElementById("messageToSign").value;
+			if (!message) {
+				log("ERROR: Please enter a message to sign");
+				return;
+			}
+
+			const encodedMessage = new TextEncoder().encode(message);
+
+			try {
+				log(`Calling sign via iframe for message: ${encodedMessage}`);
+				const request = {
+					uuid: generateUUID(),
+					message: encodedMessage,
+					// requireArrayify: false,
+					// requireHash: false,
+					requestConfiguration: {
+						token: jwtToken,
+						thirdPartyProvider: null,
+						thirdPartyTokenType: "jwt",
+						publishableKey: jwtToken,
+						openfortURL: HOT_STORAGE_SERVER,
+					},
+				};
+
+				const result = await iframeConnection.sign(request);
+				log("sign result: " + JSON.stringify(result, null, 2));
+			} catch (error) {
+				log("ERROR sign iframe: " + error.message);
+			}
+		}
+
+		async function switchChainIframe() {
+			if (!iframeConnection) {
+				log("ERROR: iFrame connection not established");
+				return;
+			}
+
+			const chainId = parseInt(document.getElementById("chainId").value) || 1;
+
+			try {
+				log(`Calling switchChain via iframe to chainId: ${chainId}`);
+				const request = {
+					uuid: generateUUID(),
+					chainId: chainId,
+					requestConfiguration: {
+						token: jwtToken,
+						thirdPartyProvider: null,
+						thirdPartyTokenType: "jwt",
+						publishableKey: jwtToken,
+						openfortURL: HOT_STORAGE_SERVER,
+					},
+				};
+
+				const result = await iframeConnection.switchChain(request);
+				log("switchChain result: " + JSON.stringify(result, null, 2));
+			} catch (error) {
+				log("ERROR switchChain iframe: " + error.message);
+			}
+		}
+
+		async function createAccountIframe() {
+			if (!iframeConnection) {
+				log("ERROR: iFrame connection not established");
+				return;
+			}
+
+			const chainId = parseInt(document.getElementById("chainId").value) || 1;
+
+			try {
+				log("Calling create via iframe...");
+				const request = {
+					uuid: generateUUID(),
+					accountType: "Smart Account",
+					chainType: "EVM",
+					chainId,
+					publishableKey: jwtToken, // TODO: should Hot Storage check this field instead of Authorization?
+					accessToken: jwtToken,
+					chainId: chainId,
+					userEntropy: "TODO",
+					projectEntropy: "TODO",
+					playerID: userId,
+					thirdPartyProvider: null, // TODO: configure in shield
+					thirdPartyTokenType: "jwt",
+					encryptionKey: null, // TODO ?
+					encryptionPart: shieldProjectEncryptionShare,
+					encryptionSession: null,
+					openfortURL: HOT_STORAGE_SERVER,
+					shieldURL: COLD_STORAGE_SERVER,
+					shieldAPIKey: shieldProjectApiKey,
+					recovery: {
+						// Whether its using Openfort (either third-party or not) or a custom provider to verify the access token
+						auth: "custom",
+						// The auth token, either idToken or accessToken
+						token: jwtToken,
+						// When using a third party auth provider, the provider name
+						authProvider: "authservice",
+						// When using a third party auth provider, the token type
+						tokenType: "jwt",
+						// When using encryption sessions, the session ID
+						encryptionSession: null,
+					}
+				};
+
+				const result = await iframeConnection.create(request);
+				log("create result: " + JSON.stringify(result, null, 2));
+			} catch (error) {
+				log("ERROR create iframe: " + error.message);
+			}
+		}
+
+		function recoverAccIframe() {
+			if (!iframeConnection) {
+				log("ERROR: iFrame connection not established");
+				return;
+			}
+			// Show the modal
+			document.getElementById("accountIdModal").style.display = "block";
+		}
+
+		function closeAccountIdModal() {
+			document.getElementById("accountIdModal").style.display = "none";
+			document.getElementById("accountIdInput").value = "";
+		}
+
+		async function confirmRecover() {
+			const accountId = document.getElementById("accountIdInput").value.trim();
+			if (!accountId) {
+				log("ERROR: Please enter an account ID");
+				return;
+			}
+
+			closeAccountIdModal();
+
+			try {
+				log(`Calling recover via iframe for account ID: ${accountId}`);
+				const request = {
+					uuid: generateUUID(),
+					recovery: {
+						// Whether its using Openfort (either third-party or not) or a custom provider to verify the access token
+						auth: "custom",
+						// The auth token, either idToken or accessToken
+						token: jwtToken,
+						// When using a third party auth provider, the provider name
+						authProvider: "authservice",
+						// When using a third party auth provider, the token type
+						tokenType: "jwt",
+						// When using encryption sessions, the session ID
+						encryptionSession: null,
+					},
+					publishableKey: jwtToken,
+					shieldAPIKey: shieldProjectApiKey,
+					accessToken: jwtToken,
+					playerID: userId,
+					account: accountId,
+					thirdPartyProvider: null, // TODO: configure in shield
+					thirdPartyTokenType: "jwt",
+					encryptionKey: null, // TODO ?
+					encryptionPart: shieldProjectEncryptionShare,
+					encryptionSession: null,
+					openfortURL: HOT_STORAGE_SERVER,
+					shieldURL: COLD_STORAGE_SERVER,
+				};
+
+				const result = await iframeConnection.recover(request);
+				log("recover result: " + JSON.stringify(result, null, 2));
+			} catch (error) {
+				log("ERROR recover iframe: " + error.message);
+			}
+		}
+
+		function generateUUID() {
+			return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+				var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+				return v.toString(16);
+			});
+		}
+	</script>
+</body>
+
+</html>

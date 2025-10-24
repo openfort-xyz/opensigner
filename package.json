@@ -1,0 +1,16 @@
+{
+  "private": true,
+  "workspaces": [
+    "docs"
+  ],
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "docs:build": "yarn workspace docs run build",
+    "docs:dev": "yarn workspace docs run dev",
+    "docs:diagrams": "yarn workspace docs run diagrams",
+    "docs:preview": "yarn workspace docs run preview"
+  },
+  "packageManager": "yarn@1.22.17"
+}

@@ -1,0 +1,22 @@
+style: {
+    fill: transparent
+}
+vars: {
+    d2-config: {
+        theme-overrides: {
+            B2: "#fc3c2f"
+            AA2: "#3b7eee"
+			AA4: "#a7b4eb"
+        }
+        layout-engine: elk {
+            padding": "[0,0,0,0]"
+            spacing.nodeNode: 10
+            spacing.edgeNode": 5
+            spacing.edgeEdge": 5
+            spacing.labelNode": 5
+            layered.spacing.nodeNodeBetweenLayers: 15
+            layered.edgeRouting: "ORTHOGONAL"
+            layered.crossingMinimization.strategy: LAYER_SWEEP
+        }
+    }
+}

@@ -1,0 +1,202 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: ofpostgres
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_password}
+    volumes:
+      - of_postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/create_database.sql
+    networks:
+      - db_network
+    expose:
+      - "5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 4s
+      retries: 10
+
+  mysql:
+    image: mysql:8.4
+    container_name: ofmysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password}
+      MYSQL_DATABASE: ${MYSQL_SHIELD_DATABASE:-shield}
+      MYSQL_USER: ${MYSQL_USER:-mysql_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-mysql_password}
+    volumes:
+      - of_mysql_data:/var/lib/mysql
+    networks:
+      - db_network
+    expose:
+      - "3306"
+    restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  iframe:
+    container_name: iframe
+    volumes:
+      - ./iframe/iframe_nginx.conf:/etc/nginx/conf.d/default.conf
+    image: ghcr.io/openfort-xyz/iframe:latest
+    environment:
+      PORT: ${IFRAME_CONTAINER_PORT:-5173}
+    networks:
+      - db_network
+    expose:
+      - "5173"
+    ports:
+      - "${IFRAME_HOST_PORT:-7050}:${IFRAME_CONTAINER_PORT:-5173}"
+    depends_on:
+      auth_service:
+        condition: service_started
+        restart: true
+    restart: unless-stopped
+
+  iframe-sample:
+    container_name: iframe-sample
+    build:
+      context: ./iframe/sample
+      dockerfile: Dockerfile
+    image: openfort/iframe-sample:latest
+    environment:
+      PORT: ${IFRAME_SAMPLE_CONTAINER_PORT:-3000}
+    networks:
+      - db_network
+    expose:
+      - "3000"
+    ports:
+      - "${IFRAME_SAMPLE_HOST_PORT:-7051}:${IFRAME_SAMPLE_CONTAINER_PORT:-3000}"
+    depends_on:
+      auth_service:
+        condition: service_started
+        restart: true
+      iframe:
+        condition: service_started
+        restart: true
+    restart: unless-stopped
+
+  auth_service:
+    container_name: authservice
+    build:
+      context: ./auth_service
+      dockerfile: Dockerfile
+    image: openfort/auth_service:latest
+    environment:
+      HOST: ${AUTH_SERVICE_CONTAINER_HOST:-0.0.0.0}
+      PORT: ${AUTH_SERVICE_CONTAINER_PORT:-3000}
+      DB_NAME: ${AUTH_SERVICE_DB_NAME:-authservice}
+      DB_USER: ${AUTH_SERVICE_DB_NAME:-postgres}
+      DB_PASS: ${AUTH_SERVICE_DB_NAME:-postgres_password}
+      DB_HOST: ${AUTH_SERVICE_DB_NAME:-ofpostgres}
+      DB_PORT: ${AUTH_SERVICE_DB_NAME:-5432}
+    networks:
+      - db_network
+    expose:
+      - "${AUTH_SERVICE_CONTAINER_PORT:-3000}"
+    ports:
+      - "${AUTH_SERVICE_HOST_PORT:-7052}:${AUTH_SERVICE_CONTAINER_PORT:-3000}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:$PORT/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  cold_storage:
+    container_name: coldstorage
+    platform: linux/amd64
+    image: openfort/shield:v0.2.28
+    command: server
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_DRIVER: ${COLD_STORAGE_DB_DRIVER:-mysql}
+      DB_NAME: ${COLD_STORAGE_DB_NAME:-shield}
+      DB_USER: ${COLD_STORAGE_DB_USER:-root}
+      DB_PASS: ${COLD_STORAGE_DB_PASS:-root_password}
+      DB_HOST: ${COLD_STORAGE_DB_HOST:-ofmysql}
+      DB_PORT: ${COLD_STORAGE_DB_PORT:-3306}
+    networks:
+      - db_network
+    expose:
+      - "${COLD_STORAGE_CONTAINER_PORT:-8080}"
+    ports:
+      - "${COLD_STORAGE_HOST_PORT:-7053}:${HOST_STORAGE_CONTAINER_PORT:-8080}"
+    restart: unless-stopped
+
+  hot_storage:
+    container_name: hotstorage
+    build:
+      context: ./hot_storage
+      dockerfile: Dockerfile
+    image: openfort/hot_storage:latest
+    environment:
+      HOST: ${HOT_STORAGE_CONTAINER_HOST:-0.0.0.0}
+      PORT: ${HOT_STORAGE_CONTAINER_PORT:-8080}
+      AUTH_SERVER_URL: ${AUTH_SERVER_URL:-http://authservice:3000}
+      DB_NAME: ${HOT_STORAGE_DB_NAME:-hotstorage}
+      DB_USER: ${HOT_STORAGE_DB_NAME:-postgres}
+      DB_PASS: ${HOT_STORAGE_DB_NAME:-postgres_password}
+      DB_HOST: ${HOT_STORAGE_DB_NAME:-ofpostgres}
+      DB_PORT: ${HOT_STORAGE_DB_NAME:-5432}
+    networks:
+      - db_network
+    expose:
+      - "${HOT_STORAGE_CONTAINER_PORT:-8080}"
+    ports:
+      - "${HOT_STORAGE_HOST_PORT:-7054}:${HOT_STORAGE_CONTAINER_PORT:-8080}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:$PORT/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  docs:
+    container_name: docs
+    build:
+      context: ./docs
+      dockerfile: Dockerfile
+      args:
+        NODE_AUTH_TOKEN: ${NODE_AUTH_TOKEN}
+    image: openfort/keys-docs:latest
+    environment:
+      PORT: ${DOCS_CONTAINER_PORT:-4173}
+    networks:
+      - db_network
+    expose:
+      - "${DOCS_CONTAINER_:-4173}"
+    ports:
+      - "${DOCS_HOST_PORT:-7055}:${DOCS_CONTAINER_PORT:-4173}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:$PORT/health.json"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+networks:
+  db_network:
+    driver: bridge
+
+volumes:
+  of_postgres_data:
+  of_mysql_data:

@@ -1,0 +1,45 @@
+...@themes/default
+
+direction: right
+
+Key: {
+    shape: image
+    icon: "./icons/key.png"
+}
+SSS: {
+    label: "SSS"
+    shape: diamond
+}
+LocalStorage: {
+    label: "Cache"
+    shape: image
+    icon: "./icons/db.svg"
+}
+HotStorage: {
+    label: "Hot Storage"
+    shape: image
+    icon: "./icons/db.svg"
+}
+ColdStorage: {
+    label: "Cold Storage"
+    shape: image
+    icon: "./icons/db.svg"
+}
+Key -> SSS {
+    style.animated: true
+}
+SSS -> LocalStorage: {
+    label: "share 1"
+    icon: "./icons/key_share_1.png"
+    style.animated: true
+}
+SSS -> HotStorage: {
+    label: "share 2"
+    icon: "./icons/key_share_2.png"
+    style.animated: true
+}
+SSS -> ColdStorage: {
+    label: "share 3"
+    icon: "./icons/key_share_3.png"
+    style.animated: true
+}

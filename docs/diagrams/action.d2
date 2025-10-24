@@ -1,0 +1,72 @@
+...@themes/default
+
+vars: {
+    d2-config: {
+        layout-engine: elk {
+            spacing.nodeNode: 15
+            layered.spacing.nodeNodeBetweenLayers: 25
+            layered.edgeRouting: "ORTHOGONAL"
+        }
+    }
+}
+
+shape: sequence_diagram
+
+user: {
+    label: "User"
+    shape: image
+    icon: "./icons/user.svg"
+}
+
+iframe: {
+    label: "iframe\n(browser)"
+    # height: 80
+}
+
+local: {
+    label: "local\nstorage\n(browser)"
+    height: 80
+}
+
+hot: {
+    label: "hot\nstorage"
+    height: 80
+}
+
+user -> iframe: {
+    label: "<action>"
+}
+
+iframe -> local: {
+    label: "get_share()"
+}
+
+local -> iframe: {
+    label: "local_share"
+    icon: "./icons/key_share_1.png"
+}
+
+iframe -> hot: {
+    label: "get_share()"
+}
+
+hot -> iframe: {
+    label: "hot_share"
+    icon: "./icons/key_share_2.png"
+}
+
+iframe -> iframe: {
+    label: "key = reconstruct(\nlocal_share, hot_share)"
+    icon: "./icons/key.png"
+}
+
+iframe."perform <action>"
+
+iframe -> iframe: {
+    label: "delete(key)"
+}
+
+iframe -> user: {
+    label: "<action> result"
+}
+

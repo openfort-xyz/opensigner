@@ -1,0 +1,29 @@
+...@themes/default
+...@themes/sql
+
+keychains: {
+    shape: sql_table
+
+    id: int {constraint: [primary_key; unique]}
+    user_id: int {constraint: foreign_key}
+}
+
+users: {
+    shape: sql_table
+
+    id: int {constraint: [primary_key; unique]}
+    project_id: int {constraint: foreign_key, references: projects.id}
+}
+
+shares: {
+    shape: sql_table
+
+    id: int {constraint: [primary_key; unique]}
+    keychain_id: int {constraint: foreign_key, references: keychains.id}
+    user_id: int {constraint: foreign_key, references: users.id}
+}
+
+keychains.user_id -> users.id
+
+shares.keychain_id -> keychains.id
+shares.user_id -> users.id

@@ -1,0 +1,21 @@
+{
+  "name": "docs",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "build": "yarn diagrams && vocs build",
+    "dev": "vocs dev",
+    "diagrams": "./diagrams/gen.sh",
+    "preview": "vocs preview",
+    "install:d2": "curl -fsSL https://d2lang.com/install.sh | sh -s --"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "swagger-ui": "^5.26.0",
+    "swagger-ui-react": "^5.26.0",
+    "typescript": "^5.8.3",
+    "vocs": "^1.0.12"
+  }
+}

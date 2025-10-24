@@ -1,0 +1,505 @@
+openapi: 3.0.0
+info:
+  title: Openfort Hot Storage API
+  version: 1.0.0
+
+paths:
+  /v1/devices/switch-chain:
+    post:
+      summary: Switch the chain of a device
+      security:
+        - pk_access_token: []
+        - pk_third_party: []
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            example: Bearer eyJhbGciOiJFZERTQSIsImtpZCI6IkphWDNMY3Q1cVR5cnFqR0pPdThBZ0lITmtnRFZMTkVNIn0.eyJuYW1lIjoiRGVtbyIsImVtYWlsIjoiZGVtb0BleGFtcGxlLmNvbSIsImVtYWlsVmVyaWZpZWQiOmZhbHNlLCJjcmVhdGVkQXQiOiIyMDI1LTA3LTMxVDEwOjE2OjA5LjIwMFoiLCJ1cGRhdGVkQXQiOiIyMDI1LTA3LTMxVDEwOjE2OjA5LjIwMFoiLCJ1c2VybmFtZSI6ImRlbW8iLCJkaXNwbGF5VXNlcm5hbWUiOiJkZW1vIiwiaWQiOiJhQjU4ZmhNaFRvWVc3cjR6N3BwQzRnNW5pd2JGNWM2YSIsImlhdCI6MTc1Mzk2MDg4MiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDozMDA1IiwiYXVkIjoiaHR0cDovL2xvY2FsaG9zdDozMDA1IiwiZXhwIjoxNzUzOTYxNzgyLCJzdWIiOiJhQjU4ZmhNaFRvWVc3cjR6N3BwQzRnNW5pd2JGNWM2YSJ9.Blv-aUcAJw0rCcZk_rTlum013yY9vWANzuOfzbeM47cJb-Agy_wFRyFIigbHFULHiy5fvQCTl0NP_h9MPmqnDA
+          required: true
+          description: JWT token for project authentication.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SwitchChainRequest'
+      responses:
+        '200':
+          description: Device chain switched
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmbeddedResponse'
+        '400':
+          description: Invalid request
+
+  /v2/accounts:
+    get:
+      operationId: getAccountsV2
+      summary: List accounts of a user.
+      description: |
+        Returns a list of accounts for the given user.
+
+        This object represents a user's account, which is a blockchain smart account or EOA that can be used to interact with the blockchain.
+
+        The accounts are returned sorted by creation date, with the most recently created accounts appearing first.
+
+        Returns the latest 10 transaction intents for each account.
+
+        By default, a maximum of 10 accounts are shown per page.
+      parameters:
+        - name: limit
+          in: query
+          description: Specifies the maximum number of records to return.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+        - name: skip
+          in: query
+          description: Specifies the offset for the first records to return.
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+        - name: order
+          in: query
+          description: Specifies the order in which to sort the results.
+          required: false
+          schema:
+            $ref: '#/components/schemas/SortOrder'
+        - name: chainId
+          in: query
+          description: The chain ID. Must be a [supported chain](/development/chains).
+          required: false
+          schema:
+            type: integer
+            format: int32
+          example: 80002
+        - name: user
+          in: query
+          description: Specifies the unique user ID (starts with pla_)
+          required: false
+          schema:
+            type: string
+          example: pla_6f6c9067-89fa-4fc8-ac72-c242a268c584
+        - name: chainType
+          in: query
+          description: The chain type. Must be either "EVM" or "SVM".
+          required: false
+          schema:
+            type: string
+          example: EVM
+        - name: accountType
+          in: query
+          description: Specifies the type of account. Must be either "Smart Account" or "Externally Owned Account".
+          required: false
+          schema:
+            type: string
+          example: Smart Account
+        - name: address
+          in: query
+          description: Specifies the account address
+          required: false
+          schema:
+            type: string
+          example: '0xf7b4c54cca21cccf42796502bf94e2838fbd44c4'
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountListV2Response'
+        '401':
+          description: Error response.
+
+  /v2/devices/recover:
+    post:
+      summary: Recover an embedded device
+      description: Recovers an embedded device for an existing account. This endpoint retrieves the device information including the share and signer details for a previously registered account.
+      operationId: recoverDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - account
+              properties:
+                account:
+                  type: string
+                  description: Specifies the unique account ID (starts with acc_)
+                  example: "acc_6f6c9067-89fa-4fc8-ac72-c242a268c584"
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecoverV2Response'
+        '401':
+          description: Error response - Unauthorized
+
+  /v2/devices/register:
+    post:
+      summary: Register an embedded device
+      description: Registers a new device for an existing account by associating a share with the account. This is used when adding a new device to an account that already exists.
+      operationId: registerDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - account
+                - share
+              properties:
+                account:
+                  type: string
+                  description: Specifies the unique account ID (starts with acc_)
+                  example: "acc_6f6c9067-89fa-4fc8-ac72-c242a268c584"
+                share:
+                  type: string
+                  description: The encrypted share repository data to register with the account
+                  example: "7d526b7e99fbf52850a183..."
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmbeddedV2Response'
+        '401':
+          description: Error response - Unauthorized
+
+  /v2/devices/create:
+    post:
+      summary: Create a new embedded device
+      description: Creates a new account and registers the first device for it. This endpoint handles the complete setup of a new account with an embedded signer.
+      operationId: createDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - accountType
+                - chainType
+                - address
+              properties:
+                accountType:
+                  type: string
+                  description: Type of account to create (Smart Account or Externally Owned Account)
+                  example: "Smart Account"
+                chainType:
+                  type: string
+                  description: Chain type (EVM or SVM)
+                  example: "EVM"
+                address:
+                  type: string
+                  description: Account blockchain address
+                  example: "0xf7b4c54cca21cccf42796502bf94e2838fbd44c4"
+                chainId:
+                  type: number
+                  description: Chain ID (optional)
+                  example: 80002
+                privateKey:
+                  type: string
+                  description: Private key for EOA accounts (optional, for Externally Owned Accounts)
+                  example: "0x..."
+                kmsKey:
+                  type: string
+                  description: KMS key identifier (optional, for KMS-managed accounts)
+                  example: "kms_..."
+                share:
+                  type: string
+                  description: The encrypted share repository data (optional, for embedded signers)
+                  example: "7d526b7e99fbf52850a183..."
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmbeddedV2Response'
+        '401':
+          description: Error response - Unauthorized
+
+components:
+  schemas:
+    EmbeddedV2Response:
+      type: object
+      required:
+        - accountType
+        - address
+        - ownerAddress
+        - chainType
+        - account
+        - signer
+      properties:
+        share:
+          type: string
+          description: The encrypted share repository data used for key management
+          example: "7d526b7e99fbf52850a183..."
+        accountType:
+          type: string
+          description: Type of account (Smart Account or Externally Owned Account)
+          example: "Smart Account"
+        implementationType:
+          type: string
+          description: Smart account implementation type (only for Smart Accounts)
+          example: "v0.6"
+        implementationAddress:
+          type: string
+          description: Implementation contract address (only for Smart Accounts)
+          example: "0x123abc..."
+        factoryAddress:
+          type: string
+          description: Factory contract address (only for Smart Accounts)
+          example: "0x456def..."
+        salt:
+          type: string
+          description: Salt used for smart account deployment (only for Smart Accounts)
+          example: "0x789..."
+        address:
+          type: string
+          description: Account blockchain address
+          example: "0xf7b4c54cca21cccf42796502bf94e2838fbd44c4"
+        ownerAddress:
+          type: string
+          description: Owner address of the account
+          example: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+        chainType:
+          type: string
+          description: Chain type (EVM or SVM)
+          example: "EVM"
+        chainId:
+          type: number
+          description: Chain ID
+          example: 80002
+        device:
+          type: string
+          description: Device identifier
+          example: "dev_7a8b9c0d-1234-5678-90ab-cdef12345678"
+        account:
+          type: string
+          description: Account ID (starts with acc_)
+          example: "acc_6f6c9067-89fa-4fc8-ac72-c242a268c584"
+        signer:
+          type: string
+          description: Signer identifier
+          example: "sig_a1b2c3d4-5678-90ab-cdef-1234567890ab"
+
+    RecoverV2Response:
+      type: object
+      required:
+        - id
+        - account
+        - signerAddress
+        - signer
+        - share
+        - isPrimary
+        - createdAt
+        - user
+      properties:
+        id:
+          type: string
+          description: Unique device identifier
+          example: "dev_7a8b9c0d-1234-5678-90ab-cdef12345678"
+        account:
+          type: string
+          description: Account ID (starts with acc_)
+          example: "acc_6f6c9067-89fa-4fc8-ac72-c242a268c584"
+        signerAddress:
+          type: string
+          description: Blockchain address of the signer
+          example: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+        signer:
+          type: string
+          description: Signer identifier
+          example: "sig_a1b2c3d4-5678-90ab-cdef-1234567890ab"
+        share:
+          type: string
+          description: The encrypted share repository data used for key management
+          example: "7d526b7e99fbf52850a183..."
+        isPrimary:
+          type: boolean
+          description: Indicates if this is the primary device for the account
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          description: Device creation timestamp in ISO 8601 format
+          example: "2024-01-15T10:30:00.000Z"
+        user:
+          type: string
+          description: User ID associated with the device (starts with pla_)
+          example: "pla_6f6c9067-89fa-4fc8-ac72-c242a268c584"
+
+    AccountListV2Response:
+      type: object
+      required:
+        - object
+        - url
+        - data
+        - start
+        - end
+        - total
+      properties:
+        object:
+          type: string
+          enum:
+            - list
+          description: Response type indicator
+        url:
+          type: string
+          description: URL of the list endpoint
+        data:
+          type: array
+          description: Array of account records
+          items:
+            type: object
+            required:
+              - id
+              - user
+              - accountType
+              - address
+              - chainType
+              - createdAt
+              - updatedAt
+            properties:
+              id:
+                type: string
+                description: Unique account identifier
+              user:
+                type: string
+                description: User ID (starts with pla_)
+              accountType:
+                type: string
+                description: Type of account (Smart Account or Externally Owned Account)
+              address:
+                type: string
+                description: Account address
+              ownerAddress:
+                type: string
+                description: Owner address of the account
+              chainType:
+                type: string
+                description: Chain type (EVM or SVM)
+              chainId:
+                type: number
+                format: double
+                description: Chain ID
+              createdAt:
+                type: number
+                format: double
+                description: Account creation timestamp
+              updatedAt:
+                type: number
+                format: double
+                description: Account last update timestamp
+              smartAccount:
+                type: object
+                description: Smart account specific data (only for Smart Accounts)
+                required:
+                  - implementationType
+                  - factoryAddress
+                  - implementationAddress
+                  - salt
+                  - active
+                properties:
+                  implementationType:
+                    type: string
+                    description: Smart account implementation type
+                  factoryAddress:
+                    type: string
+                    description: Factory contract address
+                  implementationAddress:
+                    type: string
+                    description: Implementation contract address
+                  salt:
+                    type: string
+                    description: Salt used for deployment
+                  deployedTx:
+                    type: string
+                    description: Deployment transaction hash
+                  deployedAt:
+                    type: number
+                    format: double
+                    description: Deployment timestamp
+                  active:
+                    type: boolean
+                    description: Whether the smart account is active
+              recoveryMethod:
+                type: string
+                description: Recovery method type
+              recoveryMethodDetails:
+                type: object
+                description: Details about the recovery method
+                properties:
+                  passkeyId:
+                    type: string
+                    description: Passkey identifier
+                  passkeyEnv:
+                    type: object
+                    description: Passkey environment information
+                    properties:
+                      name:
+                        type: string
+                        description: Environment name
+                      os:
+                        type: string
+                        description: Operating system
+                      osVersion:
+                        type: string
+                        description: Operating system version
+                      device:
+                        type: string
+                        description: Device type
+        start:
+          type: integer
+          format: int32
+          description: Starting index of the results
+        end:
+          type: integer
+          format: int32
+          description: Ending index of the results
+        total:
+          type: integer
+          format: int32
+          description: Total number of records available
+
+    SortOrder:
+      type: string,
+      "enum": [
+        "asc",
+        "desc"
+      ]
+
+    SwitchChainRequest:
+      type: object
+      properties:
+        chainId:
+          type: integer
+        deviceId:
+          type: string
+      required: [chainId, deviceId]
+
+    EmbeddedResponse:
+      type: object
+      properties:
+        share:
+          type: string
+        address:
+          type: string
+        chainId:
+          type: integer
+        deviceId:
+          type: string

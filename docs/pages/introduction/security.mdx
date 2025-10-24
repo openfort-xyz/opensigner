@@ -1,0 +1,392 @@
+# Security
+
+The system is composed of multiple components that communicate over HTTP.
+Communication includes sensitive data such as key shares or access tokens, therefore **it is crucial
+to ensure communication is secured though TLS** and HTTPS is enforced.
+
+It is also important to be aware of the root of trust at each point in the system.
+The key is split into three shares, two of them are enough to reconstruct the key.
+Once a user logs into a device, each one of the three shares is stored in:
+- **User's device**: the domain-protected storage of the browser.
+- **Hot storage**: users can access this share through an access token granted by the authentication service.
+- **Cold storage**: users can access this share
+    provided a request is made with valid entropy and a valid token is issued by the authentication service.
+
+## Attestation
+
+Openfort's public images are attested through [Cosign](https://github.com/sigstore/cosign).
+Github generates a unique key for each workflow run, and signs the images built by the workflow.
+Openfort has no access to said keys, ensuring the signed builds have not been tampered with
+or created with any other method other than the automated release workflows.
+
+To validate that an image was built, published, and signed by the Openfort CI workflows, users can run:
+
+```bash
+gh attestation verify \
+    oci://<image>:<version> \
+    --repo '<source code repository>' \
+    --signer-workflow ' <source code repository>/<workflow file>'
+```
+
+For example,
+
+```bash
+gh attestation verify \
+    oci://docker.io/openfort/shield@sha256:61fb0ac9b409ebcff5c10910708774e4a1bcfda6818ddc4b2f28330f12d7773c \
+    --repo openfort-xyz/shield \
+    --signer-workflow openfort-xyz/shield/.github/workflows/docker-image.yml
+```
+
+Although digests are the recomemnded way to refer to images, images can also be verified by tag:
+
+```bash
+gh attestation verify \
+    oci://docker.io/openfort/shield:v0.2.6 \
+    --repo openfort-xyz/shield \
+    --signer-workflow openfort-xyz/shield/.github/workflows/docker-image.yml
+```
+
+Alternatively, images can be verified by manually checking the Rekor logs and searching for the image digest,
+e.g.
+
+[https://search.sigstore.dev/?hash=61fb0ac9b409ebcff5c10910708774e4a1bcfda6818ddc4b2f28330f12d7773c](https://search.sigstore.dev/?hash=61fb0ac9b409ebcff5c10910708774e4a1bcfda6818ddc4b2f28330f12d7773c).
+
+### Derived checksums
+The iframe serves static assets, and checksums for these assets are generated at build time using SHA-256.
+Because iframe builds are attested, these checksums are also transitively attested.
+
+The published checksums can be compared to those computed by the user after downloading the static assets. If any mismatch is found, the iframe’s execution can be aborted.
+
+Here’s an example of the output generated when building the iframe:
+
+```
+876766b4e80133fd490603e073d3567425b88794828a9292104244c9e40875ed /usr/share/nginx/html/50x.html
+78fe0c953e0235a6ce563d728eaacbb9a4630cbd22831523d74017820a5c067c /usr/share/nginx/html/index.html
+b209a972c9f0dcc4354098df2943d21b0daa6a49486c07f2cd265d6274b0f3c2 /usr/share/nginx/html/assets/index-jgtWx_p5.js
+713b113fde9db05faa5b320e52ed7a5f0693faa71262ad55760d65b062103bc7 /usr/share/nginx/html/favicon.ico
+```
+
+This means that the user should expect having only one javascript file called `index-jgtWx_p5.js` whose `sha256sum` is `b209a972c9f0dcc4354098df2943d21b0daa6a49486c07f2cd265d6274b0f3c2`, which can be verified client-side anytime.
+This is also an exhaustive list of all the assets the user should expect seeing on their side.
+
+Note that this checksum does not prove that the `iframe` is intact. The `iframe` still relies on an nginx to provide such static assets and it's still on the client to retrieve and check those hashes.
+This means that there's still room for attackers to divert traffic to unwanted places, or even load additional assets not contemplated by the build time checksum generation.
+
+## Roots of Trust
+
+The system relies on the following roots of trust:
+
+- **Authentication service**
+
+    The authentication service is responsible for validating the user's identity and granting access tokens.
+    It must be trusted to securely handle user credentials and issue tokens that can be used to access shares.
+    While the authentication service API is provided,  each implementation will be tied to each project's specific needs,
+    and needs to be done with care.
+
+    The impact of a compromised authentication varies depending on the context:
+
+    - If the attacker also has access to the user’s device and the key was previously reconstructed there:
+        - They can fully recover the secret because user authentication directly unlocks the hot share.
+    - If the attacker only has the user’s credentials but no device access, the outcome depends on how cold share recovery is handled:
+        - With *user-based recovery*, an extra password or passkey (independent from the user’s main credentials) is needed to decrypt the cold share.
+        - With *automatic recovery*:
+            - Without 2FA: the attacker can easily recover the user’s secret key just by using the stolen credentials.
+            - With 2FA: user interaction is required to recover the secret, as the attacker would need to compromise the 2FA method as well.
+    In summary: The safest way to protect a cold share is to use user-based recovery with a completely separate password/passkey that’s unrelated to the primary authentication method.
+
+
+- **Application logic**
+
+    2 out of 3 shares are enough to reconstruct the key. For this reason, the system
+    comes with audited, open source implementations of the storage and management systems of two of the three shares.
+
+    - **iFrame**:
+    The iFrame is not only the storer (in domain-based the browser storage), but also the actor responsible for
+    splitting and reconstructing the keys. It is the only component that will have access to the full, reconstructed key.
+    
+    - **Cold Storage**: The cold storage is the stepping stone for every login in a new device.
+    The share it contains is encrypted with either user or project entropy.
+
+- **Environment**
+
+    Use trusted browsers, servers, execution environments...
+
+- **Project Owner**
+
+    Users with authentication key recovery trust on the owner of the project they belong to with part of the
+    entropy of their recovery share.
+
+- **Transport**
+
+    Sensitive data, such as access tokens and key shares, travel over the network when transmitted from one component to
+    another. It is vital to have and enforce secure communication channels, such as HTTPS, to prevent eavesdropping and tampering.
+    Make sure to validate TLS certificates to prevent Man In The Middle (MITM) attacks.
+    [HSTS](https://en.wikipedia.org/wiki/HTTP_Strict_Transport_Security) should be used for browser-oriented operations.
+
+### A Note on Recovery
+
+The three supported recovery methods, _automatic_, _password_ and _passkey_ based recovery. Each has different security considerations. 
+Each refer to how the recovery share is encrypted, and how the user can access it.
+
+- **Password-Based Recovery**: In password-based recovery, the recovery share is encrypted with a user-provided password.
+    Recovery share encryption and decryption happen in the iFrame, making the user the sole owner of the entropy guarding the share.
+    Check out the [**password-based signup**](/actions/signup#user-with-password-recovery) section for more details.
+
+    :::info
+    When setting a recovery password, the iframe uses our open-source [@openfort-xyz/crypto-js](https://github.com/openfort-xyz/crypto-js)
+    library to first derive a secure key.
+
+    Our key derivation algorithm is `Argon2` with `12` iterations using `64MiB` of memory and a `128` bit long salt.
+
+    A `256` bit length encryption key will be then derived and used to encrypt the cold share.
+
+    The cold share will be then encrypted using `AES-CBC` with the previously derived key. The Initialization Vector (IV) will
+    be generated by the iframe and will be `128` bits of length, too.
+    :::
+
+- **Automatic Recovery**:
+    In automatic recovery, on the other hand, key encryption and decryption happen in the cold storage.
+    While providing the benefit of not requiring the user to remember a password, it also proposes some new risks:
+    
+    - **Ownership**
+    If the entity in control of the cold storage (which contains one of the two shares required to reconstruct the encryption key)
+    is also the one in control of the other encryption key shares, it can access the full recovery share. This, when combined with control
+    over one of the other two shares, allows the entity to reconstruct the key.
+    
+    - **Network**:
+    The raw encryption key travels over the network from the iFrame to the cold storage, which could be intercepted.
+    This can be mitigated with proper network security measures.
+    Check out the [**automatic recovery signup**](/actions/signup#user-with-automatic-recovery) section for more details.
+
+    To enhance the security of this recovery method, you can enable OTP verification for your Shield project.
+    When enabled, Shield will require an OTP to create an encrypted session for share decryption.
+    The OTP will be sent to the user's contact information (either email or phone number).
+    This reduces the control that the cold storage host has over the stored shares.
+
+    :::info
+    Our cold storage implementation generates an encryption key for the recovery share,
+    splits it into three (one will be kept by the cold storage, one given to the caller, the last one deleted),
+    then uses AES-GCM (Advanced Encryption Standard in Galois/Counter Mode) to store one of the shares in a database.
+
+    The nonce, or IV, will be 96 bits of length in this case, as it is recommended for this particular mode of AES.
+
+    As in Password Recovery Mode, 256-bit length keys will be used. This key will be generated and split in shield.
+    The key is generated using a secure RNG (golang's `crypto/rand`).
+    :::
+
+- **Passkey Recovery**:
+    Passkey recovery behaves almost identically to password based recovery: an encryption key is derived from some user input
+    and shares are encrypted and split following pretty much the same pattern.
+    In passkey-based recovery the cold share plaintext never leaves the client, neither does the derived encryption key.
+    OpenSigner will instead store the following information:
+        - The internal passkey ID, issued by the passkey authenticator
+        - The encrypted (cold) share
+        - Some environment-related information (browser name, OS, OS Version and Device information)
+    
+    :::info
+    The cold share is encrypted using AES256 in CBC mode. The encryption key is derived using the Pseudo Random Function (PRF)
+    extension, available for most modern passkeys. This extensions allows an authenticated user to derive encryption keys.
+
+    As in password based recovery, the IV will be of 128 bits of length and will be generated by the iframe itself.
+    :::
+
+---
+
+Due to the modular nature of the system, it is possible for users to run or even implement their own components.
+It is also possible to have hybrid scenarios in which Openfort hosts some components while others are self-hosted.
+
+This section will evaluate the following scenarios, where the components are hosted by a third party such as Openfort
+(<span style={{ color:'#fc3c2f' }}>**TP**</span>) or self-hosted (<span style={{ color:'#3b7eee' }}>**SH**</span>):
+
+{/*
+
+Full table:
+
+| Scenario | Cold Storage | Auth Service | Hot Storage | iFrame |
+|---|---|---|---|---|
+| Scenario | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> |
+| Scenario | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+| Scenario | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> |
+| Scenario | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> |
+| Scenario | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> |
+| Scenario | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> |
+| Scenario | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> |
+| Scenario | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> |
+| Scenario | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> |
+| Scenario | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> |
+| Scenario | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> |
+| Scenario | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> |
+| Scenario | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> |
+| Scenario | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> |
+| Scenario | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> |
+| Scenario | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> |
+
+It'd be redundant to talk about all of them.
+
+*/}
+
+| Scenario | Cold Storage | Auth Service | Hot Storage | iFrame |
+|---|---|---|---|---|
+| [Scenario 1](/introduction/security#scenario-1) | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> |
+| [Scenario 2](/introduction/security#scenario-2) | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+| [Scenario 3](/introduction/security#scenario-3) | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+| [Scenario 4](/introduction/security#scenario-4) | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+| [Scenario 5](/introduction/security#scenario-5) | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+| [Scenario 6](/introduction/security#scenario-6) | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+
+### Scenario 1
+
+| Cold Storage | Auth Service | Hot Storage | iFrame |
+|---|---|---|---|
+| <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> |
+
+> Fully self-hosted.
+
+This scenario relies on the hosting party implementing both the Authentication Service and the Hot Storage.
+
+Developers can _know_ they're running unaltered builds of the Openfort components by checking the attestations,
+as explained in the [attestation section](/introduction/security#attestation).
+On that note, developers can enforce execution of this image by requiring attestations in their
+policies, as in this Google Cloud example that [requires attestation](https://cloud.google.com/binary-authorization/docs/key-concepts#evaluation-modes).
+
+Developers may also opt to go one step further and make some of their configuration public to show that
+attestation requirements are in place in their infrastructure.
+
+There some noteworthy risks in this scenario:
+
+- **Execution environment**: The hardware and the OS running the storage services (and the DBs they rely on) have access to the processes' memory and could
+    extract sensitive data such as key shares from the programs' memory.
+    It is essential to run them in trusted, secure environments. For instance, when running the components in GKE make
+    sure to use [confidential GKE nodes](https://cloud.google.com/kubernetes-engine/docs/how-to/confidential-gke-nodes).
+    The underlying storage used by the DBs should also be protected, to prevent extraction and brute-forcing of stored keys.
+    If using cloud providers, encrypt storages with self-managed keys, such as GC's [CMEK](https://cloud.google.com/kubernetes-engine/docs/how-to/using-cmek).
+
+- **Communication**: Enforce and validate TLS encryption in every communication happening between two components.
+    If services are running on the same machine, handle TLS certificates appropriately, use some proxy that supports TLS
+    such as [Envoy](https://www.envoyproxy.io/), or use [Unix Domain Sockets](https://man7.org/linux/man-pages/man7/unix.7.html).
+    The latter are still vulnerable to eavesdropping from the same machine, but have a reduced attack surface compared to TCP sockets.
+
+- **Total Asset Ownership**: Since the hosting party controls **all** the Keys components, they can also decrypt cold shares if those belong to a project they created.
+    The hosting party will have access to both encryption shares and to the encrypted cold shares stored in the cold storage.
+    Thus, **projects must be registered and handled by third parties unrelated to the hosting party.**
+
+All of the next scenarios load their iframe from a third party, which could have been tampered with. This is not an issue in
+[scenario 1](/introduction/security#scenario-1), as the iframe is loaded from the same origin as the rest of the components and
+served by the hosting party.
+
+### Scenario 2
+
+| Cold Storage | Auth Service | Hot Storage | iFrame |
+|---|---|---|---|
+| <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+
+Developers rely on a third party to host their hot storage and their iframe.
+The main risk here is the iframe being tampered with, allowing attackers to capture passwords and secrets on the client's side.
+
+As we mentioned before, iframe builds are attested and those feature derived checksums of the static assets it provides.
+
+The iframe is meant to be called via RPC methods from another app, so it is possible for both developers and end users to verify if the obtained static assets' checksums match those provided by the official build logs.
+
+### Scenario 3
+
+| Cold Storage | Auth Service | Hot Storage | iFrame |
+|---|---|---|---|
+| <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+
+The greatest security concerns in this scenario are:
+
+- **Access token forgery**: the third party (TP) could forge access tokens in the name of the user, and use them to access the cold storage.\
+    Shares are still encrypted with user entropy, which brings us to the next point.
+- **Share or encryption key bruteforcing**: either by forging tokens or accessing cold storage directly, the third party could
+    try to decrypt the encrypted keys through brute-forcing.
+
+Scenarios in which the party controlling the cold storage is also responsible for automatic recovery
+share keeping, password-based recovery provides more protection than automatic recovery since
+the provider has access to all the required entropy to decrypt the cold storage share.
+
+### Scenario 4
+
+| Cold Storage | Auth Service | Hot Storage | iFrame |
+|---|---|---|---|
+| <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+
+We expect this to be a common scenario: the implementations provided by Openfort are self-hosted,
+while the ones defined as unimplemented APIs are hosted by a third party such as Openfort.
+
+The biggest risk in this scenario is the third party forging access tokens in the name of the user,
+and accepting them from the hot storage; as they implement and control both.
+Unlike in [scenario 3](/introduction/security#scenario-3), the hot shares are not encrypted with user
+entropy which makes them vulnerable to access token forgery.
+
+### Scenario 5
+
+| Cold Storage | Auth Service | Hot Storage | iFrame |
+|---|---|---|---|
+| <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+
+In this scenario, all the third party controls are the cold and hot storages.
+That, when combined with the brute-force risk mentioned in [scenario 3](/introduction/security#scenario-3),
+could be enough to reconstruct the users' private keys.
+
+### Scenario 6
+
+> Fully hosted by a third party, such as Openfort.
+
+| Cold Storage | Auth Service | Hot Storage | iFrame |
+|---|---|---|---|
+| <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+
+In this scenario, a single third party entity (Openfort) is responsible for all components.
+Because it hosts both the hot and cold storage, it is necessary to encrypt at least one of those
+two shares to prevent the host from accessing the full key. There are two safe approaches:
+
+1. User entropy: only the user knows a password that is required to decrypt the cold storage share.
+2. Automatic recovery: there is an encryption key; split between the user and the cold storage,
+that is used to encrypt and decrypt the cold storage share. The cold storage is temporarily granted
+access to the user's encryption share through a one-time access method, invoked by the user.
+
+The point of both approaches is the same: make user action a requirement to access the key.
+
+Making encryption key shares a one-time access thing in the cold storage,
+as well as the final key a one-time access thing in the iframe,
+has the objective of preventing key usage without user action.
+
+Third party providers that manage users' automatic recovery and the authentication service
+could, in theory, forge access tokens representing users and gain access to the recovery shares
+of those who have automatic recovery configured. Users should be made aware of this risk when
+configuring automatic recovery. In this scenario we recommend using 2FA to protect user accounts.
+
+Another important aspect to take into account when using automatic recovery is who owns what resources.
+If the organization in charge of the cold storage starts a project within it they'll be able to reconstruct the project-wide encryption key on their own.
+Projects must be managed by someone who doesn't directly control the cold storage to avoid this scenario.
+
+## Tampering
+
+If the following components are tampered by a third party or compromised while on the developer's control,
+the following issues may arise:
+
+- **iframe**: the iframe is the only component with access to the full, reconstructed key.
+    If the iframe is compromised, the attacker could use the key to impersonate the user
+    and interact with the chain on their behalf.
+
+- **auth service**: having a compromised auth service has, besides the usual implications,
+    some risks _if the storages are also compromised_. The auth service could forge an access
+    token and have the hot or cold storage accept them. Users could then attempt to perform
+    an operation unaware of the forgery, and provide their recovery share entropy to the attacker
+    when trying to log into a new device.
+
+- **hot storage**: if the hot storage is compromised or tampered with, attackers have access to one
+    of the two shares required to reconstruct the key.
+
+- **cold storage**: the risk of a compromised cold storage is, in isolation, lesser than that of the hot storage.
+    This is due to the fact that the cold storage share is encrypted with user entropy, and access to the cold storage
+    alone is not enough to reconstruct the recovery share. When combined with other compromised components,
+    however, the risk might become more significant.
+
+## Good Practices
+
+- Always validate tokens: expiration, issuer, contents...
+- Don't log sensitive data, such as access tokens or key shares.
+- Enforce valid TLS.
+- Run services in Trusted Execution Environments (TEE) when possible.
+- Set TTLs for access tokens to limit their validity period.

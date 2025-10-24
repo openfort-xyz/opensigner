@@ -1,0 +1,27 @@
+# Setup
+
+The project Makefile makes it easy to build and run all the components through docker-compose.
+
+Building the images might take a bit, specially to build the better auth component used to run the authentication
+service database migrations: [`@better-auth/cli`](https://www.npmjs.com/package/@better-auth/cli).
+
+First let's clone the project:
+
+```shell
+git clone https://github.com/openfort-xyz/opensigner.git
+```
+
+To build the containers, run:
+
+```shell
+make build  # or `make clean build` to remove old images and volumes
+```
+
+To run them, use:
+
+```shell
+make run
+```
+
+The components can be configured through environment variables,
+check out the `env.example` and the `docker-compose.yml` files for a list of available variables.

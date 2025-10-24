@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+/* :root {
+  --vocs-color_background: white;
+}
+
+:root.dark {
+  --vocs-color_background: #232225;
+}
+*/
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+    /* Background */
+    --color-background: var(--vocs-color_background);
+    --color-background-100: var(--vocs-color_background);
+    --color-background-200: var(--vocs-color_background2);
+    --color-background-300: var(--vocs-color_background3);
+    --color-background-400: var(--vocs-color_background4);
+    --color-background-500: var(--vocs-color_background5);
+    --color-background-accent: var(--vocs-color_backgroundAccent);
+    --color-background-accent-hover: var(--vocs-color_backgroundAccentHover);
+    --color-background-accent-text: var(--vocs-color_backgroundAccentText);
+    --color-background-blue-tint: var(--vocs-color_backgroundBlueTint);
+    --color-background-dark: var(--vocs-color_backgroundDark);
+    --color-background-dark-tint: var(--vocs-color_backgroundDarkTint);
+    --color-background-green-tint: var(--vocs-color_backgroundGreenTint);
+    --color-background-green-tint-2: var(--vocs-color_backgroundGreenTint2);
+    --color-background-iris-tint: var(--vocs-color_backgroundIrisTint);
+    --color-background-red-tint: var(--vocs-color_backgroundRedTint);
+    --color-background-red-tint-2: var(--vocs-color_backgroundRedTint2);
+    --color-background-yellow-tint: var(--vocs-color_backgroundYellowTint);
+
+    /* Border */
+    --color-border: var(--vocs-color_border);
+    --color-border-100: var(--vocs-color_border);
+    --color-border-200: var(--vocs-color_border2);
+    --color-border-accent: var(--vocs-color_borderAccent);
+    --color-border-blue: var(--vocs-color_borderBlue);
+    --color-border-green: var(--vocs-color_borderGreen);
+    --color-border-iris: var(--vocs-color_borderIris);
+    --color-border-red: var(--vocs-color_borderRed);
+    --color-border-yellow: var(--vocs-color_borderYellow);
+
+    /* Text */
+    --color-text: var(--vocs-color_text);
+    --color-text-100: var(--vocs-color_text);
+    --color-text-200: var(--vocs-color_text2);
+    --color-text-300: var(--vocs-color_text3);
+    --color-text-400: var(--vocs-color_text4);
+    --color-text-accent: var(--vocs-color_textAccent);
+    --color-text-accent-hover: var(--vocs-color_textAccentHover);
+    --color-text-blue: var(--vocs-color_textBlue);
+    --color-text-blue-hover: var(--vocs-color_textBlueHover);
+    --color-text-green: var(--vocs-color_textGreen);
+    --color-text-green-hover: var(--vocs-color_textGreenHover);
+    --color-text-hover: var(--vocs-color_textHover);
+    --color-text-iris: var(--vocs-color_textIris);
+    --color-text-iris-hover: var(--vocs-color_textIrisHover);
+    --color-text-red: var(--vocs-color_textRed);
+    --color-text-red-hover: var(--vocs-color_textRedHover);
+    --color-text-yellow: var(--vocs-color_textYellow);
+    --color-text-yellow-hover: var(--vocs-color_textYellowHover);
+
+    /* Title & Heading */
+    --color-title: var(--vocs-color_title);
+    --color-heading: var(--vocs-color_heading);
+
+    /* Misc */
+    --color-inverted: var(--vocs-color_inverted);
+    --color-white: var(--vocs-color_white);
+    --color-black: var(--vocs-color_black);
+    --color-shadow: var(--vocs-color_shadow);
+    --color-shadow-2: var(--vocs-color_shadow2);
+}
+
+:root {
+    --vocs-fontSize_subtitle: 1.025rem;
+}
+
+.vocs_NavLogo_logoImage {
+    padding: 2.5px 0px;
+}
+
+.btn {
+    @apply px-3 py-0.5 bg-(--vocs-color_backgroundAccent) text-white rounded-full hover:bg-(--vocs-color_backgroundAccentHover) transition-colors duration-200 ease-in-out;
+}
+
+.btn-bg-200 {
+    @apply bg-(--vocs-color_background2) text-(--vocs-color_text) rounded-full hover:bg-(--vocs-color_background3) transition-colors duration-200 ease-in-out;
+}
+
+.btn-bg-300 {
+    @apply bg-(--vocs-color_background3) text-(--vocs-color_text) rounded-full hover:bg-(--vocs-color_background4) transition-colors duration-200 ease-in-out;
+}
+
+.btn-bg-400 {
+    @apply bg-(--vocs-color_background4) text-(--vocs-color_text) rounded-full hover:bg-(--vocs-color_background5) transition-colors duration-200 ease-in-out;
+}

@@ -1,0 +1,452 @@
+openapi: 3.0.0
+info:
+  title: OpenSigner Auth Service API
+  version: 1.0.0
+
+# Tag definitions for grouping
+# ===========================
+tags:
+  - name: OAuth
+    description: Endpoints for OAuth authentication (Google, Twitter, Facebook, Discord, Epic Games, Line, Apple)
+  - name: Third-Party OAuth
+    description: Endpoints for third-party OAuth authentication (Accelbyte, Firebase, Lootlocker, Playfab, Supabase, Custom, OIDC)
+  - name: Basic Auth
+    description: Endpoints for basic authentication (email/password, wallet/SIWE)
+
+# =====================
+# OAuth Authentication
+# =====================
+paths:
+  /iam/v1/oauth/init:
+    post:
+      summary: Initialize OAuth
+      tags: [OAuth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OAuthInitRequest"
+      responses:
+        "201":
+          description: Success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthResponse"
+        "401":
+          description: Api key is not valid
+
+  /iam/v1/oauth/pool:
+    post:
+      summary: Pool OAuth (polling)
+      tags: [OAuth]
+      parameters:
+        - in: query
+          name: key
+          schema:
+            type: string
+          required: true
+      responses:
+        "200":
+          description: Success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Api key is not valid
+
+  /iam/v1/oauth/login_id_token:
+    post:
+      summary: Login with ID Token (OAuth)
+      tags: [OAuth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginWithIdTokenRequest"
+      responses:
+        "200":
+          description: Success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Unauthorized
+
+  /iam/v1/oauth/verify:
+    post:
+      summary: Verify OAuth/Third-Party OAuth Token
+      tags: [OAuth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthenticateOAuthRequest"
+      responses:
+        "200":
+          description: Success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerResponse"
+        "401":
+          description: Unauthorized
+
+  # ============================
+  # Third-Party OAuth
+  # ============================
+  /iam/v1/oauth/link:
+    post:
+      summary: Link Third-Party OAuth
+      tags: [Third-Party OAuth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ThirdPartyLinkRequest"
+      responses:
+        "201":
+          description: Success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthPlayerResponse"
+        "401":
+          description: Api key is not valid
+
+  /iam/v1/oauth/third_party:
+    post:
+      summary: Authenticate with Third-Party OAuth
+      tags: [Third-Party OAuth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ThirdPartyOAuthRequest"
+      responses:
+        "200":
+          description: Success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthPlayerResponse"
+        "401":
+          description: Unauthorized
+
+  # =====================
+  # Basic Authentication
+  # =====================
+  /iam/v1/password/signup:
+    post:
+      summary: Email/Password Signup
+      tags: [Basic Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+      responses:
+        "201":
+          description: Success response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/AuthResponse"
+                  - $ref: "#/components/schemas/ActionRequiredResponse"
+        "401":
+          description: Api key is not valid
+        "409":
+          description: User already exists
+
+  /iam/v1/password/login:
+    post:
+      summary: Email/Password Login
+      tags: [Basic Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Success response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/AuthResponse"
+                  - $ref: "#/components/schemas/ActionRequiredResponse"
+        "401":
+          description: Unauthorized
+
+  /iam/v1/siwe/authenticate:
+    post:
+      summary: Wallet (SIWE) Authentication
+      tags: [Basic Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SIWEAuthenticateRequest"
+      responses:
+        "200":
+          description: Success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Unauthorized
+
+# =====================
+# Shared Schemas
+# =====================
+components:
+  schemas:
+    OAuthInitRequest:
+      type: object
+      properties:
+        options:
+          type: object
+          properties:
+            redirectTo:
+              type: string
+            queryParams:
+              type: object
+              additionalProperties:
+                type: string
+            callbackTo:
+              type: string
+        usePooling:
+          type: boolean
+        provider:
+          type: string
+          enum: [google, twitter, facebook, discord, epic_games, line, apple]
+          example: google
+      required: [provider]
+
+    OAuthResponse:
+      type: object
+      properties:
+        key:
+          type: string
+          description: State key for OAuth session
+        url:
+          type: string
+          description: Authorization URL
+
+    LoginWithIdTokenRequest:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum: [apple, google]
+          example: google
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+      required: [provider, token]
+
+    AuthenticateOAuthRequest:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum:
+            [
+              google,
+              twitter,
+              facebook,
+              discord,
+              epic_games,
+              line,
+              apple,
+              accelbyte,
+              firebase,
+              lootlocker,
+              playfab,
+              supabase,
+              custom,
+              oidc,
+            ]
+          example: google
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+        tokenType:
+          type: string
+          example: idToken
+        expand:
+          type: array
+          items:
+            type: string
+      required: [provider, token, tokenType]
+
+    ThirdPartyLinkRequest:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum:
+            [accelbyte, firebase, lootlocker, playfab, supabase, custom, oidc]
+          example: firebase
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+        tokenType:
+          type: string
+          example: idToken
+      required: [provider, token, tokenType]
+
+    ThirdPartyOAuthRequest:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum:
+            [accelbyte, firebase, lootlocker, playfab, supabase, custom, oidc]
+          example: firebase
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+        tokenType:
+          type: string
+          example: idToken
+      required: [provider, token, tokenType]
+
+    SignupRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          example: user@email.com
+        password:
+          type: string
+          example: password
+        name:
+          type: string
+          example: John Doe
+        description:
+          type: string
+          example: I'm a developer.
+      required: [email, password]
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          example: user@email.com
+        password:
+          type: string
+          example: password
+      required: [email, password]
+
+    SIWEAuthenticateRequest:
+      type: object
+      properties:
+        signature:
+          type: string
+          example: 0x1773ca2e6514a795bc9549ffbdf73909b2cd0ba8eafe52a1751c3ee8d644458701debd502ee5b5a8fca24606eee42a2cc756a04958c7c189913184d46c48783e1b
+        message:
+          type: string
+          example: demo.openfort.xyz wants you to sign in with your Ethereum account
+        walletClientType:
+          type: string
+          example: metamask
+        connectorType:
+          type: string
+          example: injected
+      required: [signature, message, walletClientType, connectorType]
+
+    AuthResponse:
+      type: object
+      properties:
+        player:
+          $ref: "#/components/schemas/AuthPlayerResponse"
+        token:
+          type: string
+          description: JWT access token
+        refreshToken:
+          type: string
+          description: Refresh token
+
+    ActionRequiredResponse:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [verify_email]
+
+    AuthPlayerResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        metadata:
+          type: object
+        linkedAccounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/LinkedAccountResponse"
+        player:
+          $ref: "#/components/schemas/PlayerResponse"
+
+    LinkedAccountResponse:
+      type: object
+      properties:
+        provider:
+          type: string
+        email:
+          type: string
+        externalUserId:
+          type: string
+        connectorType:
+          type: string
+        walletClientType:
+          type: string
+        disabled:
+          type: boolean
+        verified:
+          type: boolean
+        updatedAt:
+          type: integer
+        address:
+          type: string
+        metadata:
+          type: object
+
+    PlayerResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        metadata:
+          type: object
+        transactionIntents:
+          type: array
+          items:
+            type: object
+        accounts:
+          type: array
+          items:
+            type: object

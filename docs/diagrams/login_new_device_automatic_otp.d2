@@ -1,0 +1,104 @@
+...@themes/default
+
+shape: sequence_diagram
+
+admin: {
+    label: "Admin"
+    shape: image
+    icon: "./icons/admin.svg"
+    width: 20
+}
+
+user: {
+    label: "User"
+    shape: image
+    icon: "./icons/user.svg"
+}
+
+iframe: {
+    label: "iFrame"
+    shape: image
+    icon: "./icons/iframe.svg"
+}
+
+local: {
+    label: "Cache"
+    shape: image
+    icon: "./icons/db.svg"
+}
+
+hot: {
+    label: "Hot Storage"
+    shape: image
+    icon: "./icons/db.svg"
+}
+
+cold: {
+    label: "Cold Storage"
+    shape: image
+    icon: "./icons/db.svg"
+}
+
+auth: {
+    label: "Auth Service"
+    shape: image
+    icon: "./icons/identity.svg"
+}
+
+Create encrypted session: {
+    admin -> cold: {
+        label: "POST /project/otp\n{\"userId\": <userId>, \"email\": <email>}"
+    }
+
+    cold -> user: {
+        label: "Send generated OTP\nover email or SMS"
+    }
+
+    user -> admin: {
+        label: "Pass OTP"
+    }
+    
+    admin -> cold: {
+        label: "POST /project/encryption_session\n{\"encryptionPart\": <encKeyShare2>,\n\"otpCode\": <OTP Code>}"
+        icon: "./icons/key_share_2_alt.png"
+    }
+
+    cold."Maps the encryption key\nshare to a sessionId that\ncan only be used once.\nAnd verify if OTP is correct."
+
+    cold -> admin: {
+        label: "sessionId: UUID"
+    }
+
+    admin -> user {
+        label: "sessionId"
+    }
+
+    user -> iframe: {
+        label: "sessionId"
+    }
+
+    iframe -> cold: {
+        label: "GET /cold_storage/sessionId\nAuthorization: Bearer JWT\nX-User-ID: userId\nX-Encryption-Session: sessionId"
+    }
+
+    cold."Check if session key was created with OTP.\nAnd if not - throw an error."
+
+    cold -> auth: {
+        label: "validate JWT"
+    }
+
+    cold -> cold: {
+        label: "Reconstruct cold share\n(see diagram above)"
+        icon: "./icons/key_share_3.png"
+    }
+
+    cold -> cold: {
+        label: "delete"
+        icon: "./icons/key_share_2_alt.png"
+    }
+
+    cold -> iframe: {
+        label: "cold_share"
+        icon: "./icons/key_share_3.png"
+    }
+}

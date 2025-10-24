@@ -1,0 +1,73 @@
+...@themes/default
+
+direction: right
+
+diagramStart: {
+    style.opacity: 0
+
+    user: {
+        label: "user encryption share\n(received in `/v2/devices/register`)"
+        shape: image
+        icon: "./icons/key_share_2_alt.png"
+    }
+
+    cold: {
+        label: "cold encryption share\n(stored in cold database\nat key creation)"
+        shape: image
+        icon: "./icons/key_share_1_alt.png"
+    }
+    
+    db: {
+        label: "cold database"
+        shape: image
+        icon: "./icons/db.svg"
+    }
+}
+
+encKey: {
+    label: "encryption key"
+    shape: image
+    icon: "./icons/key_alt.png"
+}
+
+share: {
+    label: "cold private key share"
+    shape: image
+    icon: "./icons/key_share_3.png"
+}
+
+sss: {
+    label: "SSS"
+    shape: diamond
+}
+
+decrypt: {
+    label: "decrypt"
+    shape: diamond
+}
+
+diagramStart.db -> decrypt: {
+    label: "encrypted private key cold share"
+    style.animated: true
+}
+
+diagramStart.user -> sss: {
+    style.animated: true
+}
+
+diagramStart.cold -> sss: {
+    style.animated: true
+}
+
+sss -> encKey: {
+    style.animated: true
+}
+
+encKey -> decrypt: {
+    style.animated: true
+}
+
+decrypt -> share: {
+    label: "private key share"
+    style.animated: true
+}

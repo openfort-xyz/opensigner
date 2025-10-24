@@ -1,0 +1,42 @@
+...@themes/default
+
+direction: right
+
+from: {
+    style.opacity: 0
+
+    onmachine: {
+        label: "in-process"
+        shape: text
+    }
+
+    overnetwork: {
+        label: "over the network"
+        shape: text
+    }
+}
+
+to: {
+    style.opacity: 0
+
+    _1: {
+        label: "1"
+        shape: text
+        style.opacity: 0
+    }
+
+    _2: {
+        label: "1"
+        shape: text
+        style.opacity: 0
+    }
+}
+
+from.onmachine -- to._1: {
+    style.animated: false
+}
+
+from.overnetwork -- to._2: {
+    style.animated: true
+}
+

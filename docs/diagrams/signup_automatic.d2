@@ -1,0 +1,165 @@
+...@themes/default
+
+direction: right
+
+user: {
+    label: "User"
+    shape: image
+    icon: "./icons/user.svg"
+}
+
+
+local: {
+    label: "Cache\n(Browser Storage)"
+    shape: image
+    icon: "./icons/db.svg"
+}
+
+iframe: {
+    label: "iFrame"
+    style: {
+        fill: "#f0f0f0"
+        opacity: 0.4
+    }
+
+    key: {
+        label: "Private Key"
+        shape: image
+        icon: "./icons/key.png"
+    }
+
+    keySss: {
+        label: "SSS"
+        shape: diamond
+    }
+
+    shares: {
+        style.opacity: 0
+        share1: {
+            label: "Private Share 1\n(Device)"
+            shape: image
+            icon: "./icons/key_share_1.png"
+        }
+
+        share2: {
+            label: "Private Share 2\n(Hot)"
+            shape: image
+            icon: "./icons/key_share_2.png"
+        }
+
+        share3: {
+            label: "Private Share 3\n(Cold)"
+            shape: image
+            icon: "./icons/key_share_3.png"
+        }
+    }
+}
+
+coldFrame: {
+    label: "Cold Storage"
+    style: {
+        fill: "#f0f0f0"
+        opacity: 0.4
+    }
+
+    cold: {
+        label: "Cold Storage DB"
+        shape: image
+        icon: "./icons/db.svg"
+    }
+
+    encKey: {
+        label: "Encription Key"
+        shape: image
+        icon: "./icons/key_alt.png"
+    }
+
+    coldEncrypt: {
+        label: "Encrypt"
+        shape: diamond
+    }
+
+    encKeySss: {
+        label: "SSS"
+        shape: diamond
+    }
+
+    encShare1: {
+        label: "Enc Share 1"
+        shape: image
+        icon: "./icons/key_share_1_alt.png"
+    }
+
+    encShare2: {
+        label: "Enc Share 2"
+        shape: image
+        icon: "./icons/key_share_2_alt.png"
+    }
+}
+
+hot: {
+    label: "Hot Storage"
+    shape: image
+    icon: "./icons/db.svg"
+}
+
+user -> iframe.key {
+    label: "owns"
+}
+
+iframe.key -> iframe.keySss {
+    # style.animated: true
+}
+
+iframe.keySss -> iframe.shares.share1 {
+}
+
+iframe.keySss -> iframe.shares.share2 {
+}
+
+iframe.keySss -> iframe.shares.share3 {
+}
+
+iframe.shares.share2 -- hot {
+    label: "store"
+    style.animated: true
+}
+
+iframe.shares.share1 -> local {
+    label: "store"
+} 
+
+coldFrame.encKey -> coldFrame.encKeySss {
+    # style.animated: true
+}
+
+coldFrame.encKeySss -> coldFrame.encShare1 {
+}
+
+coldFrame.encKeySss -> coldFrame.encShare2 {
+}
+
+user -- coldFrame.encShare2 {
+    label: "keeps\n(app developers could\nkeep it for users)"
+    style.animated: true
+}
+
+coldFrame.encShare1 -- coldFrame.cold {
+    label: "store"
+}
+
+coldFrame.encKey -> coldFrame.coldEncrypt {
+    label: "as entropy"
+}
+
+iframe.shares.share3 -- coldFrame.coldEncrypt {
+    label: "as data"
+    style.animated: true
+}
+
+coldFrame.coldEncrypt -- coldFrame.cold {
+    label: "store"
+}
+
+
+

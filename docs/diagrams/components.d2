@@ -1,0 +1,43 @@
+...@themes/default
+
+direction: right
+
+vars: {
+    d2-config: {
+        theme-overrides: {
+            B2: "#fc3c2f"
+            AA2: "#3b7eee"
+			AA4: "#a7b4eb"
+        }
+        layout-engine: elk {
+            spacing.nodeNode: 15
+            layered.spacing.nodeNodeBetweenLayers: 25
+            layered.edgeRouting: "ORTHOGONAL"
+        }
+    }
+}
+
+iframe: {
+    label: "iframe\n(in-browser)"
+}
+
+storage: {
+    label: "key share storage"
+    style.multiple: true
+}
+
+auth: {
+    label: "auth service"
+}
+
+iframe <-> storage: {
+    label: "put/get share\nwith access token"
+}
+
+iframe <-> auth: {
+    label: "get acess token"
+}
+
+storage <-> auth: {
+    label: "validate access token"
+}

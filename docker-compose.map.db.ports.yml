@@ -1,0 +1,7 @@
+services:
+  postgres:
+    ports:
+      - "${POSTGRES_HOST_PORT:-7056}:5432"
+  mysql:
+    ports:
+      - "${MYSQL_HOST_PORT:-7057}:3306"

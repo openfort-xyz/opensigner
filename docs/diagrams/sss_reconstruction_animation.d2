@@ -1,0 +1,64 @@
+...@themes/default
+
+direction: right
+
+Key: {
+    label: "Key"
+    shape: image
+    icon: "./icons/key.png"
+}
+SSS: {
+    label: "SSS"
+    shape: image
+    shape: diamond
+}
+Share1: {
+    label: "Share 1"
+    shape: image
+    icon: "./icons/key_share_1.png"
+}
+Share2: {
+    label: "Share 2"
+    shape: image
+    icon: "./icons/key_share_2.png"
+}
+Share3: {
+    label: "Share 3"
+    shape: image
+    icon: "./icons/key_share_3.png"
+    style.opacity: 0.2
+}
+
+Share1 -> SSS: {
+    style.animated: true
+}
+Share2 -> SSS: {
+    style.animated: true
+}
+Share3 -> SSS: {
+    style.animated: true
+    style.opacity: 0
+}
+
+SSS -> Key: {
+    style.animated: true
+}
+
+scenarios: {
+    pair2: {
+        Share1.style.opacity: 1
+        Share2.style.opacity: 0.2
+        Share3.style.opacity: 1
+        (Share1 -> SSS)[0].style.opacity: 1
+        (Share2 -> SSS)[0].style.opacity: 0
+        (Share3 -> SSS)[0].style.opacity: 1
+    }
+    pair3: {
+        Share1.style.opacity: 0.2
+        Share2.style.opacity: 1
+        Share3.style.opacity: 1
+        (Share1 -> SSS)[0].style.opacity: 0
+        (Share2 -> SSS)[0].style.opacity: 1
+        (Share3 -> SSS)[0].style.opacity: 1
+    }
+}

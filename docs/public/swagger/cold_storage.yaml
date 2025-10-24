@@ -1,0 +1,896 @@
+openapi: 3.0.3
+info:
+  title: Openfort Cold Storage API
+  description: |
+    Shield by Openfort is a secure service dedicated to the protection of sensitive data. 
+    It ensures the confidentiality and security of data management by offering a robust 
+    framework for storing secrets and encryption parameters.
+  version: 0.0.1
+  contact:
+    name: Openfort
+    url: https://www.openfort.io/
+    email: support@openfort.io
+
+security:
+  - ApiKeyAuth: []
+  - ApiSecretAuth: []
+  - BearerAuth: []
+
+paths:
+  /shares:
+    post:
+      tags:
+        - Shares
+      summary: Register Share
+      description: Registers a new share for the authenticated user
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AuthProvider'
+        - $ref: '#/components/parameters/OpenfortProvider'
+        - $ref: '#/components/parameters/OpenfortTokenType'
+        - $ref: '#/components/parameters/EncryptionPart'
+        - $ref: '#/components/parameters/EncryptionSession'
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterShareRequest'
+      responses:
+        '201':
+          description: Share registered successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags:
+        - Shares
+      summary: Update Share
+      description: Updates an existing share for the authenticated user
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AuthProvider'
+        - $ref: '#/components/parameters/OpenfortProvider'
+        - $ref: '#/components/parameters/OpenfortTokenType'
+        - $ref: '#/components/parameters/EncryptionPart'
+        - $ref: '#/components/parameters/EncryptionSession'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateShareRequest'
+      responses:
+        '200':
+          description: Share updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateShareResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    get:
+      tags:
+        - Shares
+      summary: Get Share
+      description: Retrieves share details for the authenticated user
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AuthProvider'
+        - $ref: '#/components/parameters/OpenfortProvider'
+        - $ref: '#/components/parameters/OpenfortTokenType'
+        - $ref: '#/components/parameters/EncryptionPart'
+        - $ref: '#/components/parameters/EncryptionSession'
+      responses:
+        '200':
+          description: Share details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetShareResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Shares
+      summary: Delete Share
+      description: Deletes the share for the authenticated user
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AuthProvider'
+        - $ref: '#/components/parameters/OpenfortProvider'
+        - $ref: '#/components/parameters/OpenfortTokenType'
+        - $ref: '#/components/parameters/EncryptionPart'
+        - $ref: '#/components/parameters/EncryptionSession'
+      responses:
+        '204':
+          description: Share deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /register:
+    post:
+      tags:
+        - Projects
+      summary: Create Project
+      description: Creates a new project with API keys and optional encryption key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: Project created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateProjectResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /project:
+    get:
+      tags:
+        - Projects
+      summary: Get Project
+      description: Retrieves project details
+      security:
+        - ApiKeyAuth: []
+        - ApiSecretAuth: []
+      responses:
+        '200':
+          description: Project details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetProjectResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /project/providers:
+    post:
+      tags:
+        - Providers
+      summary: Add Providers
+      description: Adds authentication providers to the project
+      security:
+        - ApiKeyAuth: []
+        - ApiSecretAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddProvidersRequest'
+      responses:
+        '200':
+          description: Providers added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddProvidersResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    get:
+      tags:
+        - Providers
+      summary: Get Providers
+      description: Retrieves all providers associated with the project
+      security:
+        - ApiKeyAuth: []
+        - ApiSecretAuth: []
+      responses:
+        '200':
+          description: Providers retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetProvidersResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /project/providers/{provider}:
+    get:
+      tags:
+        - Providers
+      summary: Get Provider
+      description: Retrieves details of a specific provider
+      security:
+        - ApiKeyAuth: []
+        - ApiSecretAuth: []
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          description: Provider ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Provider details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetProviderResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags:
+        - Providers
+      summary: Update Provider
+      description: Updates a specific provider's configuration
+      security:
+        - ApiKeyAuth: []
+        - ApiSecretAuth: []
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          description: Provider ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProviderRequest'
+      responses:
+        '200':
+          description: Provider updated successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Providers
+      summary: Delete Provider
+      description: Deletes a specific provider from the project
+      security:
+        - ApiKeyAuth: []
+        - ApiSecretAuth: []
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          description: Provider ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Provider deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /project/encrypt:
+    post:
+      tags:
+        - Encryption
+      summary: Encrypt Project Shares
+      description: Encrypts all project shares using the provided encryption part
+      security:
+        - ApiKeyAuth: []
+        - ApiSecretAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EncryptBodyRequest'
+      responses:
+        '200':
+          description: Shares encrypted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /project/encryption-session:
+    post:
+      tags:
+        - Encryption
+      summary: Register Encryption Session
+      description: Creates a one-time encryption session for secure operations
+      security:
+        - ApiKeyAuth: []
+        - ApiSecretAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterEncryptionSessionRequest'
+      responses:
+        '200':
+          description: Encryption session registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterEncryptionSessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /project/encryption-key:
+    post:
+      tags:
+        - Encryption
+      summary: Register Encryption Key
+      description: Generates and registers a new encryption key for the project
+      security:
+        - ApiKeyAuth: []
+        - ApiSecretAuth: []
+      responses:
+        '200':
+          description: Encryption key registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterEncryptionKeyResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /project/otp:
+    post:
+      summary: Request OTP
+      description: Generate and send a one-time password (OTP) to a user via email or phone
+      tags:
+        - Projects
+      security:
+        - ApiKeyAuth: []
+        - ApiSecretAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+              properties:
+                user_id:
+                  type: string
+                  description: The unique identifier of the user
+                dangerously_skip_verification:
+                  type: boolean
+                  description: Skip verification checks (use with caution)
+                  default: false
+                email:
+                  type: string
+                  format: email
+                  description: Email address to send OTP (mutually exclusive with phone)
+                phone:
+                  type: string
+                  description: Phone number to send OTP (mutually exclusive with email)
+              description: Either email or phone must be provided, but not both
+      responses:
+        '200':
+          description: OTP generated and sent successfully
+        '400':
+          description: Bad Request - Invalid parameters or request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Project not found or OTP record not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: OTP rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token for user authentication
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Project API Key
+    ApiSecretAuth:
+      type: apiKey
+      in: header
+      name: X-API-Secret
+      description: Project API Secret
+
+  parameters:
+    AuthProvider:
+      name: X-Auth-Provider
+      in: header
+      required: true
+      description: Authentication provider type
+      schema:
+        type: string
+        enum: [openfort, custom]
+    OpenfortProvider:
+      name: X-Openfort-Provider
+      in: header
+      required: false
+      description: Openfort provider details (required when using third-party with Openfort)
+      schema:
+        type: string
+    OpenfortTokenType:
+      name: X-Openfort-Token-Type
+      in: header
+      required: false
+      description: Openfort token type (required when using third-party with Openfort)
+      schema:
+        type: string
+    EncryptionPart:
+      name: X-Encryption-Part
+      in: header
+      required: false
+      description: Encryption part for decrypting shares
+      schema:
+        type: string
+    EncryptionSession:
+      name: X-Encryption-Session
+      in: header
+      required: false
+      description: Encryption session ID for secure operations
+      schema:
+        type: string
+    UserId:
+      name: X-User-ID
+      in: header
+      required: false
+      description: User ID for admin operations (when using API Key/Secret auth)
+      schema:
+        type: string
+
+  schemas:
+    RegisterShareRequest:
+      type: object
+      required:
+        - secret
+        - entropy
+      properties:
+        secret:
+          type: string
+          description: The secret value to be stored
+          example: "some_secret_value"
+        entropy:
+          type: string
+          enum: [none, user, project]
+          description: Encryption type for the share
+          example: "user"
+        salt:
+          type: string
+          description: Salt used for encryption (required for user entropy)
+          example: "some_salt_value"
+        iterations:
+          type: integer
+          description: Number of iterations for encryption algorithm
+          example: 1000
+        length:
+          type: integer
+          description: Length of the encrypted data
+          example: 256
+        digest:
+          type: string
+          description: Hashing algorithm used
+          example: "sha256"
+        encryption_part:
+          type: string
+          description: Encryption part for project entropy
+          example: "part_value"
+        encryption_session:
+          type: string
+          description: Session ID for encryption operations
+          example: "session_value"
+
+    UpdateShareRequest:
+      type: object
+      required:
+        - secret
+        - entropy
+      properties:
+        secret:
+          type: string
+          description: The updated secret value
+          example: "updated_secret_value"
+        entropy:
+          type: string
+          enum: [none, user, project]
+          description: Encryption type for the share
+          example: "project"
+        salt:
+          type: string
+          description: Updated salt for encryption
+          example: "updated_salt_value"
+        iterations:
+          type: integer
+          description: Updated number of iterations
+          example: 2000
+        length:
+          type: integer
+          description: Updated length of encrypted data
+          example: 512
+        digest:
+          type: string
+          description: Updated hashing algorithm
+          example: "sha512"
+        encryption_part:
+          type: string
+          description: Updated encryption part
+          example: "updated_part_value"
+        encryption_session:
+          type: string
+          description: Updated session ID
+          example: "updated_session_value"
+
+    UpdateShareResponse:
+      type: object
+      properties:
+        secret:
+          type: string
+          example: "updated_secret_value"
+        entropy:
+          type: string
+          example: "project"
+        salt:
+          type: string
+          example: "updated_salt_value"
+        iterations:
+          type: integer
+          example: 2000
+        length:
+          type: integer
+          example: 512
+        digest:
+          type: string
+          example: "sha512"
+        encryption_part:
+          type: string
+          example: "updated_part_value"
+        encryption_session:
+          type: string
+          example: "updated_session_value"
+
+    GetShareResponse:
+      type: object
+      properties:
+        secret:
+          type: string
+          example: "some_secret_value"
+        entropy:
+          type: string
+          example: "user"
+        salt:
+          type: string
+          example: "some_salt_value"
+        iterations:
+          type: integer
+          example: 1000
+        length:
+          type: integer
+          example: 256
+        digest:
+          type: string
+          example: "sha256"
+        encryption_part:
+          type: string
+          example: "part_value"
+        encryption_session:
+          type: string
+          example: "session_value"
+
+    CreateProjectRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Name of the project
+          example: "My Project"
+        generate_encryption_key:
+          type: boolean
+          description: Whether to generate an encryption key during creation
+          example: true
+
+    CreateProjectResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique project identifier
+          example: "project_id"
+        name:
+          type: string
+          description: Project name
+          example: "My Project"
+        api_key:
+          type: string
+          description: Generated API key for the project
+          example: "generated_api_key"
+        api_secret:
+          type: string
+          description: Generated API secret for the project
+          example: "generated_api_secret"
+        encryption_part:
+          type: string
+          description: Generated encryption part (if requested)
+          example: "generated_encryption_part"
+
+    GetProjectResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Project identifier
+          example: "project_id"
+        name:
+          type: string
+          description: Project name
+          example: "My Project"
+
+    AddProvidersRequest:
+      type: object
+      properties:
+        providers:
+          type: object
+          properties:
+            openfort:
+              type: object
+              properties:
+                publishable_key:
+                  type: string
+                  description: Openfort publishable key
+                  example: "openfort_publishable_key"
+            custom:
+              type: object
+              properties:
+                jwk:
+                  type: string
+                  description: JSON Web Key for custom provider
+                  example: "custom_jwk"
+                pem:
+                  type: string
+                  description: PEM certificate for custom provider
+                  example: "custom_pem"
+                key_type:
+                  type: string
+                  enum: [rsa, ecdsa]
+                  description: Key type for custom provider
+                  example: "rsa"
+
+    AddProvidersResponse:
+      type: object
+      properties:
+        providers:
+          type: array
+          items:
+            type: object
+            properties:
+              provider_id:
+                type: string
+                description: Unique provider identifier
+                example: "openfort_provider_id"
+              type:
+                type: string
+                enum: [openfort, custom]
+                description: Provider type
+                example: "openfort"
+
+    GetProvidersResponse:
+      type: object
+      properties:
+        providers:
+          type: array
+          items:
+            type: object
+            properties:
+              provider_id:
+                type: string
+                example: "openfort_provider_id"
+              type:
+                type: string
+                enum: [openfort, custom]
+                example: "openfort"
+
+    GetProviderResponse:
+      type: object
+      properties:
+        provider_id:
+          type: string
+          example: "custom_provider_id"
+        type:
+          type: string
+          enum: [openfort, custom]
+          example: "custom"
+        jwk:
+          type: string
+          example: "custom_jwk"
+        pem:
+          type: string
+          example: "custom_pem"
+        key_type:
+          type: string
+          enum: [rsa, ecdsa]
+          example: "rsa"
+        publishable_key:
+          type: string
+          example: "openfort_publishable_key"
+
+    UpdateProviderRequest:
+      type: object
+      properties:
+        publishable_key:
+          type: string
+          description: Updated publishable key for Openfort provider
+          example: "new_publishable_key"
+        jwk:
+          type: string
+          description: Updated JWK for custom provider
+          example: "new_jwk"
+        pem:
+          type: string
+          description: Updated PEM certificate for custom provider
+          example: "new_pem"
+        key_type:
+          type: string
+          enum: [rsa, ecdsa]
+          description: Updated key type for custom provider
+          example: "ecdsa"
+
+    EncryptBodyRequest:
+      type: object
+      required:
+        - encryption_part
+      properties:
+        encryption_part:
+          type: string
+          description: Encryption part for encrypting shares
+          example: "encryption_part_value"
+
+    RegisterEncryptionSessionRequest:
+      type: object
+      required:
+        - encryption_part
+      properties:
+        encryption_part:
+          type: string
+          description: Encryption part for the session
+          example: "encryption_part_value"
+
+    RegisterEncryptionSessionResponse:
+      type: object
+      properties:
+        session_id:
+          type: string
+          description: Generated session identifier
+          example: "generated_session_id"
+
+    RegisterEncryptionKeyResponse:
+      type: object
+      properties:
+        encryption_part:
+          type: string
+          description: Generated encryption part
+          example: "generated_encryption_part"
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code
+        details:
+          type: object
+          description: Additional error details
+
+  responses:
+    BadRequest:
+      description: Bad Request - Invalid request body or parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized - Invalid or missing authentication credentials
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Not Found - The requested resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalServerError:
+      description: Internal Server Error - An unexpected server error occurred
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+tags:
+  - name: Shares
+    description: Operations related to managing user shares
+  - name: Projects
+    description: Operations related to project management
+  - name: Providers
+    description: Operations related to authentication providers
+  - name: Encryption
+    description: Operations related to encryption and security

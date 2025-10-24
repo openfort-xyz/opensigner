@@ -1,0 +1,180 @@
+# Cold Storage
+
+## General Overview
+The Cold Storage, or *Shield*, is where the cold share lives. It basically provides two main services:
+1. Cold share storage
+2. Cold share recovery
+
+Shield relies on the same authentication system as the Hot Storage. That is, an OIDC-compatible authentication system needs to be set up and specified for Shield to be able to recognize and validate users.
+
+
+
+## Technical Considerations
+### Introduction
+Shield is an HTTP server exposing an API. This API is mostly used by iFrame, and no hand-crafted requests should be neither needed nor done by any other HTTP client than that of iFrame's.
+There are a couple exceptions for this: handling project and authentication providers. These two exceptions will be explained in more details in further sections.
+
+In any case, the API specifics can be found in [Shield's official repository](https://github.com/openfort-xyz/shield) `README.md`.
+
+### What the Developer Needs to Know
+#### What Shield Needs
+Shield relies on a MySQL-compatible database for it to run. **Shield has been developed using MariaDB**. This along with other specifics entails taking care of certain environment configurations
+
+```
+# DB related fields, those do NOT have a default value
+DB_HOST=
+DB_PORT=
+DB_USER=
+DB_PASS=
+DB_NAME=
+# URL to the Hot Storage, will be used as base URL for API
+OPENFORT_BASE_URL=
+# Shield's port, default is 8080
+PORT=
+# Requests per second, default is 100
+RPS= 
+# Read timeout, default is 5s
+READ_TIMEOUT=
+# Write timeout, default is 10s
+WRITE_TIMEOUT=
+# Idle timeout, default is 15s
+IDLE_TIMEOUT=
+# CORS Max Age, default is 86400
+CORS_MAX_AGE=
+# CORS extra allowed headers, empty by default
+CORS_EXTRA_ALLOWED_HEADERS=
+```
+
+By `OPENFORT_BASE_URL` we mean the **Hot Storage**. Shield will know about the authentication service once an Authentication Provider is configured for a certain project.
+
+#### About Shield's tech stack and architecture
+Shield is fully written in golang and it relies on a MySQL-compatible database for its persistence layer.
+
+All database interactions are done using golang's ORM, `gorm`. Database migrations are done via `goose`.
+
+The app's entrypoint is CLI-based. It's two main command branches are `db` and `server`.
+
+```
+2025/08/04 09:07:16 INFO Starting OpenFort Shield
+Root command
+
+Usage:
+  shield [command]
+
+Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  db          Database operations
+  help        Help about any command
+  server      Run the server
+
+Flags:
+  -h, --help   help for shield
+
+Use "shield [command] --help" for more information about a command.
+```
+
+The `db` command offers two sub-commands: `create-migration` and `migrate`. `create-migration` creates migrations reflecting the difference between what's modeled in Shield and what's available in the DB schema. This command **doesn't take indexing into account** and we encourage to manually review all generated migrations. `migrate` applies all the migrations that are not present in the current target DB.
+
+The `server` command starts Shield. `server` also detects pending DB migrations and applies them. 
+
+Shield's codebase is structured following an hexagonal architecture approach. That is, each layer is self-contained, and different layers communicate only through agreed-upon ports. When following our codebase, we strongly recommend starting in `server.go` and then going all your way down through whatever handler, service and repository you need to look for.
+
+Shield also features mock entity repositories. This allows anyone to run shield's tests without having to have an actual database up and running. Tests can be run via `go test` or `gotestsum` as it's usual in golang projects.
+
+#### Dockerization & Deploy
+Shield is ready to be Dockerized. No environment variables or build args are needed for this step. A regular `docker build . -t xyz ...` will do the trick.
+
+A Shield container can be then started with a regular `docker run` command. Environment variables can be either specified in the `run` command or by mounting a `.env` file.
+
+Shield will start its HTTP server on port `8080`, so whatever port mapping intending to make a Shield container reachable from the outside should use `8080` as the container port.
+
+Shield doesn't feature any kind of HTTPS support by itself. Secure communications must be enforced via load balancers and/or other front mechanisms.
+
+Shield can also be locally run (e.g. `go cmd/main.go server`) **although we strongly discourage doing so**.
+
+The provided Docker image expects the user providing the proper CLI commands. That is, the image can be used for either DB migrations or running the actual server.
+
+### Security Concerns
+Shield doesn't implement any kind of HTTPS handling by itself: it needs to be done somewhere else and proper routing needs to be implemented in the corresponding load balancers. Same goes for cert validation, IP whitelisting etc. Shield only cares about user and project authentication and it does so by delegating it to the external auth server.
+
+Secure communications are essential here: Shield will communicate unencrypted shares to the iFrame. Any compromise in any of the two endpoints or in the communication channel might give access to a share to unwanted audiences.
+
+## Concepts
+
+### Projects
+A project is a group of users. Each project also features an encryption key needed for automatic share recovery in case it's needed.
+
+### Users
+As mentioned in other sections, the user is the core concept of Keys. Users are who store shares and might need them to recover their keys afterwards.
+
+A user belongs to exactly one project.
+
+### Password Recovery
+Shares can be encrypted/decrypted in `iFrame` based on user-originated entropy.
+
+We'd like to stress the fact that **user-based encryption DOESN'T happen in Shield, it's fully client-side**. Shield will only store the encrypted share and will blindly send it back to the user along with its encryption parameters.
+
+Shield doesn't know, and **cannot** know, if the share encryption was performed as stated in the encryption parameter set.
+
+Shield also **doesn't retrieve externally stored shares**. A share can be stored somewhere else (for now, Google Drive and iCloud). Shield will only store the reference to where the share is stored, but it's up to the client (i.e. the iFrame) to recover the actual share.
+
+When this method is chosen the following happens:
+
+1. The user introduces a password
+2. An encryption key is derived from this password
+3. This password can then be used to encrypt/decrypt their shares
+
+Both encryption and decryption happens in iFrame. Shield will store whatever the users sends to it along with the encryption parameters that have been used to perform such encryption.
+
+The encryption parameters are `salt`, `iterations`, `length` and `digest`. `digest` refers to the hash algorithm used by PBKDF2, not the digested secret itself or anything or the sort.
+
+Following the most common recommendations, [`salt` should be at least 128 bits long](https://csrc.nist.gov/pubs/sp/800/132/final) and [at least 600_000 iterations should be used along with PBKDF2](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#:~:text=If%20FIPS%2D140%20compliance%20is,provides%20no%20additional%20secure%20characteristics).
+
+`length` will always reference to the number of **bytes** of the resulting derived key, not bits, not anything else.
+
+
+### Automatic Recovery
+Cold share recovery can be also done via project-wide entropy. In this case, **both encryption and decryption happen server-side** (understanding *server* as *shield*).
+
+When a project is created, an encryption key for this particular project is created and split between shield and the project. This key is reconstructed and used to encrypt/decrypt shares whenever the entropy source is the project.
+
+### Passkey Recovery
+Cold shares can be encrypted using passkeys.
+
+Whenever a user wants to encrypt/decrypt their share the following happens:
+1. The passkey authenticator will prompt the user to authenticate themselves
+2. If the authentication is successful, a 256bit encryption key will be derived
+3. This encryption key will be used to both encrypt and decrypt their cold share
+4. Shield will then remember the internal passkey ID and certain environment details for that share
+
+#### Authentication process
+**OpenSigner does not rely on webauthn authentication ceremonies**.
+In other words, OpenSigner does not support issuing server-side challenges and validating them.
+As we discussed in previous chapters, user authentication is done and managed by the external auth provider, and Shield will use it as its only source of truth regarding authentication.
+Shield will still require proper user authentication when storing and retrieving shares encrypted using passkeys.
+
+From here on, authentication refers to the process of the user successfully authenticating within the passkey's ecosystem (by introducing a PIN, biometrics, etc).
+This authentication, if successful, makes the authenticator return the following:
+- A signed challenge (which we don't use)
+- A derived 256-bit encryption key
+
+#### The Encryption Key
+Modern passkeys support the Pseudo Random Function (PRF) extension. This extension allows the user to produce pseudo-random noise in a deterministic way using their private key (which never leaves the passkey's authenticator) and some seed.
+OpenSigner relies on this extension to produce a 256-bit encryption key for symmetric encryption of the cold share.
+
+Note that in order to be able this PRF output we both need the private key and the seed.
+
+The seed can remain public and having *access* to the private key requires the user to be authenticated within the passkey's authenticator. OpenSigner uses the user's external ID as the fixed seed.
+
+Using PRF makes server-side challenges unnecessary: an attacker cannot benefit from an old signature since there's no verifier to do replication attacks against, and PRF outputs require being properly authenticated within the passkey's ecosystem.
+
+#### Encrypting and Decrypting
+The derived 256-bit key is then used to symmetrically encrypt and decrypt the cold share.
+OpenSigner uses `AES-CBC` in this case. We deem `AES-CBC` to be enough since shares are of fixed size, rendering potential oracle padding attacks useless.
+Both the encryption and decryption happen client-side: Shield will only see, and interact with, the encrypted contents of the share.
+Having non-authenticated encryption is not a big issue here either: decrypting rubbish will only make further checks (e.g. private key -> address derivation) fail.
+
+#### What Shield Stores
+Shield will store the encrypted contents of the cold share along with the internal passkey ID.
+By *internal passkey ID* we mean the identifier the passkey authenticator gave to that particular passkey.
+OpenSigner also stores the environment in which the passkey was created. This information is mainly extracted from the `User-Agent` token and is meant for both hinting and tracking purposes.
