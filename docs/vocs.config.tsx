@@ -29,6 +29,7 @@ export default defineConfig({
         light: '/icons/open-signer-logo.svg',
         dark: '/icons/open-signer-logo.svg',
     },
+    banner: 'If you like OpenSigner, give it a [star on GitHub ⭐](https://github.com/openfort-xyz/opensigner)!', 
     iconUrl: "/icons/icon.svg",
     sidebar,
     aiCta: true,
