@@ -4,22 +4,28 @@ To create a new key with OpenSigner, users call the `create()` method on the iFr
 The iFrame generates a new private key and splits it into three shares using threshold cryptography.
 Two shares are distributed to hot storage and cold storage respectively, while the third share is stored locally in the localStorage.
 
+The signup process depends on the recovery method:
+
+- **Password Recovery**: User provides a password to encrypt the cold share client-side
+- **Automatic Recovery**: Cold share is encrypted server-side using project entropy
+- **Passkey Recovery**: User creates a passkey to derive an encryption key for the cold share
+
 
 :::info
-The signup diagrams shows data being moved inside the in process or to local storage with continous lines, and the data
+The signup diagrams show data being moved inside the in process or to local storage with continuous lines, and the data
 potentially being transmitted over a network with dashed lines.
 
-<img src="/diagrams/conn_legend.svg" alt="Connection legent" width="60%" style={{ display: "block", margin: "auto" }}/>
+<img src="/diagrams/conn_legend.svg" alt="Connection legend" width="60%" style={{ display: "block", margin: "auto" }}/>
 :::
 
-## User with Password Recovery
+## Password Recovery
 
 When using password-based recovery, the entropy used to encrypt the recovery share is completely provided by the user.
 This ensures the system remains non-custodial and users are in control of their keys.
 
 ![Sign up user with automatic recovery](/diagrams/signup_password.svg)
 
-## User with Automatic Recovery
+## Automatic Recovery
 
 When using *automatic recovery*, the entropy is managed by the cold storage service.
 To secure the recovery share, an encryption key is generated in the cold storage, which is then split into 2 shares with a required quorum of 2 for reconstruction.
@@ -48,7 +54,7 @@ Shield will require an OTP when creating a new encrypted session.
 The OTP will be sent to the user via SMS or email.
 This ensures that the cold share cannot be accessed for key reconstruction without user interaction.
 
-## User with Passkey Recovery
+## Passkey Recovery
 
 OpenSigner uses the passkey Pseudo Random Function (PRF) extension to derive an encryption key to symmetrically encrypt/decrypt the cold share.
 

@@ -22,34 +22,34 @@ if (
 
 }
 export default defineConfig({
-    rootDir: '.',
-    description: 'Open-source and non-custodial and self-hostable private key management.',
-    title: 'OpenSigner | Non-Custodial Key Management',
-    logoUrl: {
-        light: '/icons/open-signer-logo.svg',
-        dark: '/icons/open-signer-logo.svg',
+  rootDir: '.',
+  description: 'Open-source and non-custodial and self-hostable private key management.',
+  title: 'OpenSigner | Non-Custodial Wallet Key Management',
+  logoUrl: {
+    light: '/icons/open-signer-logo.svg',
+    dark: '/icons/open-signer-logo.svg',
+  },
+  banner: 'If you like OpenSigner, give it a [star on GitHub ⭐](https://github.com/openfort-xyz/opensigner)!',
+  iconUrl: "/icons/icon.svg",
+  sidebar,
+  aiCta: true,
+  socials: [
+    {
+      icon: 'github',
+      link: 'https://github.com/openfort-xyz/opensigner',
     },
-    banner: 'If you like OpenSigner, give it a [star on GitHub ⭐](https://github.com/openfort-xyz/opensigner)!', 
-    iconUrl: "/icons/icon.svg",
-    sidebar,
-    aiCta: true,
-    socials: [
-        {
-            icon: 'github',
-            link: 'https://github.com/openfort-xyz/opensigner',
-        },
-        {
-            icon: 'telegram',
-            link: 'https://t.me/openfort',
-        },
-        {
-            icon: 'x',
-            link: 'https://x.com/openfort_hq',
-        }
-    ],
-    theme: {
-        accentColor: { light: '#004AAD', dark: '#004AAD' },
+    {
+      icon: 'telegram',
+      link: 'https://t.me/openfort',
     },
+    {
+      icon: 'x',
+      link: 'https://x.com/openfort_hq',
+    }
+  ],
+  theme: {
+    accentColor: { light: '#004AAD', dark: '#004AAD' },
+  },
   head() {
     return (
       <>

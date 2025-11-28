@@ -3,12 +3,15 @@
 Before recovering a key, the user must call hot storage to retrieve their list of accounts and select the one to recover.
 Once selected, pass the account UUID to the iFrame, which will handle the recovery process.
 
-Depending on whether the user has automatic key recovery or
-password based key recovery:
+The process differs depending on the recovery method:
 
-## User with Password Recovery
+- **Password Recovery**: User provides a password to decrypt the cold share
+- **Automatic Recovery**: Cold share is decrypted server-side using project entropy
+- **Passkey Recovery**: User authenticates with a passkey to derive the decryption key
 
-The user tries to recover the key trough the iFrame. For that, it'll attempt to reconstruct its key
+## Password Recovery
+
+The user tries to recover the key through the iFrame. For that, it'll attempt to reconstruct its key
 and fail due to not having the local share. This share is stored in each device after the user recovers it in that device for the first time.
 
 Instead, the iFrame will fetch the hot and cold shares with the JWT token it'll obtain from the auth service,
@@ -22,7 +25,7 @@ The diagram below shows this process in greater detail.
 
 ![Login user with password-based recovery](/diagrams/login_new_device_password.svg)
 
-## User with Automatic Recovery
+## Automatic Recovery
 
 :::info
 `Admin` and `User` may be the same entity, although that may defeat the purpose of automatic recovery.
@@ -36,7 +39,7 @@ the local and hot shares to reconstruct the private key. The diagram leaves the
 private key reconstruction happening in the cold storage ambiguous, let's delve into it a bit more.
 
 The cold storage has the cold share, but it is encrypted with a key it has no access to.
-They key used to encrypt the cold share was split into shares and deleted after its first usage.
+The key used to encrypt the cold share was split into shares and deleted after its first usage.
 The cold storage kept one of these shares, while the admin kept the other share.
 When the admin called the cold storage `/v2/devices/register` endpoint, it lent
 its share as a one-time way of reconstructing the encryption key and decrypting the cold share.
@@ -49,14 +52,14 @@ by the admin after using it once.
 ### OTP with Automatic Recovery
 
 The flow is the same as with usual automatic recovery above, the only difference is in encrypted session creation - it requires some actions from user.
-Thats why on this diagram showed only encrypted session creation flow.
+That's why on this diagram showed only encrypted session creation flow.
 
 ![Login user with automatic recovery and OTP](/diagrams/login_new_device_automatic_otp.svg)
 
 As shown in the diagram, the admin must request an OTP for the user before proceeding with encrypted session creation.
 If a session is created without the OTP, the cold storage will not return the share to the iFrame, causing the entire key recovery process to fail.
 
-## User with Passkey Recovery
+## Passkey Recovery
 
 When cold shares are encrypted using passkeys, OpenSigner stores the necessary information for it to know
 which passkey it should ask for.

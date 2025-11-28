@@ -4,7 +4,7 @@ The authentication service is responsible for verifying users. The auth service,
 hot storage, and cold storage all share the `user` concept. A user is a `uuid`,
 and the owner of the data it has stored in the storages.
 
-When a user requests data from the storages, it must pass it's user id and access token.
+When a user requests data from the storages, it must pass its user id and access token.
 The storages will then ask the auth service to verify that the access token belongs to
 the user, and only then will they return the requested data.
 
@@ -13,16 +13,14 @@ The authentication service should support two types of authentication:
 - **3rd Party Authentication**: This is the authentication service provided by a third-party provider
 such as Google, Apple, or GitHub.
 
-The authentication service should support two types of authentication: first party and third party.
-
 In both cases, the hot and cold storages expect a JWT token to be passed in the `Authorization` header
-or in a cookie field specified on the request itsef..
+or in a cookie field specified on the request itself.
 
 ## First Party Authentication
 
 In this model, the implementer is fully responsible for user authentication.
 The current model is based on email/password authentication, although it may be
-expandeded to support additional authentication methods, such as passkeys, in the future.
+expanded to support additional authentication methods, such as passkeys, in the future.
 
 ## Third Party Authentication
 

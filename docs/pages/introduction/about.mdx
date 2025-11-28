@@ -4,85 +4,52 @@ import { SVGSequence } from '../../lib/svgsequence.tsx';
 
 ## Overview
 
-One of the most notable challenges is ensuring that someone (but only that someone!) has 
-**continued** access to a *secret*, regardless of whether they reinstall an app, lose their
- phone, or encounter any of the other myriad pitfalls of life.
+One of the most notable challenges in security is ensuring that a user—and *only* that user—has **continued** access to a secret, regardless of device loss, app reinstallation, or other life events.
 
-Unfortunately, the default approach to these problems is often to place the burden directly
- onto the user by requiring them to manage a backup of their secret key.
-These keys are too long to memorize and are challenging for users to store securely. 
-This complexity becomes especially evident when users need to input their key material 
-on a new device, leading some to opt for less secure alternatives instead of navigating the secure platform.
+Traditional approaches often burden the user with managing backups of their secret keys. These keys are long, complex, and difficult to store securely. This complexity often leads users to choose less secure alternatives rather than navigating the secure platform, especially when migrating to a new device.
 
-Different approaches have tried to solve the problem of managing encryption keys. In cryptocurrency, 
-seed phrases turn keys into word lists, which are easier than random characters but still hard to 
-remember. Passkeys remove the need to remember anything, but they're tricky to move between devices 
-and raise questions about how they're backed up.
-
-Password-based encryption tries to turn simple passwords into secure keys through repeated processing. 
-This lets users recover their encryption keys using something they can remember. But these systems are 
-weak against attackers who simply guess passwords over and over until they find the right one.
-A better solution uses special security hardware called HSMs (Hardware Security Modules). 
-These devices limit how many password guesses someone can make. This means short PINs or passwords 
-can safely protect encryption keys without the risk of someone guessing them through brute force.
-
-Companies like Apple, [WhatsApp](https://engineering.fb.com/2021/09/10/security/whatsapp-e2ee-backups/),
- and Signal use this approach. Users typically log in with their account and enter a 6-digit PIN. 
- The security hardware protects this PIN from attackers (including the companies themselves) who might try to guess it repeatedly.
-The downside is that your security now depends on the hardware itself staying secure. If vulnerabilities 
-are discovered in the hardware or its software, your secrets could be at risk. Additionally, secure hardware 
-is often slow, outdated, and expensive, making it hard to use for large-scale systems.
+Various solutions have attempted to address this:
+- **Seed phrases**: Easier than random characters but still difficult to remember and secure.
+- **Passkeys**: Eliminate the need for memory but can be tricky to transfer between devices and raise backup concerns.
+- **Password-based encryption**: Vulnerable to brute-force attacks if the password is weak.
+- **HSMs (Hardware Security Modules)**: Used by companies like Apple, [WhatsApp](https://engineering.fb.com/2021/09/10/security/whatsapp-e2ee-backups/), and Signal. They protect PINs from brute-force attacks but rely on the hardware's security and can be expensive and inflexible.
 
 ## Introducing OpenSigner
 
-We have designed OpenSigner to solve these problems.
+OpenSigner is designed to solve these problems by enabling:
 
-It enables:
+- **Users** to:
+    - Securely store cryptographic keys by splitting them into shares stored in separate locations.
+    - Sign data using an ephemeral reconstruction of their private key, used only for a specific operation.
 
-- **Users**
-    - Securely store cryptographic keys; by splitting the key into shares and storing the shares in separate locations.
-    - Sign data using their cryptographic keys; by creating an ephemeral reconstruction of their private key used only for *one* specific operation.
-
-- **Organizations and Developers**
-    - Easily manage their and their users' cryptographic keys.
-    - Abstract their users from the key recovery process by using our `automatic recovery` feature,
-    or let them be in charge of them through `password recovery` or `passkey recovery`.
-
+- **Organizations and Developers** to:
+    - Easily manage their users' cryptographic keys.
+    - Abstract the key recovery process via `automatic recovery` or empower users with `password recovery` or `passkey recovery`.
 
 ### Architecture
+
 ![Component overview](/diagrams/components.svg)
 
-There are three main components in the OpenSigner architecture.
+OpenSigner consists of three main components:
 
-**iFrame**: Performs user operations and handles key splitting and reconstruction.
-
-**Key share storage**: Keys are split into three shares, and each share is stored in a different location:
-1. **User device**: Key share stored in the user's device within the iframe.
-2. **Hot storage**: External storage for key shares that will be accessed frequently.
-3. **Cold storage**: External storage for key shares that will be accessed
-only when one of the other shares (local and hot) is missing.
-
-**Authentication service**: verifies that a user has access to a share.
-It does this by giving an access token to the iframe when the user logs in,
-and exposing a validation endpoint for that access token to the storages.
+1. **iFrame**: Performs user operations, handles key splitting, and reconstructs keys.
+2. **Key Share Storage**: Keys are split into three shares, stored in different locations:
+    - **User device**: Stored within the iframe on the user's device.
+    - **Hot storage**: External storage for frequently accessed shares.
+    - **Cold storage**: External storage for shares accessed only when a local or hot share is missing.
+3. **Authentication Service**: Verifies user access to shares by issuing access tokens to the iframe and exposing validation endpoints to the storages.
 
 ## How it works
 
 ### Splitting
 
-OpenSigner splits private keys into three shares using
-[secret sharing schemes](https://en.wikipedia.org/wiki/Shamir%27s_secret_sharing),
-allowing for secure key management and recovery.
-This approach ensures that the key is not stored in any single location,
-reducing the risk of loss or compromise.
+OpenSigner uses [Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_secret_sharing) to split private keys into three shares. This ensures the key is never stored in a single location, reducing the risk of compromise.
 
-<img src="/diagrams/sss_splitting.svg" alt="Component overview" width="75%" style={{ display: "block", margin: "auto" }}/>
+![Splitting overview](/diagrams/sss_splitting.svg)
 
 ### Reconstruction
 
-The original key can be reconstructed using any two of the three shares.
-Rather than keep the private key stored,
-the iframe component reconstructs it each time it is needed and forgets it right afterwards.
+The original key can be reconstructed using any two of the three shares. The iframe component reconstructs the private key only when needed and discards it immediately after use.
 
 <SVGSequence 
     imgSize="70%"

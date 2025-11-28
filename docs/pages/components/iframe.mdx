@@ -3,17 +3,17 @@
 ## General Overview
 
 The iFrame is embedded into the user browser, or into a React Native app.
-It is component in charge of generating the private key, splitting it into shares,
+It is the component in charge of generating the private key, splitting it into shares,
 and storing them in their respective storage components; as well as fetching the shares
 and reconstructing the private key when required.
 
 Operations that use the private key all take place inside the iFrame,
 so the private key is never exposed to the outside world.
-The iFrame reconstructs the private key in memory and forgets if after each usage,
+The iFrame reconstructs the private key in memory and forgets it after each usage,
 ensuring that the private key is never stored in the browser and its in-memory lifetime
 is as short-lived as possible.
 
-The sample provied in the [iFrame sample](https://github.com/openfort-xyz/opensigner/tree/main/iframe/sample)
+The sample provided in the [iFrame sample](https://github.com/openfort-xyz/opensigner/tree/main/iframe/sample)
 shows how to:
 
 - log into the auth service to get an access token

@@ -1,6 +1,6 @@
 # Users
 
-The Openfort key management components share one `user` concept; with the exception of the cold storage which expands on it.
+The OpenSigner wallet key management components share one `user` concept; with the exception of the cold storage which expands on it.
 
 One user can have none, one, or many keys for a chain.
 One user can have keys for multiple chains.
@@ -17,22 +17,22 @@ Projects are given unique API keys (`X-API-Key`), used by clients to identify th
 
 Read more about cold storage authentication in the [Cold Storage](/components/shield) documentation.
 
-### Providers
+## Providers
 
 Providers are different ways to authenticate a user in a project.
-A project may identify its users via the Openfort auth system or by a custom provider.
+A project may identify its users via the [Openfort](https://openfort.io) auth system or by a custom provider.
 
 The same project can enable both authentication methods. In any case, a project can have at most one custom provider, and at most one openfort provider. It also needs at least one valid authentication provider registered and set up.
 
 Whenever a request is performed, shield will know which authentication provider it should use based on the contents in the `X-Auth-Provider` header. This header accepts two values: `openfort` and `custom`.
 
-Shield identifies to which project users belong via the `X-API-Key` header, which maps them to their project. Users themselves are mapped using personal keys/tokens. How these keys/tokens look like depends on what kind of provider they're using to authenticate.
+Shield identifies to which project users belong via the `X-API-Key` header, which maps them to their project. Users themselves are mapped using personal keys/tokens. How these keys/tokens look depends on what kind of provider they're using to authenticate.
 
-#### Openfort Provider
+### Openfort Provider
 
 The Openfort provider relies on the user's Openfort `publishable_key` to properly identify and authenticate its users.
 
-#### Custom Providers
+### Custom Providers
 
 A custom provider is an external source in charge of authenticating users. This kind of providers rely on externally signed `JWT` tokens to **identify and authenticate users**.
 
@@ -42,8 +42,8 @@ When a project defines a custom provider, Shield will use the JWT tokens issued 
 
 Custom providers consist of the following fields:
 
-    - `jwk_url` A URL pointing to a publicly exposed JWK keyset (usually `.well-known/jwks.json`)
-    - `pem_cert` A PEM file containing the **public** key from the key pair used to sign JWT tokens
-    - `key_type` The type of the key pair used to sign and validate tokens. Supported types are `RSA`, `ECDSA`, and `Ed25519`
+- `jwk_url` A URL pointing to a publicly exposed JWK keyset (usually `.well-known/jwks.json`)
+- `pem_cert` A PEM file containing the **public** key from the key pair used to sign JWT tokens
+- `key_type` The type of the key pair used to sign and validate tokens. Supported types are `RSA`, `ECDSA`, and `Ed25519`
 
 Both `jwk_url` and `pem_cert` can be specified (although it might end up being redundant). At least one of those is mandatory though.

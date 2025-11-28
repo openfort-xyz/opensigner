@@ -1,7 +1,5 @@
 # Hot Storage
 
-## General Overview
-
 The Hot Storage component is used to store "hot shares": shares that are required each time an operation is performed with the private key
 the "hot share" belongs to: _log in, sign transactions, export the private key, etc_.
 
@@ -10,16 +8,17 @@ is designed with fast, frequent access in mind.
 
 Also unlike the Cold Storage, the Hot Storage does not come with a battle-tested implementation. We have created a base implementation,
 not intended for production, under the `hot_storage/sample` directory. We encourage you to implement your own version according to your needs.
-See [Hot Storage Specification](/components/hot_storage#specification) for more details. The sample implementation
-is written in Go, uses PostgreSQL to store data, and can be configured through the environment variables
-shown in the `docker-compose.yml` file at the root fo the repository.
 
-## How It Works
+The sample implementation
+is written in Go, uses PostgreSQL to store data, and can be configured through the environment variables
+shown in the `docker-compose.yml` file at the root of the repository.
+
+## How it works
 
 The Hot Storage links shares to a specific device, user, and auth provider, and stores them in a database.
 The user is validated against the specified auth provider using the configured [Auth Service](/components/auth).
 
-Users will need to specify the user id, auth provider, and device id when requesting shares, and prove their addentity
+Users will need to specify the user id, auth provider, and device id when requesting shares, and prove their identity
 through a [JWT](https://www.jwt.io/) token issued by the specified auth service.
 The auth service must match the one configured when creating the share.
 
