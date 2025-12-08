@@ -1,14 +1,51 @@
 ![OpenSigner](https://github.com/openfort-xyz/opensigner/blob/main/.github/banner.png)
 
-# OpenSigner
+<p align="center">
+  <h2 align="center">
+    OpenSigner
+  </h2>
 
-Non-custodial private key management infrastructure.
+  <p align="center">
+    Non-custodial private key management infrastructure.
+    <br />
+    <a href="https://opensigner.dev"><strong>Learn more »</strong></a>
+    <br />
+    <br />
+    <a href="https://t.me/openfort">Telegram</a>
+    · 
+    <a href="https://youtu.be/Fwe5cIQNKos">Video Walkthrough</a>
+    · 
+    <a href="https://github.com/openfort-xyz/opensigner/issues">Issues</a>
+  </p>
 
-[Video Playground Walkthrough](https://youtu.be/Fwe5cIQNKos)
+</p>
 
-## Documentation
 
-For documentation and guides, visit [opensigner.dev](https://opensigner.dev).
+## About the Project
+
+OpenSigner is an open-source, self-hostable key management stack for non-custodial wallets. It lets you issue, store, and recover cryptographic keys for your users without ever taking custody of those keys yourself. Keys are split into shares (device, hot, and cold storage) using Shamir’s Secret Sharing and only reconstructed ephemerally in memory when a signature is needed, then discarded. You can plug OpenSigner into your existing auth (OIDC, passkeys, email, etc.) and create wallets on networks like Ethereum and Solana without locking yourself into a single provider. 
+
+### Why OpenSigner
+
+Most “embedded wallet” solutions still hold or control user keys behind closed, SaaS-only infrastructure, which creates single points of failure and strong vendor lock-in. With OpenSigner, the key management layer is fully open-source and self-hostable, so you can run it on your own infra, start on Openfort’s cloud and migrate later, or mix both. Threshold cryptography and key sharding reduce the blast radius of breaches, while a vendor-neutral architecture keeps wallets non-custodial and portable across providers. 
+
+## Contribution
+
+OpenSigner is a free and open-source project licensed under the MIT License. You’re free to run it, modify it, and deploy it in your own stack, including production environments. 
+
+You can help drive its development by:
+
+- Contributing code, tests, and docs via pull requests to the [OpenSigner repository](https://github.com/openfort-xyz/opensigner).
+- Suggesting new features, reporting bugs, and sharing feedback through GitHub issues.
+
+For contribution details, please refer to the `CONTRIBUTING.md` file in the repository.
+
+## Security
+
+If you discover a security vulnerability within OpenSigner, please email **security@openfort.xyz**. 
+
+All reports are reviewed promptly, and issues will be addressed as quickly as possible. Responsible disclosures are highly appreciated and will be acknowledged where appropriate.
+
 
 ## Development
 
