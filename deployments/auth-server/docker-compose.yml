@@ -88,7 +88,6 @@ services:
 
 networks:
   db_network:
-    name: opensigner_db_network
     driver: bridge
 
 volumes:

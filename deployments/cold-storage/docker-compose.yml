@@ -1,0 +1,59 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: ofmysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password}
+      MYSQL_DATABASE: ${MYSQL_SHIELD_DATABASE:-shield}
+      MYSQL_USER: ${MYSQL_USER:-mysql_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-mysql_password}
+    volumes:
+      - cold_storage_mysql_data:/var/lib/mysql
+    networks:
+      - db_network
+    expose:
+      - "3306"
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  cold_storage:
+    container_name: coldstorage
+    platform: linux/amd64
+    image: ghcr.io/openfort-xyz/shield:v0.2.30
+    command: server
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_DRIVER: ${COLD_STORAGE_DB_DRIVER:-mysql}
+      DB_NAME: ${COLD_STORAGE_DB_NAME:-shield}
+      DB_USER: ${COLD_STORAGE_DB_USER:-root}
+      DB_PASS: ${COLD_STORAGE_DB_PASS:-root_password}
+      DB_HOST: ${COLD_STORAGE_DB_HOST:-mysql}
+      DB_PORT: ${COLD_STORAGE_DB_PORT:-3306}
+    networks:
+      - db_network
+    expose:
+      - "${COLD_STORAGE_CONTAINER_PORT:-8080}"
+    ports:
+      - "${COLD_STORAGE_HOST_PORT:-7053}:${COLD_STORAGE_CONTAINER_PORT:-8080}"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${COLD_STORAGE_CONTAINER_PORT:-8080}/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+networks:
+  db_network:
+    driver: bridge
+
+volumes:
+  cold_storage_mysql_data:
+
