@@ -1,0 +1,96 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: ofpostgres
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_password}
+    volumes:
+      - auth_hot_postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - db_network
+    expose:
+      - "5432"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 4s
+      retries: 10
+
+  auth_service:
+    container_name: authservice
+    build:
+      context: ./auth_service
+      dockerfile: Dockerfile
+    image: openfort/auth_service:latest
+    environment:
+      HOST: ${AUTH_SERVICE_CONTAINER_HOST:-0.0.0.0}
+      PORT: ${AUTH_SERVICE_CONTAINER_PORT:-3000}
+      DB_NAME: ${AUTH_SERVICE_DB_NAME:-authservice}
+      DB_USER: ${AUTH_SERVICE_DB_USER:-postgres}
+      DB_PASS: ${AUTH_SERVICE_DB_PASS:-postgres_password}
+      DB_HOST: ${AUTH_SERVICE_DB_HOST:-postgres}
+      DB_PORT: ${AUTH_SERVICE_DB_PORT:-5432}
+      JWT_SECRET: ${AUTH_JWT_SECRET:-secret}
+    networks:
+      - db_network
+    expose:
+      - "${AUTH_SERVICE_CONTAINER_PORT:-3000}"
+    ports:
+      - "${AUTH_SERVICE_HOST_PORT:-7052}:${AUTH_SERVICE_CONTAINER_PORT:-3000}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:$PORT/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  hot_storage:
+    container_name: hotstorage
+    build:
+      context: ./hot_storage
+      dockerfile: Dockerfile
+    image: openfort/hot_storage:latest
+    environment:
+      HOST: ${HOT_STORAGE_CONTAINER_HOST:-0.0.0.0}
+      PORT: ${HOT_STORAGE_CONTAINER_PORT:-8080}
+      AUTH_SERVER_URL: ${AUTH_SERVER_URL:-http://authservice:3000}
+      DB_NAME: ${HOT_STORAGE_DB_NAME:-hotstorage}
+      DB_USER: ${HOT_STORAGE_DB_USER:-postgres}
+      DB_PASS: ${HOT_STORAGE_DB_PASS:-postgres_password}
+      DB_HOST: ${HOT_STORAGE_DB_HOST:-postgres}
+      DB_PORT: ${HOT_STORAGE_DB_PORT:-5432}
+    networks:
+      - db_network
+    expose:
+      - "${HOT_STORAGE_CONTAINER_PORT:-8080}"
+    ports:
+      - "${HOT_STORAGE_HOST_PORT:-7054}:${HOT_STORAGE_CONTAINER_PORT:-8080}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth_service:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:$PORT/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+networks:
+  db_network:
+    name: opensigner_db_network
+    driver: bridge
+
+volumes:
+  auth_hot_postgres_data:
+

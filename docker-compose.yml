@@ -1,25 +1,4 @@
 services:
-  postgres:
-    image: postgres:16
-    container_name: ofpostgres
-    environment:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_password}
-    volumes:
-      - of_postgres_data:/var/lib/postgresql/data
-      - ./postgres/init.sql:/docker-entrypoint-initdb.d/create_database.sql
-    networks:
-      - db_network
-    expose:
-      - "5432"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 4s
-      retries: 10
-
   mysql:
     image: mysql:8.4
     container_name: ofmysql
@@ -43,6 +22,7 @@ services:
 
   iframe:
     container_name: iframe
+    platform: linux/amd64
     volumes:
       - ./iframe/iframe_nginx.conf:/etc/nginx/conf.d/default.conf
     image: ghcr.io/openfort-xyz/iframe:latest
@@ -83,36 +63,6 @@ services:
         restart: true
     restart: unless-stopped
 
-  auth_service:
-    container_name: authservice
-    build:
-      context: ./auth_service
-      dockerfile: Dockerfile
-    image: openfort/auth_service:latest
-    environment:
-      HOST: ${AUTH_SERVICE_CONTAINER_HOST:-0.0.0.0}
-      PORT: ${AUTH_SERVICE_CONTAINER_PORT:-3000}
-      DB_NAME: ${AUTH_SERVICE_DB_NAME:-authservice}
-      DB_USER: ${AUTH_SERVICE_DB_NAME:-postgres}
-      DB_PASS: ${AUTH_SERVICE_DB_NAME:-postgres_password}
-      DB_HOST: ${AUTH_SERVICE_DB_NAME:-ofpostgres}
-      DB_PORT: ${AUTH_SERVICE_DB_NAME:-5432}
-    networks:
-      - db_network
-    expose:
-      - "${AUTH_SERVICE_CONTAINER_PORT:-3000}"
-    ports:
-      - "${AUTH_SERVICE_HOST_PORT:-7052}:${AUTH_SERVICE_CONTAINER_PORT:-3000}"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:$PORT/health"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-
   cold_storage:
     container_name: coldstorage
     platform: linux/amd64
@@ -135,37 +85,6 @@ services:
     ports:
       - "${COLD_STORAGE_HOST_PORT:-7053}:${HOST_STORAGE_CONTAINER_PORT:-8080}"
     restart: unless-stopped
-
-  hot_storage:
-    container_name: hotstorage
-    build:
-      context: ./hot_storage
-      dockerfile: Dockerfile
-    image: openfort/hot_storage:latest
-    environment:
-      HOST: ${HOT_STORAGE_CONTAINER_HOST:-0.0.0.0}
-      PORT: ${HOT_STORAGE_CONTAINER_PORT:-8080}
-      AUTH_SERVER_URL: ${AUTH_SERVER_URL:-http://authservice:3000}
-      DB_NAME: ${HOT_STORAGE_DB_NAME:-hotstorage}
-      DB_USER: ${HOT_STORAGE_DB_NAME:-postgres}
-      DB_PASS: ${HOT_STORAGE_DB_NAME:-postgres_password}
-      DB_HOST: ${HOT_STORAGE_DB_NAME:-ofpostgres}
-      DB_PORT: ${HOT_STORAGE_DB_NAME:-5432}
-    networks:
-      - db_network
-    expose:
-      - "${HOT_STORAGE_CONTAINER_PORT:-8080}"
-    ports:
-      - "${HOT_STORAGE_HOST_PORT:-7054}:${HOT_STORAGE_CONTAINER_PORT:-8080}"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:$PORT/health"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
 
   docs:
     container_name: docs
