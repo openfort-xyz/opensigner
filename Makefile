@@ -22,6 +22,7 @@ clean:
 		down --rmi 'all' -v
 
 run:
+	@cd iframe && ./generate-nginx-config.sh
 	docker compose \
 		--project-directory . \
 		-f deployments/auth-server/docker-compose.yml \
@@ -55,6 +56,7 @@ stop-cold-storage:
 
 # Iframe Standalone Deployment
 run-iframe:
+	@cd iframe && ./generate-nginx-config.sh
 	docker compose --project-directory . -f deployments/iframe/docker-compose.yml up -d
 
 stop-iframe:
