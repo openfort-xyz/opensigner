@@ -447,20 +447,22 @@
 				return;
 			}
 
-			try {
-				const formData = new FormData();
-				formData.append("email", email);
-				formData.append("username", username);
-				formData.append("name", name);
-				formData.append("password", password);
-
-				const response = await fetch(
-					`${AUTH_SERVER}/api/auth/sign-up/email`,
-					{
-						method: "POST",
-						body: formData,
+		try {
+			const response = await fetch(
+				`${AUTH_SERVER}/api/auth/sign-up/email`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
 					},
-				);
+					body: JSON.stringify({
+						email: email,
+						username: username,
+						name: name,
+						password: password,
+					}),
+				},
+			);
 
 				const data = await response.json();
 
@@ -491,18 +493,20 @@
 				return;
 			}
 
-			try {
-				const formData = new FormData();
-				formData.append("username", username);
-				formData.append("password", password);
-
-				const response = await fetch(
-					`${AUTH_SERVER}/api/auth/sign-in/username`,
-					{
-						method: "POST",
-						body: formData,
+		try {
+			const response = await fetch(
+				`${AUTH_SERVER}/api/auth/sign-in/username`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
 					},
-				);
+					body: JSON.stringify({
+						username: username,
+						password: password,
+					}),
+				},
+			);
 
 				const data = await response.json();
 
