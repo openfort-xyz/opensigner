@@ -1,0 +1,206 @@
+# Self-Hosting Guide
+
+This guide covers how to migrate from an Openfort-hosted OpenSigner deployment to a fully self-hosted environment.
+
+## Migration Overview
+
+Migrating to self-hosted involves:
+1. Setting up your infrastructure
+2. Deploying OpenSigner components
+3. Configuring authentication
+4. Migrating existing user data (if applicable)
+
+---
+
+## Prerequisites
+
+Before starting the migration:
+
+- [ ] Docker and Docker Compose installed
+- [ ] PostgreSQL or MySQL database available
+- [ ] TLS certificates for HTTPS
+- [ ] DNS configured for your services
+- [ ] Access to your current user/project data (for migration)
+
+---
+
+## Infrastructure Setup
+
+### Basic Deployment
+
+Clone the repository and build the project:
+
+```bash
+git clone https://github.com/openfort-xyz/opensigner.git
+cd opensigner
+make clean build
+```
+
+Start all services:
+
+```bash
+make run
+```
+
+Or selectively start services:
+
+```bash
+docker-compose up postgres mysql auth_service iframe iframe-sample hot_storage cold_storage
+```
+
+### Service Ports
+
+| Port | Service |
+|------|---------|
+| 7050 | iFrame |
+| 7051 | iFrame-enabled page sample |
+| 7052 | Auth Service |
+| 7053 | Cold Storage (Shield) |
+| 7054 | Hot Storage |
+| 7055 | Documentation |
+
+---
+
+## Protecting Shield Encryption Secrets
+
+:::warning[Critical for Self-Hosting Security]
+When completely self-hosted, you need to keep the encryption secret of Shield (cold storage) **encrypted from whoever makes the hosting for Shield**. If the hosting provider can access Shield's encryption keys, they can decrypt cold shares and potentially reconstruct user private keys.
+:::
+
+### Recommended Approaches
+
+#### 1. Trusted Execution Environment (TEE)
+
+Run Shield inside a TEE that provides hardware-based isolation:
+
+| Provider | TEE Solution | Documentation |
+|----------|-------------|---------------|
+| **AWS** | Nitro Enclaves | [AWS Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/) |
+| **Azure** | Confidential Computing | [Azure Confidential VMs](https://azure.microsoft.com/en-us/solutions/confidential-compute/) |
+| **GCP** | Confidential VMs | [GCP Confidential Computing](https://cloud.google.com/confidential-computing) |
+
+#### 2. Non-Extractable KMS
+
+Store Shield's master encryption key in a KMS with non-extractable key policies:
+
+```yaml
+# Example: GCP Cloud KMS configuration
+shield:
+  encryption:
+    provider: gcp-kms
+    key_ring: opensigner-keys
+    key_name: shield-master-key
+    # Key cannot be exported from KMS
+    extraction_policy: DISALLOWED
+```
+
+#### 3. Confidential GKE Nodes
+
+When running on Kubernetes:
+
+```bash
+# Create a confidential node pool
+gcloud container node-pools create confidential-pool \
+  --cluster=opensigner-cluster \
+  --machine-type=n2d-standard-4 \
+  --enable-confidential-nodes
+```
+
+### Why This Matters
+
+Without TEE or non-extractable KMS:
+- The hosting provider's admin access includes access to Shield's memory
+- Encryption keys can be extracted from the running process
+- Cold shares can be decrypted without user knowledge
+
+With TEE or non-extractable KMS:
+- Shield's encryption keys never exist in plaintext outside the secure enclave
+- Even the hosting provider cannot extract the encryption secrets
+- Only Shield running inside the TEE can use the keys
+
+---
+
+## Configuration
+
+### Environment Variables
+
+Configure services via environment variables in `docker-compose.yml` or your deployment manifests:
+
+```yaml
+# Cold Storage (Shield)
+COLD_STORAGE_DB_HOST: your-db-host
+COLD_STORAGE_DB_PORT: 5432
+COLD_STORAGE_DB_NAME: shield
+COLD_STORAGE_DB_USER: shield_user
+COLD_STORAGE_DB_PASSWORD: ${SHIELD_DB_PASSWORD}  # Use secrets management
+
+# Hot Storage
+HOT_STORAGE_DB_HOST: your-db-host
+HOT_STORAGE_AUTH_ENDPOINT: https://your-auth-service/validate
+```
+
+### TLS Configuration
+
+Ensure all inter-service communication uses TLS:
+
+```yaml
+services:
+  cold_storage:
+    environment:
+      TLS_CERT_PATH: /certs/shield.crt
+      TLS_KEY_PATH: /certs/shield.key
+      TLS_CA_PATH: /certs/ca.crt
+    volumes:
+      - ./certs:/certs:ro
+```
+
+---
+
+## Data Migration
+
+### From Openfort-Hosted
+
+If migrating existing users from Openfort hosting:
+
+1. **Export user data** from Openfort (contact support for data export)
+2. **Prepare the target database** with the Shield schema
+3. **Import user records** while preserving encrypted share data
+4. **Update DNS/endpoints** to point to your self-hosted services
+5. **Test with a subset of users** before full migration
+
+:::caution[Important]
+User cold shares are encrypted. During migration, you must:
+- Preserve the exact encrypted share data (no re-encryption)
+- Migrate project encryption keys if using automatic recovery
+- Coordinate with Openfort for any project-level secrets
+:::
+
+### New Deployment
+
+For fresh deployments, no migration is needed. Simply:
+1. Deploy the services
+2. Configure your authentication provider
+3. Register your project with Shield
+4. Start onboarding users
+
+---
+
+## Verification Checklist
+
+After migration, verify:
+
+- [ ] All services are accessible via HTTPS
+- [ ] User authentication works correctly
+- [ ] Key creation (signup) completes successfully
+- [ ] Key recovery (login on new device) works
+- [ ] Signing operations execute properly
+- [ ] 2FA/OTP (if enabled) is delivered and validated
+- [ ] Attestation verification passes for all images
+
+---
+
+## Next Steps
+
+- Review [System Integrity](/security/system-integrity) to verify your images
+- Understand [Deployment Scenarios](/security/deployment-scenarios) for your specific setup
+- Implement [Best Practices](/security/threat-analysis#best-practices) for production

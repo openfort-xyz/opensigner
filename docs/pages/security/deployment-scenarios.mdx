@@ -1,0 +1,189 @@
+# Deployment Scenarios
+
+Due to the modular nature of the system, it is possible for users to run or even implement their own components.
+It is also possible to have hybrid scenarios in which Openfort hosts some components while others are self-hosted.
+
+## Understanding Custodial vs Non-Custodial Deployments
+
+:::warning[Key Distinction]
+OpenSigner configuration becomes **custodial** when the same entity controls both hot and cold storage, unless the right protections are introduced:
+- **User-held secret** (password or passkey recovery)
+- **Client-side key derivation**
+- **2FA/OTP verification**
+:::
+
+### What Makes a Deployment Non-Custodial?
+
+In a non-custodial OpenSigner deployment, the backend **never** has access to enough shares to reconstruct a private key. This is achieved through one of these mechanisms:
+
+| Mechanism | How It Prevents Backend Reconstruction |
+|-----------|--------------------------------------|
+| **Password Recovery** | Cold share is encrypted with user's password; backend never sees plaintext |
+| **Passkey Recovery** | Cold share encryption key is derived client-side via PRF extension |
+| **2FA for Automatic Recovery** | OTP required for cold share decryption; requires active user participation |
+| **Split Hosting** | Hot and cold storage hosted by different, untrusted parties |
+
+:::info[Platform-Controlled Storage Warning]
+In the default OpenSigner setup, both hot and cold storage appear platform-controlled. Without user-held secrets or 2FA:
+1. Backend has access to the hot share via valid JWT
+2. Backend has access to the cold share encryption (in automatic recovery mode)
+3. Backend can coordinate to reconstruct the private key
+
+**This is custodial behavior.** For non-custodial guarantees, user-held secrets or 2FA are required.
+:::
+
+---
+
+## Scenario Overview
+
+This section evaluates the following scenarios, where the components are hosted by a third party such as Openfort
+(<span style={{ color:'#fc3c2f' }}>**TP**</span>) or self-hosted (<span style={{ color:'#3b7eee' }}>**SH**</span>):
+
+| Scenario | Cold Storage | Auth Service | Hot Storage | iFrame |
+|---|---|---|---|---|
+| [Scenario 1](/security/deployment-scenarios#scenario-1-fully-self-hosted) | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> |
+| [Scenario 2](/security/deployment-scenarios#scenario-2-self-hosted-auth-cold-storage) | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+| [Scenario 3](/security/deployment-scenarios#scenario-3-self-hosted-hot-storage) | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+| [Scenario 4](/security/deployment-scenarios#scenario-4-self-hosted-cold-storage) | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+| [Scenario 5](/security/deployment-scenarios#scenario-5-self-hosted-auth-service) | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+| [Scenario 6](/security/deployment-scenarios#scenario-6-fully-hosted) | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+
+---
+
+### Scenario 1: Fully Self-Hosted
+
+| Cold Storage | Auth Service | Hot Storage | iFrame |
+|---|---|---|---|
+| <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> |
+
+> Fully self-hosted.
+
+This scenario relies on the hosting party implementing both the Authentication Service and the Hot Storage.
+
+Developers can _know_ they're running unaltered builds of the Openfort components by checking the attestations,
+as explained in the [attestation section](/security/system-integrity#attestation).
+On that note, developers can enforce execution of this image by requiring attestations in their
+policies, as in this Google Cloud example that [requires attestation](https://cloud.google.com/binary-authorization/docs/key-concepts#evaluation-modes).
+
+Developers may also opt to go one step further and make some of their configuration public to show that
+attestation requirements are in place in their infrastructure.
+
+#### Noteworthy Risks
+
+- **Execution environment**: The hardware and the OS running the storage services (and the DBs they rely on) have access to the processes' memory and could
+    extract sensitive data such as key shares from the programs' memory.
+    It is essential to run them in trusted, secure environments. For instance, when running the components in GKE make
+    sure to use [confidential GKE nodes](https://cloud.google.com/kubernetes-engine/docs/how-to/confidential-gke-nodes).
+    The underlying storage used by the DBs should also be protected, to prevent extraction and brute-forcing of stored keys.
+    If using cloud providers, encrypt storages with self-managed keys, such as GC's [CMEK](https://cloud.google.com/kubernetes-engine/docs/how-to/using-cmek).
+
+- **Communication**: Enforce and validate TLS encryption in every communication happening between two components.
+    If services are running on the same machine, handle TLS certificates appropriately, use some proxy that supports TLS
+    such as [Envoy](https://www.envoyproxy.io/), or use [Unix Domain Sockets](https://man7.org/linux/man-pages/man7/unix.7.html).
+    The latter are still vulnerable to eavesdropping from the same machine, but have a reduced attack surface compared to TCP sockets.
+
+- **Total Asset Ownership**: Since the hosting party controls **all** the Keys components, they can also decrypt cold shares if those belong to a project they created.
+    The hosting party will have access to both encryption shares and to the encrypted cold shares stored in the cold storage.
+    Thus, **projects must be registered and handled by third parties unrelated to the hosting party.**
+
+All of the next scenarios load their iframe from a third party, which could have been tampered with. This is not an issue in
+Scenario 1, as the iframe is loaded from the same origin as the rest of the components and
+served by the hosting party.
+
+---
+
+### Scenario 2: Self-Hosted Auth + Cold Storage
+
+| Cold Storage | Auth Service | Hot Storage | iFrame |
+|---|---|---|---|
+| <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+
+Developers rely on a third party to host their hot storage and their iframe.
+The main risk here is the iframe being tampered with, allowing attackers to capture passwords and secrets on the client's side.
+
+As we mentioned before, iframe builds are attested and those feature derived checksums of the static assets it provides.
+
+The iframe is meant to be called via RPC methods from another app, so it is possible for both developers and end users to verify if the obtained static assets' checksums match those provided by the official build logs.
+
+---
+
+### Scenario 3: Self-Hosted Hot Storage
+
+| Cold Storage | Auth Service | Hot Storage | iFrame |
+|---|---|---|---|
+| <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+
+The greatest security concerns in this scenario are:
+
+- **Access token forgery**: the third party (TP) could forge access tokens in the name of the user, and use them to access the cold storage.\
+    Shares are still encrypted with user entropy, which brings us to the next point.
+- **Share or encryption key bruteforcing**: either by forging tokens or accessing cold storage directly, the third party could
+    try to decrypt the encrypted keys through brute-forcing.
+
+Scenarios in which the party controlling the cold storage is also responsible for automatic recovery
+share keeping, password-based recovery provides more protection than automatic recovery since
+the provider has access to all the required entropy to decrypt the cold storage share.
+
+---
+
+### Scenario 4: Self-Hosted Cold Storage
+
+| Cold Storage | Auth Service | Hot Storage | iFrame |
+|---|---|---|---|
+| <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+
+We expect this to be a common scenario: the implementations provided by Openfort are self-hosted,
+while the ones defined as unimplemented APIs are hosted by a third party such as Openfort.
+
+The biggest risk in this scenario is the third party forging access tokens in the name of the user,
+and accepting them from the hot storage; as they implement and control both.
+Unlike in Scenario 3, the hot shares are not encrypted with user
+entropy which makes them vulnerable to access token forgery.
+
+---
+
+### Scenario 5: Self-Hosted Auth Service
+
+| Cold Storage | Auth Service | Hot Storage | iFrame |
+|---|---|---|---|
+| <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+
+In this scenario, all the third party controls are the cold and hot storages.
+That, when combined with the brute-force risk mentioned in Scenario 3,
+could be enough to reconstruct the users' private keys.
+
+---
+
+### Scenario 6: Fully Hosted
+
+> Fully hosted by a third party, such as Openfort.
+
+| Cold Storage | Auth Service | Hot Storage | iFrame |
+|---|---|---|---|
+| <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
+
+In this scenario, a single third party entity (Openfort) is responsible for all components.
+Because it hosts both the hot and cold storage, it is necessary to encrypt at least one of those
+two shares to prevent the host from accessing the full key. There are two safe approaches:
+
+1. **User entropy**: only the user knows a password that is required to decrypt the cold storage share.
+2. **Automatic recovery with 2FA**: there is an encryption key; split between the user and the cold storage,
+that is used to encrypt and decrypt the cold storage share. The cold storage is temporarily granted
+access to the user's encryption share through a one-time access method, invoked by the user.
+
+The point of both approaches is the same: make user action a requirement to access the key.
+
+Making encryption key shares a one-time access thing in the cold storage,
+as well as the final key a one-time access thing in the iframe,
+has the objective of preventing key usage without user action.
+
+:::important[2FA Recommendation for Automatic Recovery]
+Third party providers that manage users' automatic recovery and the authentication service
+could, in theory, forge access tokens representing users and gain access to the recovery shares
+of those who have automatic recovery configured. Users should be made aware of this risk when
+configuring automatic recovery. **In this scenario we strongly recommend using 2FA to protect user accounts.**
+:::
+
+Another important aspect to take into account when using automatic recovery is who owns what resources.
+If the organization in charge of the cold storage starts a project within it they'll be able to reconstruct the project-wide encryption key on their own.
+Projects must be managed by someone who doesn't directly control the cold storage to avoid this scenario.

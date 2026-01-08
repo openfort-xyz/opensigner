@@ -10,10 +10,6 @@ export const sidebar: Sidebar =
                     link: '/introduction/about',
                 },
                 {
-                    text: 'Security',
-                    link: '/introduction/security',
-                },
-                {
                     text: 'Users',
                     link: '/introduction/users',
                 },
@@ -24,6 +20,35 @@ export const sidebar: Sidebar =
                 {
                     text: 'Getting Started',
                     link: '/introduction/getting-started',
+                },
+            ]
+        },
+        {
+            text: 'Security',
+            items: [
+                {
+                    text: 'Overview',
+                    link: '/security/overview',
+                },
+                {
+                    text: 'Recovery Methods',
+                    link: '/security/recovery-methods',
+                },
+                {
+                    text: 'Deployment Scenarios',
+                    link: '/security/deployment-scenarios',
+                },
+                {
+                    text: 'Self-Hosting Guide',
+                    link: '/security/self-hosting',
+                },
+                {
+                    text: 'Threat Analysis',
+                    link: '/security/threat-analysis',
+                },
+                {
+                    text: 'System Integrity',
+                    link: '/security/system-integrity',
                 },
             ]
         },

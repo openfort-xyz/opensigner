@@ -1,0 +1,100 @@
+# System Integrity
+
+This page covers how to verify that OpenSigner components are authentic and haven't been tampered with.
+
+## Attestation
+
+Openfort's public images are attested through [Cosign](https://github.com/sigstore/cosign).
+Github generates a unique key for each workflow run, and signs the images built by the workflow.
+Openfort has no access to said keys, ensuring the signed builds have not been tampered with
+or created with any other method other than the automated release workflows.
+
+### Verifying Images
+
+To validate that an image was built, published, and signed by the Openfort CI workflows, users can run:
+
+```bash
+gh attestation verify \
+    oci://<image>:<version> \
+    --repo '<source code repository>' \
+    --signer-workflow ' <source code repository>/<workflow file>'
+```
+
+### Example: Verify Shield Image
+
+```bash
+gh attestation verify \
+    oci://docker.io/openfort/shield@sha256:61fb0ac9b409ebcff5c10910708774e4a1bcfda6818ddc4b2f28330f12d7773c \
+    --repo openfort-xyz/shield \
+    --signer-workflow openfort-xyz/shield/.github/workflows/docker-image.yml
+```
+
+### Verify by Tag
+
+Although digests are the recommended way to refer to images, images can also be verified by tag:
+
+```bash
+gh attestation verify \
+    oci://docker.io/openfort/shield:v0.2.6 \
+    --repo openfort-xyz/shield \
+    --signer-workflow openfort-xyz/shield/.github/workflows/docker-image.yml
+```
+
+### Alternative: Rekor Logs
+
+Alternatively, images can be verified by manually checking the Rekor logs and searching for the image digest,
+e.g.
+
+[https://search.sigstore.dev/?hash=61fb0ac9b409ebcff5c10910708774e4a1bcfda6818ddc4b2f28330f12d7773c](https://search.sigstore.dev/?hash=61fb0ac9b409ebcff5c10910708774e4a1bcfda6818ddc4b2f28330f12d7773c).
+
+---
+
+## Derived Checksums
+
+The iframe serves static assets, and checksums for these assets are generated at build time using SHA-256.
+Because iframe builds are attested, these checksums are also transitively attested.
+
+The published checksums can be compared to those computed by the user after downloading the static assets. If any mismatch is found, the iframe's execution can be aborted.
+
+### Example Build Output
+
+Here's an example of the output generated when building the iframe:
+
+```
+876766b4e80133fd490603e073d3567425b88794828a9292104244c9e40875ed /usr/share/nginx/html/50x.html
+78fe0c953e0235a6ce563d728eaacbb9a4630cbd22831523d74017820a5c067c /usr/share/nginx/html/index.html
+b209a972c9f0dcc4354098df2943d21b0daa6a49486c07f2cd265d6274b0f3c2 /usr/share/nginx/html/assets/index-jgtWx_p5.js
+713b113fde9db05faa5b320e52ed7a5f0693faa71262ad55760d65b062103bc7 /usr/share/nginx/html/favicon.ico
+```
+
+This means that the user should expect having only one javascript file called `index-jgtWx_p5.js` whose `sha256sum` is `b209a972c9f0dcc4354098df2943d21b0daa6a49486c07f2cd265d6274b0f3c2`, which can be verified client-side anytime.
+This is also an exhaustive list of all the assets the user should expect seeing on their side.
+
+### Limitations
+
+:::danger[Important Caveat]
+This checksum does not prove that the `iframe` is intact. The `iframe` still relies on an nginx to provide such static assets and it's still on the client to retrieve and check those hashes.
+This means that there's still room for attackers to divert traffic to unwanted places, or even load additional assets not contemplated by the build time checksum generation.
+:::
+
+### Client-Side Verification
+
+To verify checksums client-side:
+
+1. Fetch the static assets from the iframe origin
+2. Compute SHA-256 hash of each file
+3. Compare against the published build checksums
+4. Abort iframe execution if any mismatch is detected
+
+```javascript
+// Example verification approach
+async function verifyAssetChecksum(url, expectedHash) {
+  const response = await fetch(url);
+  const buffer = await response.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+  const hashHex = Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+  return hashHex === expectedHash;
+}
+```
