@@ -22,7 +22,7 @@ to ensure communication is secured through TLS** and HTTPS is enforced.
 | **iFrame** | Client-side component running in the user's browser that reconstructs keys. |
 
 :::warning[Custody Model]
-**The open-source OpenSigner configuration is custodial by default** when using automatic recovery without 2FA. The backend can access both hot and cold shares to reconstruct user private keys.
+**OpenSigner configuration is custodial by default** when using automatic recovery without 2FA. The backend can access both hot and cold shares to reconstruct user private keys.
 
 For non-custodial deployments, you must use **password recovery**, **passkey recovery**, or enable **2FA for automatic recovery**.
 
@@ -40,8 +40,6 @@ Once a user logs into a device, each one of the three shares is stored in:
 - **Cold storage** (Shield): users can access this share provided a request is made with valid entropy and a valid token is issued by the **Auth Provider**.
 
 The system relies on the following roots of trust:
-
-### Authentication Service
 
 ### Auth Provider (Authentication Service)
 
@@ -79,8 +77,6 @@ The share it contains is encrypted with either user or project entropy.
 ### Environment
 
 Use trusted browsers, servers, execution environments...
-
-### Project Owner
 
 ### Developer / Project Owner
 
