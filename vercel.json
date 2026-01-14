@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "yarn build",
+  "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/docs/security",
+      "destination": "/docs/security/overview",
+      "permanent": true
+    }
+  ]
+}

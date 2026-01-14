@@ -46,10 +46,6 @@ export const sidebar: Sidebar =
                     text: 'System Integrity',
                     link: '/security/system-integrity',
                 },
-                {
-                    text: 'Self-Hosting',
-                    link: '/security/self-hosting',
-                },
             ]
         },
         {
