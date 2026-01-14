@@ -28,7 +28,7 @@ OpenSigner is designed to solve these problems by enabling:
     - Sign data using an ephemeral reconstruction of their private key, used only for a specific operation.
 
 - **Organizations and Developers** to:
-    - Easily manage their users' cryptographic keys.
+    - Manage their users' cryptographic keys.
     - Abstract the key recovery process via `automatic recovery` or empower users with `password recovery` or `passkey recovery`.
 
 ### Architecture
@@ -39,10 +39,10 @@ OpenSigner consists of three main components:
 
 1. **iFrame**: Performs user operations, handles key splitting, and reconstructs keys.
 2. **Key Share Storage**: Keys are split into three shares, stored in different locations:
-    - **User device**: Stored within the iframe on the user's device.
+    - **User device**: Stored within the iFrame on the user's device.
     - **Hot storage**: External storage for frequently accessed shares.
     - **Cold storage**: External storage for shares accessed only when a local or hot share is missing.
-3. **Authentication Service**: Verifies user access to shares by issuing access tokens to the iframe and exposing validation endpoints to the storages.
+3. **Authentication Service**: Verifies user access to shares by issuing access tokens to the iFrame and exposing validation endpoints to the storages.
 
 ## How it works
 
@@ -54,7 +54,7 @@ OpenSigner uses [Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%2
 
 ### Reconstruction
 
-The original key can be reconstructed using any two of the three shares. The iframe component reconstructs the private key only when needed and discards it immediately after use.
+The original key can be reconstructed using any two of the three shares. The iFrame component reconstructs the private key only when needed and discards it immediately after use.
 
 <SVGSequence 
     imgSize="70%"

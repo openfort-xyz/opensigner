@@ -13,10 +13,10 @@ to ensure communication is secured through TLS** and HTTPS is enforced.
 
 | Term | Definition |
 |---|---|
-| **End User** | The final user of the wallet (e.g., a player in a game). |
-| **Developer / Project Owner** | The entity building the application (e.g., You). Controls the project secrets. |
-| **Host / Operator** | The entity operating the infrastructure (e.g., Openfort or You in self-hosted). |
-| **Auth Provider** | The system validating user identity (e.g., Openfort Auth, Google, Custom OIDC). |
+| **End User** | The final user of the wallet (for example, a player in a game). |
+| **Developer / Project Owner** | The entity building the application (for example, You). Controls the project secrets. |
+| **Host / Operator** | The entity operating the infrastructure (for example, Openfort or You in self-hosted). |
+| **Auth Provider** | The system validating user identity (for example, Openfort Auth, Google, Custom OIDC). |
 | **Shield (Cold Storage)** | Component that stores encrypted recovery shares. |
 | **Hot Storage** | Component that stores frequently accessed shares. |
 | **iFrame** | Client-side component running in the user's browser that reconstructs keys. |
@@ -45,7 +45,7 @@ The system relies on the following roots of trust:
 
 The **Auth Provider** is responsible for validating the user's identity and granting access tokens.
 It must be trusted to securely handle user credentials and issue tokens that can be used to access shares.
-While the authentication service API is provided, each implementation will be tied to each project's specific needs,
+While the authentication service API is provided, each implementation is tied to each project's specific needs,
 and needs to be done with care.
 
 The impact of a compromised authentication varies depending on the context:
@@ -69,14 +69,14 @@ comes with audited, open source implementations of the storage and management sy
 
 - **iFrame**:
 The iFrame is not only the storer (in domain-based browser storage), but also the actor responsible for
-splitting and reconstructing the keys. It is the only component that will have access to the full, reconstructed key.
+splitting and reconstructing the keys. It is the only component that has access to the full, reconstructed key.
 
 - **Cold Storage**: The cold storage is the stepping stone for every login in a new device.
 The share it contains is encrypted with either user or project entropy.
 
 ### Environment
 
-Use trusted browsers, servers, execution environments...
+Use trusted browsers, servers, and execution environments.
 
 ### Developer / Project Owner
 

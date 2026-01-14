@@ -1,6 +1,6 @@
 ---
 title: Deployment Scenarios
-description: Due to the modular nature of the system, it is possible for users to run or even implement their own components.
+description: Due to the modular nature of the system, users can run or even implement their own components.
 ---
 
 # Deployment Scenarios
@@ -56,7 +56,7 @@ attestation requirements are in place in their infrastructure.
     The latter are still vulnerable to eavesdropping from the same machine, but have a reduced attack surface compared to TCP sockets.
 
 - **Total Asset Ownership**: Since the hosting party controls **all** the Keys components, they can also decrypt cold shares if those belong to a project they created.
-    The hosting party will have access to both encryption shares and to the encrypted cold shares stored in the cold storage.
+    The hosting party has access to both encryption shares and to the encrypted cold shares stored in the cold storage.
     Thus, **projects must be registered and handled by third parties unrelated to the hosting party.**
 
 All of the next scenarios load their iframe from a third party, which could have been tampered with. This is not an issue in
@@ -73,7 +73,7 @@ served by the hosting party.
 Developers rely on a third party to host their hot storage and their iframe.
 The main risk here is the iframe being tampered with, allowing attackers to capture passwords and secrets on the client's side.
 
-As we mentioned before, iframe builds are attested and those feature derived checksums of the static assets it provides.
+As mentioned before, iframe builds are attested and those feature derived checksums of the static assets it provides.
 
 The iframe is meant to be called via RPC methods from another app, so it is possible for both developers and end users to verify if the obtained static assets' checksums match those provided by the official build logs.
 
@@ -102,7 +102,7 @@ the Host has access to all the required entropy to decrypt the cold storage shar
 |---|---|---|---|
 | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
 
-We expect this to be a common scenario: the implementations provided by Openfort are self-hosted,
+This is expected to be a common scenario: the implementations provided by Openfort are self-hosted,
 while the ones defined as unimplemented APIs are hosted by a third party such as Openfort.
 
 The biggest risk in this scenario is the third party forging access tokens in the name of the user,
@@ -149,11 +149,11 @@ has the objective of preventing key usage without user action.
 Third party Hosts that manage users' automatic recovery and the authentication service
 could, in theory, forge access tokens representing users and gain access to the recovery shares
 of those who have automatic recovery configured. Users should be made aware of this risk when
-configuring automatic recovery. **In this scenario we strongly recommend using 2FA to protect user accounts.**
+configuring automatic recovery. **Using 2FA is strongly recommended to protect user accounts in this scenario.**
 :::
 
 Another important aspect to take into account when using automatic recovery is who owns what resources.
-If the organization in charge of the cold storage starts a project within it they'll be able to reconstruct the project-wide encryption key on their own.
+If the organization in charge of the cold storage starts a project within it, the organization can reconstruct the project-wide encryption key on their own.
 Projects must be managed by someone who doesn't directly control the cold storage to avoid this scenario.
 
 ## Frequently Asked Questions
@@ -162,8 +162,8 @@ Projects must be managed by someone who doesn't directly control the cold storag
 
 **In automatic recovery mode without 2FA: It depends on Hosting.**
 
-- **Scenario 6 (Fully Hosted by a Host, e.g. Openfort): No.**
-  The Host (e.g. Openfort) holds the *Shield Encryption Part*. You (Developer) hold the *Developer Encryption Part*.
+- **Scenario 6 (Fully Hosted by a Host such as Openfort): No.**
+  The Host (such as Openfort) holds the *Shield Encryption Part*. You (Developer) hold the *Developer Encryption Part*.
   As long as the Developer does not expose their part to the Host, the Host cannot decrypt the Cold Share.
   The Host has 1 share (Hot) + 0 usable shares (Encrypted Cold) = 1 share. **Insufficient.**
 
@@ -183,7 +183,7 @@ Projects must be managed by someone who doesn't directly control the cold storag
 |---------------------|--------------|------------------------|
 | **Password Recovery** | User-provided password encrypts cold share client-side | ✅ Yes |
 | **Passkey Recovery** | PRF extension derives encryption key on user device | ✅ Yes |
-| **Automatic (Cloud)** | Encryption key split between Host (e.g. Openfort) and Developer (You) | ✅ Yes (if Developer Part is secure) |
+| **Automatic (Cloud)** | Encryption key split between Host (such as Openfort) and Developer (You) | ✅ Yes (if Developer Part is secure) |
 | **2FA/OTP for Automatic** | OTP sent to user's email/phone required for decryption | ✅ Yes |
 | **Split Hosting** | Hot and cold storage hosted by different, mutually-untrusting parties | ✅ Yes |
 

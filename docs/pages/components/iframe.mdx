@@ -5,7 +5,9 @@ description: Deep dive into the OpenSigner iFrame, the core actor responsible fo
 
 # iFrame
 
-## General Overview
+The iFrame is the core client-side component that handles all cryptographic operations securely within the user's browser.
+
+## General overview
 
 The iFrame is embedded into the user browser, or into a React Native app.
 It is the component in charge of generating the private key, splitting it into shares,
@@ -27,16 +29,16 @@ shows how to:
 - register a user, generating its private key to split it and store the shares
 - retrieve the shares, reconstruct the private key and sign a message
 
-## How It Works
+## How it works
 
 The iFrame is written in React and uses the [crypto-js](https://github.com/openfort-xyz/crypto-js),
 [openfort-js](https://github.com/openfort-xyz/openfort-js),
 and [shield-js](https://github.com/openfort-xyz/shield-js).
 
-Its constructors expects the access token and the URL of the hot storage.
+The constructor expects the access token and the URL of the hot storage.
 The iFrame can be interacted with by using the browser [postMessage](https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage)
 API, which allows sending messages to the iFrame and receiving messages from it.
-The cold storage url is configured when calling the methods that require it.
+The cold storage URL is configured when calling the methods that require it.
 
 After a successful reconstruction of the private key,
 if the current device had no local share in the [browser storage](https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API),

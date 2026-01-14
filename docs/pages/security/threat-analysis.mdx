@@ -80,7 +80,7 @@ however, the risk might become more significant.
 | Hosting Configuration | Outcome |
 |----------------------|---------|
 | Single Host operates all + holds ALL keys (Self-Hosted default) | ⚠️ Host can reconstruct keys |
-| Cloud Host (e.g. Openfort) + Developer holds Encryption Part | ❌ Host has only 1 usable share (Hot) |
+| Cloud Host (such as Openfort) + Developer holds Encryption Part | ❌ Host has only 1 usable share (Hot) |
 | Single Host + password/passkey recovery | ❌ User entropy protects cold share |
 | Single Host + automatic + 2FA | ❌ OTP required for cold share access |
 | Split hosting (different Hosts) | ❌ No single party has both shares |
@@ -97,7 +97,7 @@ however, the risk might become more significant.
 
 ## Best Practices
 
-- **Always validate tokens**: expiration, issuer, contents...
+- **Always validate tokens**: expiration, issuer, and contents.
 - **Don't log sensitive data**, such as access tokens or key shares.
 - **Enforce valid TLS** on all communications.
 - **Run services in Trusted Execution Environments (TEE)** when possible.

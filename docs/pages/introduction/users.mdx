@@ -17,7 +17,7 @@ When using automatic key recovery, cold storage users rely on projects.
 Projects manage the entropy for the users' recovery shares. More specifically,
 projects have access to half of the entropy, while the cold storage has the other half.
 
-Put simply, projects are containers for users' keys and their recovery share entropy.
+Projects are containers for users' keys and their recovery share entropy.
 Projects are given unique API keys (`X-API-Key`), used by clients to identify them.
 
 Read more about cold storage authentication in the [Cold Storage](/components/shield) documentation.
@@ -29,7 +29,7 @@ A project may identify its users via the [Openfort](https://openfort.io) auth sy
 
 The same project can enable both authentication methods. In any case, a project can have at most one custom provider, and at most one openfort provider. It also needs at least one valid authentication provider registered and set up.
 
-Whenever a request is performed, shield will know which authentication provider it should use based on the contents in the `X-Auth-Provider` header. This header accepts two values: `openfort` and `custom`.
+Whenever a request is performed, Shield knows which authentication provider it should use based on the contents in the `X-Auth-Provider` header. This header accepts two values: `openfort` and `custom`.
 
 Shield identifies to which project users belong via the `X-API-Key` header, which maps them to their project. Users themselves are mapped using personal keys/tokens. How these keys/tokens look depends on what kind of provider they're using to authenticate.
 
@@ -39,11 +39,11 @@ The Openfort provider relies on the user's Openfort `publishable_key` to properl
 
 ### Custom Providers
 
-A custom provider is an external source in charge of authenticating users. This kind of providers rely on externally signed `JWT` tokens to **identify and authenticate users**.
+A custom provider is an external source in charge of authenticating users. Custom providers rely on externally signed `JWT` tokens to **identify and authenticate users**.
 
-This means that all keychains and keys created by them will be tied to their particular user id.
+This means that all keychains and keys created by them are tied to their particular user ID.
 
-When a project defines a custom provider, Shield will use the JWT tokens issued by it to identify and authenticate users.
+When a project defines a custom provider, Shield uses the JWT tokens issued by it to identify and authenticate users.
 
 Custom providers consist of the following fields:
 
