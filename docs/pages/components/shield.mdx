@@ -23,7 +23,7 @@ Shield is fully written in golang and it relies on a MySQL-compatible database f
 
 All database interactions are done using golang's ORM, `gorm`. Database migrations are done via `goose`.
 
-The app's entrypoint is CLI-based. It's two main command branches are `db` and `server`.
+The app's entrypoint is CLI-based. Its two main command branches are `db` and `server`.
 
 ```
 2025/08/04 09:07:16 INFO Starting OpenFort Shield
@@ -85,7 +85,7 @@ CORS_EXTRA_ALLOWED_HEADERS=
 
 ## Deployment
 
-Shield is ready to be Dockerized. No environment variables or build args are needed for this step. A regular `docker build . -t xyz ...` does the trick.
+Shield is ready to be Dockerized. No environment variables or build args are needed for this step. A regular `docker build . -t xyz ...` command works.
 
 A Shield container can be then started with a regular `docker run` command. Environment variables can be either specified in the `run` command or by mounting a `.env` file.
 
@@ -93,7 +93,7 @@ Shield starts its HTTP server on port `8080`, so whatever port mapping intending
 
 Shield doesn't feature any kind of HTTPS support by itself. Secure communications must be enforced via load balancers and/or other front mechanisms.
 
-Shield can also run locally (for example, `go cmd/main.go server`) **although this is strongly discouraged**.
+Shield can also run locally (for example, `go cmd/main.go server`), but this is not recommended for production.
 
 The provided Docker image expects the user providing the proper CLI commands. That is, the image can be used for either DB migrations or running the actual server.
 
@@ -101,7 +101,7 @@ The provided Docker image expects the user providing the proper CLI commands. Th
 
 Shield doesn't implement any kind of HTTPS handling by itself: it needs to be done somewhere else and proper routing needs to be implemented in the corresponding load balancers. Same goes for cert validation, IP whitelisting, and more. Shield only cares about user and project authentication and it does so by delegating it to the external auth server.
 
-Secure communications are essential here: Shield communicates unencrypted shares to the iFrame. Any compromise in any of the two endpoints or in the communication channel might give access to a share to unwanted audiences.
+Secure communications are essential here: Shield communicates unencrypted shares to the iFrame. Any compromise in either endpoint or in the communication channel exposes the share to unauthorized parties.
 
 ## Core Concepts
 
@@ -120,7 +120,7 @@ Shares can be encrypted/decrypted in `iFrame` based on user-originated entropy.
 
 **User-based encryption DOESN'T happen in Shield, it's fully client-side**. Shield only stores the encrypted share and blindly sends it back to the user along with its encryption parameters.
 
-Shield doesn't know, and **cannot** know, if the share encryption was performed as stated in the encryption parameter set.
+Shield doesn't know, and can't know, if the share encryption was performed as stated in the encryption parameter set.
 
 Shield also **doesn't retrieve externally stored shares**. A share can be stored somewhere else (for now, Google Drive and iCloud). Shield only stores the reference to where the share is stored, but it's up to the client (that is, the iFrame) to recover the actual share.
 
@@ -144,7 +144,7 @@ Cold share recovery can be also done via project-wide entropy. In this case, **b
 
 When a project is created, an encryption key for this particular project is created and split between shield and the project. This key is reconstructed and used to encrypt/decrypt shares whenever the entropy source is the project.
 
-This type of share recovery also can be enhanced with 2FA, detailed description is provided below.
+This type of share recovery also can be enhanced with OTP, detailed description is provided below.
 
 ### Passkey Recovery
 Cold shares can be encrypted using passkeys.
@@ -180,26 +180,26 @@ Using PRF makes server-side challenges unnecessary: an attacker cannot benefit f
 The derived 256-bit key is then used to symmetrically encrypt and decrypt the cold share.
 OpenSigner uses `AES-CBC` in this case. `AES-CBC` is sufficient since shares are of fixed size, rendering potential oracle padding attacks useless.
 Both the encryption and decryption happen client-side: Shield only sees and interacts with the encrypted contents of the share.
-Having non-authenticated encryption is not a big issue here either: decrypting rubbish only makes further checks (such as private key to address derivation) fail.
+Non-authenticated encryption is acceptable here: decrypting garbage causes further checks (such as private key to address derivation) to fail.
 
 #### What Shield Stores
 Shield will store the encrypted contents of the cold share along with the internal passkey ID.
 By *internal passkey ID* we mean the identifier the passkey authenticator gave to that particular passkey.
 OpenSigner also stores the environment in which the passkey was created. This information is mainly extracted from the `User-Agent` token and is meant for both hinting and tracking purposes.
 
-## 2FA (Two-Factor Authentication) for automatic recovery
+## OTP (Two-Factor Authentication) for automatic recovery
 
-Shield supports Two-Factor Authentication (2FA) using One-Time Passwords (OTP) to add an additional layer of security when creating encrypted sessions.
+Shield supports Two-Factor Authentication (OTP) using One-Time Passwords (OTP) to add an additional layer of security when creating encrypted sessions.
 
 :::info
-2FA is available only for shares with automatic recovery method.
+OTP is available only for shares with automatic recovery method.
 :::
 
-### Enabling 2FA
+### Enabling OTP
 
-2FA is a project-level feature that must be enabled before it can be used. Once enabled, **2FA cannot be disabled** for a project.
+OTP is a project-level feature that must be enabled before it can be used. Once enabled, **OTP cannot be disabled** for a project.
 
-To enable 2FA for a project, use the following endpoint:
+To enable OTP for a project, use the following endpoint:
 
 **Endpoint:** `POST /project/enable-2fa`
 
@@ -208,12 +208,12 @@ To enable 2FA for a project, use the following endpoint:
 - `X-API-Secret`: Project's API secret
 
 **Response:**
-- `200 OK`: 2FA enabled successfully
-- `409 Conflict`: 2FA already enabled for this project
+- `200 OK`: OTP enabled successfully
+- `409 Conflict`: OTP already enabled for this project
 
-### How 2FA Works
+### How OTP Works
 
-When 2FA is enabled for a project, users must go through an OTP verification flow when creating an encrypted session. Here's the typical flow:
+When OTP is enabled for a project, users must go through an OTP verification flow when creating an encrypted session. Here's the typical flow:
 
 #### 1. Request OTP
 
@@ -303,9 +303,9 @@ After receiving the OTP, users create an encrypted session by providing the OTP 
 
 The `session_id` can then be used with the `X-Encryption-Session` header when registering, updating, or retrieving shares.
 
-### 2FA Security Features
+### OTP Security Features
 
-- **OTP Verification**: When 2FA is enabled and `dangerously_skip_verification` is `false`, users must provide a valid OTP code to create an encrypted session
+- **OTP Verification**: When OTP is enabled and `dangerously_skip_verification` is `false`, users must provide a valid OTP code to create an encrypted session
 - **Contact Verification**: Shield verifies and stores hashed contact information (email or phone) to ensure consistency across requests
 - **Rate Limiting**: Project-level rate limits prevent abuse of OTP generation
 - **Session Expiry**: Encryption sessions are time-limited for security
@@ -352,8 +352,8 @@ Shield API returns various error codes depending on the type of failure encounte
 | 428 | `OTP_MISSING` | OTP is required for this request |
 | 404 | `OTP_RECORD_NOT_FOUND` | OTP record not found for user |
 | 400 | `OTP_USER_INFO_MISSING` | Missing user information like email or phone number |
-| 400 | `OTP_NOT_SUPPORTED` | Project doesn't support 2FA |
-| 409 | `OTP_ALREADY_ENABLED` | Project already has 2FA enabled |
+| 400 | `OTP_NOT_SUPPORTED` | Project doesn't support OTP |
+| 409 | `OTP_ALREADY_ENABLED` | Project already has OTP enabled |
 
 ### Project Errors
 

@@ -9,10 +9,9 @@ The Hot Storage component is used to store "hot shares": shares that are require
 the "hot share" belongs to: log in, sign transactions, export the private key, and more.
 
 Unlike the [Cold Storage](/components/shield) component, which is only accessed when the user logs into a new device, the hot storage
-is designed with fast, frequent access in mind.
+handles fast, frequent access.
 
-Also unlike the Cold Storage, the Hot Storage does not come with a battle-tested implementation. A base implementation,
-not intended for production, is available under the `hot_storage/sample` directory. You are encouraged to implement your own version according to your needs.
+The hot storage doesn't include a production-ready implementation. A base implementation for development purposes is available under the `hot_storage/sample` directory. Implement your own version according to your needs.
 
 The sample implementation
 is written in Go, uses PostgreSQL to store data, and can be configured through the environment variables

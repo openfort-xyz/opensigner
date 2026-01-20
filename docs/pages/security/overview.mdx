@@ -20,20 +20,12 @@ to ensure communication is secured through TLS** and HTTPS is enforced.
 | **Shield (Cold Storage)** | Component that stores encrypted recovery shares. |
 | **Hot Storage** | Component that stores frequently accessed shares. |
 | **iFrame** | Client-side component running in the user's browser that reconstructs keys. |
-
-:::warning[Custody Model]
-**OpenSigner configuration is custodial by default** when using automatic recovery without 2FA. The backend can access both hot and cold shares to reconstruct user private keys.
-
-For non-custodial deployments, you must use **password recovery**, **passkey recovery**, or enable **2FA for automatic recovery**.
-
-→ See [Deployment Scenarios](/security/deployment-scenarios#understanding-the-custody-model) for complete details.
-:::
-
+ 
 ## Trust Model
 
-It is important to be aware of the root of trust at each point in the system.
-The key is split into three shares, two of them are enough to reconstruct the key.
-Once a user logs into a device, each one of the three shares is stored in:
+Understand the root of trust at each point in the system.
+The key is split into three shares; two of them are enough to reconstruct the key.
+Once a user logs into a device, the three shares are stored in:
 
 - **User's device**: the domain-protected storage of the browser.
 - **Hot storage**: users can access this share through an access token granted by the **Auth Provider**.
@@ -55,8 +47,8 @@ The impact of a compromised authentication varies depending on the context:
 - If the attacker only has the user's credentials but no device access, the outcome depends on how cold share recovery is handled:
     - With *user-based recovery*, an extra password or passkey (independent from the user's main credentials) is needed to decrypt the cold share.
     - With *automatic recovery*:
-        - Without 2FA: the attacker can easily recover the user's secret key just by using the stolen credentials.
-        - With 2FA: user interaction is required to recover the secret, as the attacker would need to compromise the 2FA method as well.
+        - Without OTP: the attacker can easily recover the user's secret key just by using the stolen credentials.
+        - With OTP: user interaction is required to recover the secret, as the attacker would need to compromise the OTP method as well.
 
 :::tip[Best Practice]
 The safest way to protect a cold share is to use user-based recovery with a completely separate password/passkey that's unrelated to the primary authentication method.
@@ -64,11 +56,11 @@ The safest way to protect a cold share is to use user-based recovery with a comp
 
 ### Application Logic
 
-2 out of 3 shares are enough to reconstruct the key. For this reason, the system
-comes with audited, open source implementations of the storage and management systems of two of the three shares.
+Two out of three shares are enough to reconstruct the key. For this reason, the system
+includes audited, open-source implementations of the storage and management systems of two of the three shares.
 
 - **iFrame**:
-The iFrame is not only the storer (in domain-based browser storage), but also the actor responsible for
+The iFrame stores shares (in domain-based browser storage) and handles
 splitting and reconstructing the keys. It is the only component that has access to the full, reconstructed key.
 
 - **Cold Storage**: The cold storage is the stepping stone for every login in a new device.
@@ -96,5 +88,4 @@ Make sure to validate TLS certificates to prevent Man In The Middle (MITM) attac
 - **[Custody Model FAQ](/security/deployment-scenarios#frequently-asked-questions)** - Key questions about backend reconstruction and non-custodial guarantees
 - [Recovery Methods](/security/recovery-methods) - Password, passkey, and automatic recovery options
 - [Deployment Scenarios](/security/deployment-scenarios) - Hosting configurations and their security implications
-- [Self-Hosting Guide](/security/self-hosting) - Migration guide and TEE recommendations
 - [Threat Analysis](/security/threat-analysis) - Potential attack vectors and mitigations

@@ -9,8 +9,8 @@ This section covers potential attack vectors against OpenSigner components and r
 
 ## Tampering Risks
 
-If the following components are tampered by a third party or compromised while on the developer's control,
-the following issues may arise:
+If the following components are tampered with by a third party or compromised while under the developer's control,
+these issues can arise:
 
 ### iFrame Compromise
 
@@ -48,14 +48,14 @@ of the two shares required to reconstruct the key.
 
 ### Cold Storage Compromise
 
-The risk of a compromised cold storage is, in isolation, lesser than that of the hot storage.
-This is due to the fact that the cold storage share is encrypted with user entropy, and access to the cold storage
+The risk of a compromised cold storage is, in isolation, lesser than that of the hot storage
+because the cold storage share is encrypted with user entropy, and access to the cold storage
 alone is not enough to reconstruct the recovery share. When combined with other compromised components,
-however, the risk might become more significant.
+the risk increases significantly.
 
 **Mitigations:**
 - Use password or passkey recovery (user-held secrets)
-- Enable 2FA for automatic recovery
+- Enable OTP for automatic recovery
 - Run cold storage in TEE with non-extractable KMS
 
 
@@ -69,9 +69,9 @@ however, the risk might become more significant.
 |-----------------|---------|
 | Password-based | ❌ Attack fails - attacker needs recovery password |
 | Passkey-based | ❌ Attack fails - attacker needs passkey device |
-| Automatic (Self-Hosted, No 2FA) | ⚠️ Attack succeeds - credentials unlock all shares if Admin holds all keys |
+| Automatic (Self-Hosted, No OTP) | ⚠️ Attack succeeds - credentials unlock all shares if Admin holds all keys |
 | Automatic (Cloud) | ❌ Attack fails - Admin holds Developer Part, attacker lacks it |
-| Automatic (with 2FA) | ❌ Attack fails - attacker needs OTP |
+| Automatic (with OTP) | ❌ Attack fails - attacker needs OTP |
 
 ### Malicious Host
 
@@ -82,7 +82,7 @@ however, the risk might become more significant.
 | Single Host operates all + holds ALL keys (Self-Hosted default) | ⚠️ Host can reconstruct keys |
 | Cloud Host (such as Openfort) + Developer holds Encryption Part | ❌ Host has only 1 usable share (Hot) |
 | Single Host + password/passkey recovery | ❌ User entropy protects cold share |
-| Single Host + automatic + 2FA | ❌ OTP required for cold share access |
+| Single Host + automatic + OTP | ❌ OTP required for cold share access |
 | Split hosting (different Hosts) | ❌ No single party has both shares |
 
 ### Token Forgery
@@ -92,7 +92,7 @@ however, the risk might become more significant.
 **Protection:** Even with forged tokens:
 - Password recovery: cold share requires user's password
 - Passkey recovery: cold share requires user's passkey
-- Automatic + 2FA: cold share requires user's OTP
+- Automatic + OTP: cold share requires user's OTP
 
 
 ## Best Practices
@@ -103,7 +103,7 @@ however, the risk might become more significant.
 - **Run services in Trusted Execution Environments (TEE)** when possible.
 - **Set TTLs for access tokens** to limit their validity period.
 - **Use password or passkey recovery** for maximum security.
-- **Enable 2FA for automatic recovery** to prevent backend reconstruction.
+- **Enable OTP for automatic recovery** to prevent backend reconstruction.
 - **Separate project ownership** from infrastructure hosting.
 - **Monitor audit logs** for unusual access patterns.
 - **Regularly rotate** service credentials and API keys.

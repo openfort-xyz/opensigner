@@ -5,8 +5,8 @@ description: Due to the modular nature of the system, users can run or even impl
 
 # Deployment Scenarios
 
-Due to the modular nature of the system, it is possible for users to run or even implement their own components.
-It is also possible to have hybrid scenarios in which Openfort hosts some components while others are self-hosted.
+Due to the modular nature of the system, users can run or implement their own components.
+Hybrid scenarios are possible where Openfort hosts some components while others are self-hosted.
 
 ## Scenario Overview
 
@@ -102,7 +102,7 @@ the Host has access to all the required entropy to decrypt the cold storage shar
 |---|---|---|---|
 | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
 
-This is expected to be a common scenario: the implementations provided by Openfort are self-hosted,
+This is a common scenario: the implementations provided by Openfort are self-hosted,
 while the ones defined as unimplemented APIs are hosted by a third party such as Openfort.
 
 The biggest risk in this scenario is the third party forging access tokens in the name of the user,
@@ -117,9 +117,9 @@ entropy which makes them vulnerable to access token forgery.
 |---|---|---|---|
 | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#3b7eee' }}>**SH**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
 
-In this scenario, all the third party controls are the cold and hot storages.
-That, when combined with the brute-force risk mentioned in Scenario 3,
-could be enough to reconstruct the users' private keys.
+In this scenario, the third party controls the cold and hot storages.
+Combined with the brute-force risk mentioned in Scenario 3,
+this can be enough to reconstruct the users' private keys.
 
 
 ### Scenario 6: Fully Hosted
@@ -135,7 +135,7 @@ Because it hosts both the hot and cold storage, it is necessary to encrypt at le
 two shares to prevent the host from accessing the full key. There are two safe approaches:
 
 1. **User entropy**: only the user knows a password that is required to decrypt the cold storage share.
-2. **Automatic recovery with 2FA**: there is an encryption key; split between the user and the cold storage,
+2. **Automatic recovery with OTP**: there is an encryption key; split between the user and the cold storage,
 that is used to encrypt and decrypt the cold storage share. The cold storage is temporarily granted
 access to the user's encryption share through a one-time access method, invoked by the user.
 
@@ -145,11 +145,11 @@ Making encryption key shares a one-time access thing in the cold storage,
 as well as the final key a one-time access thing in the iframe,
 has the objective of preventing key usage without user action.
 
-:::important[2FA Recommendation for Automatic Recovery]
+:::important[OTP Recommendation for Automatic Recovery]
 Third party Hosts that manage users' automatic recovery and the authentication service
 could, in theory, forge access tokens representing users and gain access to the recovery shares
 of those who have automatic recovery configured. Users should be made aware of this risk when
-configuring automatic recovery. **Using 2FA is strongly recommended to protect user accounts in this scenario.**
+configuring automatic recovery. **Using OTP is strongly recommended to protect user accounts in this scenario.**
 :::
 
 Another important aspect to take into account when using automatic recovery is who owns what resources.
@@ -160,7 +160,7 @@ Projects must be managed by someone who doesn't directly control the cold storag
 
 ### Does the backend ever have access to enough shares to reconstruct a private key?
 
-**In automatic recovery mode without 2FA: It depends on Hosting.**
+**In automatic recovery mode without OTP: It depends on Hosting.**
 
 - **Scenario 6 (Fully Hosted by a Host such as Openfort): No.**
   The Host (such as Openfort) holds the *Shield Encryption Part*. You (Developer) hold the *Developer Encryption Part*.
@@ -171,11 +171,11 @@ Projects must be managed by someone who doesn't directly control the cold storag
   If you host everything yourself, you hold the Hot Share + Shield Encryption Part + Developer Encryption Part.
   You (the Host/Developer) have full custody.
 
-**In password/passkey recovery or automatic recovery with 2FA: No.**
+**In password/passkey recovery or automatic recovery with OTP: No.**
 
 - **Password recovery**: Cold share is encrypted with user's password (client-side); backend never has the plaintext
 - **Passkey recovery**: Cold share encryption key is derived client-side via PRF extension; backend never has access
-- **Automatic + 2FA**: OTP verification is required, which requires active user participation that cannot be forged
+- **Automatic + OTP**: OTP verification is required, which requires active user participation that cannot be forged
 
 ### What prevents backend-side reconstruction in non-custodial deployments?
 
@@ -184,7 +184,7 @@ Projects must be managed by someone who doesn't directly control the cold storag
 | **Password Recovery** | User-provided password encrypts cold share client-side | ✅ Yes |
 | **Passkey Recovery** | PRF extension derives encryption key on user device | ✅ Yes |
 | **Automatic (Cloud)** | Encryption key split between Host (such as Openfort) and Developer (You) | ✅ Yes (if Developer Part is secure) |
-| **2FA/OTP for Automatic** | OTP sent to user's email/phone required for decryption | ✅ Yes |
+| **OTP/OTP for Automatic** | OTP sent to user's email/phone required for decryption | ✅ Yes |
 | **Split Hosting** | Hot and cold storage hosted by different, mutually-untrusting parties | ✅ Yes |
 
 ### Is the open-source configuration custodial by default?
@@ -200,13 +200,13 @@ Projects must be managed by someone who doesn't directly control the cold storag
 
 - Use **password-based recovery** (recommended for maximum security), OR
 - Use **passkey-based recovery**, OR
-- Enable **2FA/OTP verification** for automatic recovery, OR
+- Enable **OTP/OTP verification** for automatic recovery, OR
 - Run Shield in a **TEE (Trusted Execution Environment)** where the encryption keys are not extractable even by you.
 
 :::note[MiCA and Custody Definitions]
 Under regulatory frameworks like MiCA, a platform that is technically capable of reconstructing or exporting a user's private key—even if gated by authentication and frontend flows—may be considered custodial.
 
-The open-source OpenSigner configuration, when using automatic recovery without 2FA, meets this technical definition of custody because the platform can access both shares needed for key reconstruction.
+The open-source OpenSigner configuration, when using automatic recovery without OTP, meets this technical definition of custody because the platform can access both shares needed for key reconstruction.
 
 **For non-custodial regulatory classification:** Implement one of the protection mechanisms listed above to ensure the platform cannot unilaterally reconstruct user keys.
 :::

@@ -25,8 +25,8 @@ potentially being transmitted over a network with dashed lines.
 
 ## Password Recovery
 
-When using password-based recovery, the entropy used to encrypt the recovery share is completely provided by the user.
-This ensures the system remains non-custodial and users are in control of their keys.
+When using password-based recovery, the user provides the entropy used to encrypt the recovery share.
+This ensures the system remains non-custodial and users control their keys.
 
 ![Sign up user with automatic recovery](/diagrams/signup_password.svg)
 
@@ -40,7 +40,7 @@ The developer must secure this encryption share at all times, and it should neve
 When a request to secure a new recovery share is made, the developer must `POST` to the cold storage `/project/encryption-session` endpoint with the **encryption share**.
 This endpoint returns an encryption session ID, which the developer must provide to the user during the signup process. This session ID is valid for one-time use.
 
-While adding complexity, it allows users to recover their keys without needing to remember a password.
+This adds complexity but allows users to recover their keys without remembering a password.
 
 For the system to remain non-custodial, the **Developer** (holding the encryption part) must differ from the **Cold Storage Host**.
 

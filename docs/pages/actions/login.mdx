@@ -16,8 +16,8 @@ The process differs depending on the recovery method:
 
 ## Password Recovery
 
-The user tries to recover the key through the iFrame. For that, it attempts to reconstruct its key
-and fails due to not having the local share. This share is stored in each device after the user recovers it in that device for the first time.
+The user recovers the key through the iFrame. The iFrame attempts to reconstruct the key
+and fails because the local share is missing. This share is stored on each device after the user recovers it for the first time on that device.
 
 Instead, the iFrame fetches the hot and cold shares with the JWT token it obtains from the auth service,
 reconstructs the key, splits it again, and:
@@ -26,35 +26,35 @@ reconstructs the key, splits it again, and:
 - Store the local share in the device.
 - Store the hot share in the hot storage.
 
-The diagram below shows this process in greater detail.
+The diagram below shows this process in detail.
 
 ![Login user with password-based recovery](/diagrams/login_new_device_password.svg)
 
 ## Automatic Recovery
 
 :::info
-`Admin` and `User` may be the same entity, although that may defeat the purpose of automatic recovery.
-Usually, `Admin` is the developer of the application the user is using, and `User` is the end user.
+`Admin` and `User` can be the same entity, though this defeats the purpose of automatic recovery.
+Typically, `Admin` is the application developer, and `User` is the end user.
 :::
 
 ![Login user with automatic recovery](/diagrams/login_new_device_automatic.svg)
 
-The user can now use this device without accessing the cold storage again; by using
-the local and hot shares to reconstruct the private key. The diagram leaves the
-private key reconstruction happening in the cold storage ambiguous. The following section explains it in more detail.
+The user can now use this device without accessing the cold storage again by using
+the local and hot shares to reconstruct the private key. The diagram doesn't show the
+private key reconstruction in the cold storage. The following section explains it in detail.
 
 The cold storage has the cold share, but it is encrypted with a key it has no access to.
 The key used to encrypt the cold share was split into shares and deleted after its first usage.
 The cold storage kept one of these shares, while the admin kept the other share.
-When the admin called the cold storage `/v2/devices/register` endpoint, it lent
-its share as a one-time way of reconstructing the encryption key and decrypting the cold share.
+When the admin calls the cold storage `/v2/devices/register` endpoint, it provides
+its share as a one-time input for reconstructing the encryption key and decrypting the cold share.
 
 To enforce this one-time usage, the cold storage deletes the encryption key share passed
 by the admin after using it once.
 
 ![Cold share reconstruction](/diagrams/enc_key_reconstruction.svg)
 
-### 2FA with Automatic Recovery
+### OTP with Automatic Recovery
 
 The flow is the same as with usual automatic recovery above, the only difference is in encrypted session creation - it requires some actions from user.
 The diagram below shows only the encrypted session creation flow.

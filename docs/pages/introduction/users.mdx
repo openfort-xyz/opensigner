@@ -1,11 +1,11 @@
 ---
 title: Users
-description: The OpenSigner wallet key management components share one user concept; with the exception of the cold storage which expands on it.
+description: The OpenSigner wallet key management components share one user concept, except for cold storage which expands on it.
 ---
 
 # Users
 
-The OpenSigner wallet key management components share one `user` concept; with the exception of the cold storage which expands on it.
+The OpenSigner wallet key management components share one `user` concept, except for cold storage which expands on it.
 
 One user can have none, one, or many keys for a chain.
 One user can have keys for multiple chains.
@@ -51,4 +51,4 @@ Custom providers consist of the following fields:
 - `pem_cert` A PEM file containing the **public** key from the key pair used to sign JWT tokens
 - `key_type` The type of the key pair used to sign and validate tokens. Supported types are `RSA`, `ECDSA`, and `Ed25519`
 
-Both `jwk_url` and `pem_cert` can be specified (although it might end up being redundant). At least one of those is mandatory though.
+Both `jwk_url` and `pem_cert` can be specified. At least one is required.

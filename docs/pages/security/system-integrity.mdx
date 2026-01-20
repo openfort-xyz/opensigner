@@ -11,8 +11,8 @@ This page covers how to verify that OpenSigner components are authentic and have
 
 Openfort's public images are attested through [Cosign](https://github.com/sigstore/cosign).
 Github generates a unique key for each workflow run, and signs the images built by the workflow.
-Openfort has no access to said keys, ensuring the signed builds have not been tampered with
-or created with any other method other than the automated release workflows.
+Openfort has no access to these keys, ensuring the signed builds have not been tampered with
+or created with any method other than the automated release workflows.
 
 ### Verifying Images
 
@@ -78,7 +78,7 @@ This is also an exhaustive list of all the assets the user should expect seeing 
 
 :::danger[Important Caveat]
 This checksum does not prove that the `iframe` is intact. The `iframe` still relies on an nginx to provide such static assets and it's still on the client to retrieve and check those hashes.
-This means that there's still room for attackers to divert traffic to unwanted places, or even load additional assets not contemplated by the build time checksum generation.
+Attackers can still divert traffic to unwanted places or load additional assets not covered by the build-time checksum generation.
 :::
 
 ### Client-Side Verification
