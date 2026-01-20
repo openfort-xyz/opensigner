@@ -30,7 +30,6 @@ yarn dev
 yarn docs:dev
 ```
 
----
 
 ## Development
 

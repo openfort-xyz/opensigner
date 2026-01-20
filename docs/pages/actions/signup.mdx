@@ -1,3 +1,8 @@
+---
+title: Creating a New Key
+description: Step-by-step technical guide on how OpenSigner handles the creation and splitting of new cryptographic keys.
+---
+
 # Creating a Key
 
 To create a new key with OpenSigner, users call the `create()` method on the iFrame.
@@ -12,7 +17,7 @@ The signup process depends on the recovery method:
 
 
 :::info
-The signup diagrams show data being moved inside the in process or to local storage with continuous lines, and the data
+The signup diagrams show data being moved inside the process or to local storage with continuous lines, and the data
 potentially being transmitted over a network with dashed lines.
 
 <img src="/diagrams/conn_legend.svg" alt="Connection legend" width="60%" style={{ display: "block", margin: "auto" }}/>
@@ -20,8 +25,8 @@ potentially being transmitted over a network with dashed lines.
 
 ## Password Recovery
 
-When using password-based recovery, the entropy used to encrypt the recovery share is completely provided by the user.
-This ensures the system remains non-custodial and users are in control of their keys.
+When using password-based recovery, the user provides the entropy used to encrypt the recovery share.
+This ensures the system remains non-custodial and users control their keys.
 
 ![Sign up user with automatic recovery](/diagrams/signup_password.svg)
 
@@ -29,18 +34,18 @@ This ensures the system remains non-custodial and users are in control of their 
 
 When using *automatic recovery*, the entropy is managed by the cold storage service.
 To secure the recovery share, an encryption key is generated in the cold storage, which is then split into 2 shares with a required quorum of 2 for reconstruction.
-One share kept by the cold storage, and another one is given back to the developer.
-The developer must secure this encryption share at all times, and it should never be exposed in the client side.
+One share is kept by the cold storage, and another one is given back to the developer.
+The developer must secure this encryption share at all times, and it should never be exposed on the client side.
 
 When a request to secure a new recovery share is made, the developer must `POST` to the cold storage `/project/encryption-session` endpoint with the **encryption share**.
-This endpoint will return an encryption session ID, which the developer must provide to the user during the signup process. This session ID is valid for one time use.
+This endpoint returns an encryption session ID, which the developer must provide to the user during the signup process. This session ID is valid for one-time use.
 
-While adding complexity, it allows users to recover their keys without needing to remember a password.
+This adds complexity but allows users to recover their keys without remembering a password.
 
-For the system to remain non-custodial, the provider must differ from the cold storage provider.
+For the system to remain non-custodial, the **Developer** (holding the encryption part) must differ from the **Cold Storage Host**.
 
 :::danger
-If the same entity controls the cold storage and the providers
+If the same entity controls the cold storage and the **Developer Encryption Part**,
 the system becomes custodial, as the entity can access the recovery share.
 :::
 
@@ -50,16 +55,16 @@ the system becomes custodial, as the entity can access the recovery share.
 
 You can enable OTP verification for your Shield project to enhance the security of automatic recovery shares.
 The diagram above remains valid. The key difference is that during key reconstruction,
-Shield will require an OTP when creating a new encrypted session.
-The OTP will be sent to the user via SMS or email.
+Shield requires an OTP when creating a new encrypted session.
+The OTP is sent to the user via SMS or email.
 This ensures that the cold share cannot be accessed for key reconstruction without user interaction.
 
 ## Passkey Recovery
 
 OpenSigner uses the passkey Pseudo Random Function (PRF) extension to derive an encryption key to symmetrically encrypt/decrypt the cold share.
 
-The user will only need to follow their authenticator's flow for passkey creation/validation. OpenSigner will remember which passkey it should ask for whenever a user wants to recover their cold share.
+The user needs only to follow their authenticator's flow for passkey creation and validation. OpenSigner remembers which passkey it should ask for whenever a user wants to recover their cold share.
 
 Both the passkey's private key and the cold share are safe in this scenario, too:
 - The passkey's private key cannot leave the authenticator device
-- The cold share is encrypted and decrypted client side
+- The cold share is encrypted and decrypted on the client side

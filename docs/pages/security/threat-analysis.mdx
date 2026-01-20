@@ -1,0 +1,109 @@
+---
+title: Threat Analysis
+description: This section covers potential attack vectors against OpenSigner components and recommended mitigations.
+---
+
+# Threat Analysis
+
+This section covers potential attack vectors against OpenSigner components and recommended mitigations.
+
+## Tampering Risks
+
+If the following components are tampered with by a third party or compromised while under the developer's control,
+these issues can arise:
+
+### iFrame Compromise
+
+The iframe is the only component with access to the full, reconstructed key.
+If the iframe is compromised, the attacker could use the key to impersonate the user
+and interact with the chain on their behalf.
+
+**Mitigations:**
+- Verify iframe checksums against official build logs
+- Use [attestation verification](/security/system-integrity#attestation) to ensure build integrity
+- Load iframe from trusted, self-hosted origin when possible
+
+### Auth Service Compromise
+
+Having a compromised auth service has, besides the usual implications,
+some risks _if the storages are also compromised_. The auth service could forge an access
+token and have the hot or cold storage accept them. Users could then attempt to perform
+an operation unaware of the forgery, and provide their recovery share entropy to the attacker
+when trying to log into a new device.
+
+**Mitigations:**
+- Use short-lived access tokens with strict validation
+- Implement token binding to specific operations
+- Monitor for unusual authentication patterns
+
+### Hot Storage Compromise
+
+If the hot storage is compromised or tampered with, attackers have access to one
+of the two shares required to reconstruct the key.
+
+**Mitigations:**
+- Hot storage alone is insufficient for key reconstruction
+- Requires compromise of cold storage or device share for full attack
+- Encrypt database storage with self-managed keys (CMEK)
+
+### Cold Storage Compromise
+
+The risk of a compromised cold storage is, in isolation, lesser than that of the hot storage
+because the cold storage share is encrypted with user entropy, and access to the cold storage
+alone is not enough to reconstruct the recovery share. When combined with other compromised components,
+the risk increases significantly.
+
+**Mitigations:**
+- Use password or passkey recovery (user-held secrets)
+- Enable OTP for automatic recovery
+- Run cold storage in TEE with non-extractable KMS
+
+
+## Attack Scenarios
+
+### Credential Theft + No Device Access
+
+**Attack:** Attacker obtains user's login credentials but doesn't have physical access to their device.
+
+| Recovery Method | Outcome |
+|-----------------|---------|
+| Password-based | ❌ Attack fails - attacker needs recovery password |
+| Passkey-based | ❌ Attack fails - attacker needs passkey device |
+| Automatic (Self-Hosted, No OTP) | ⚠️ Attack succeeds - credentials unlock all shares if Admin holds all keys |
+| Automatic (Cloud) | ❌ Attack fails - Admin holds Developer Part, attacker lacks it |
+| Automatic (with OTP) | ❌ Attack fails - attacker needs OTP |
+
+### Malicious Host
+
+**Attack:** The entity hosting OpenSigner components attempts to access user keys.
+
+| Hosting Configuration | Outcome |
+|----------------------|---------|
+| Single Host operates all + holds ALL keys (Self-Hosted default) | ⚠️ Host can reconstruct keys |
+| Cloud Host (such as Openfort) + Developer holds Encryption Part | ❌ Host has only 1 usable share (Hot) |
+| Single Host + password/passkey recovery | ❌ User entropy protects cold share |
+| Single Host + automatic + OTP | ❌ OTP required for cold share access |
+| Split hosting (different Hosts) | ❌ No single party has both shares |
+
+### Token Forgery
+
+**Attack:** Auth service operator forges tokens to access shares.
+
+**Protection:** Even with forged tokens:
+- Password recovery: cold share requires user's password
+- Passkey recovery: cold share requires user's passkey
+- Automatic + OTP: cold share requires user's OTP
+
+
+## Best Practices
+
+- **Always validate tokens**: expiration, issuer, and contents.
+- **Don't log sensitive data**, such as access tokens or key shares.
+- **Enforce valid TLS** on all communications.
+- **Run services in Trusted Execution Environments (TEE)** when possible.
+- **Set TTLs for access tokens** to limit their validity period.
+- **Use password or passkey recovery** for maximum security.
+- **Enable OTP for automatic recovery** to prevent backend reconstruction.
+- **Separate project ownership** from infrastructure hosting.
+- **Monitor audit logs** for unusual access patterns.
+- **Regularly rotate** service credentials and API keys.

@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in contributing to vocs! Please take a moment to review this document before submitting a pull request.
+Thanks for your interest in contributing to OpenSigner! Please take a moment to review this document before submitting a pull request.
 
 If you want to contribute, but aren't sure where to start, you can create a [new discussion](https://github.com/openfort-xyz/opensigner/discussions).
 
@@ -21,7 +21,6 @@ This guide is intended to help you get started with contributing. By following t
 5. Submitting a pull request
 6. Versioning
 
----
 
 ### Cloning the repository
 
@@ -36,7 +35,6 @@ git clone https://github.com/openfort-xyz/opensigner.git
   <a href="#basic-guide">&uarr; back to top</a></b>
 </div>
 
----
 
 ### Installing Node.js and Pnpm
 
@@ -58,7 +56,6 @@ If the versions are not correct or you don't have Node.js or Pnpm installed, dow
   <a href="#basic-guide">&uarr; back to top</a></b>
 </div>
 
----
 
 ### Installing dependencies
 
@@ -74,7 +71,6 @@ After the install completes, Pnpm links packages across the project for developm
   <a href="#basic-guide">&uarr; back to top</a></b>
 </div>
 
----
 
 ### Writing documentation
 
@@ -92,7 +88,6 @@ Try to keep documentation brief and use plain language so folks of all experienc
   <a href="#basic-guide">&uarr; back to top</a></b>
 </div>
 
----
 
 ### Submitting a pull request
 
@@ -107,7 +102,6 @@ When you submit a pull request, GitHub will automatically lint, build, and test 
   <a href="#basic-guide">&uarr; back to top</a></b>
 </div>
 
----
 
 ### Versioning
 
@@ -125,7 +119,6 @@ Even though you can technically use any markdown formatting you like, headings s
 
 If your PR is making changes to an area that already has a changeset (e.g. there’s an existing changeset covering theme API changes but you’re making further changes to the same API), you should update the existing changeset in your PR rather than creating a new one.
 
----
 
 <br>
 

@@ -1,0 +1,91 @@
+---
+title: Security Overview
+description: The OpenSigner system is composed of multiple components that communicate over HTTP.
+---
+
+# Security Overview
+
+The OpenSigner system is composed of multiple components that communicate over HTTP.
+Communication includes sensitive data such as key shares or access tokens, therefore **it is crucial
+to ensure communication is secured through TLS** and HTTPS is enforced.
+
+## Glossary
+
+| Term | Definition |
+|---|---|
+| **End User** | The final user of the wallet (for example, a player in a game). |
+| **Developer / Project Owner** | The entity building the application (for example, You). Controls the project secrets. |
+| **Host / Operator** | The entity operating the infrastructure (for example, Openfort or You in self-hosted). |
+| **Auth Provider** | The system validating user identity (for example, Openfort Auth, Google, Custom OIDC). |
+| **Shield (Cold Storage)** | Component that stores encrypted recovery shares. |
+| **Hot Storage** | Component that stores frequently accessed shares. |
+| **iFrame** | Client-side component running in the user's browser that reconstructs keys. |
+ 
+## Trust Model
+
+Understand the root of trust at each point in the system.
+The key is split into three shares; two of them are enough to reconstruct the key.
+Once a user logs into a device, the three shares are stored in:
+
+- **User's device**: the domain-protected storage of the browser.
+- **Hot storage**: users can access this share through an access token granted by the **Auth Provider**.
+- **Cold storage** (Shield): users can access this share provided a request is made with valid entropy and a valid token is issued by the **Auth Provider**.
+
+The system relies on the following roots of trust:
+
+### Auth Provider (Authentication Service)
+
+The **Auth Provider** is responsible for validating the user's identity and granting access tokens.
+It must be trusted to securely handle user credentials and issue tokens that can be used to access shares.
+While the authentication service API is provided, each implementation is tied to each project's specific needs,
+and needs to be done with care.
+
+The impact of a compromised authentication varies depending on the context:
+
+- If the attacker also has access to the user's device and the key was previously reconstructed there:
+    - They can fully recover the secret because user authentication directly unlocks the hot share.
+- If the attacker only has the user's credentials but no device access, the outcome depends on how cold share recovery is handled:
+    - With *user-based recovery*, an extra password or passkey (independent from the user's main credentials) is needed to decrypt the cold share.
+    - With *automatic recovery*:
+        - Without OTP: the attacker can easily recover the user's secret key just by using the stolen credentials.
+        - With OTP: user interaction is required to recover the secret, as the attacker would need to compromise the OTP method as well.
+
+:::tip[Best Practice]
+The safest way to protect a cold share is to use user-based recovery with a completely separate password/passkey that's unrelated to the primary authentication method.
+:::
+
+### Application Logic
+
+Two out of three shares are enough to reconstruct the key. For this reason, the system
+includes audited, open-source implementations of the storage and management systems of two of the three shares.
+
+- **iFrame**:
+The iFrame stores shares (in domain-based browser storage) and handles
+splitting and reconstructing the keys. It is the only component that has access to the full, reconstructed key.
+
+- **Cold Storage**: The cold storage is the stepping stone for every login in a new device.
+The share it contains is encrypted with either user or project entropy.
+
+### Environment
+
+Use trusted browsers, servers, and execution environments.
+
+### Developer / Project Owner
+
+Users with **automatic recovery** trust the owner of the project (Developer) to hold the **Developer Encryption Part** securely.
+If the Developer loses this part, automatic recovery becomes impossible for registered devices.
+If the Developer exposes this part, the non-custodial guarantees of the **Host** are compromised.
+
+### Transport
+
+Sensitive data, such as access tokens and key shares, travel over the network when transmitted from one component to
+another. It is vital to have and enforce secure communication channels, such as HTTPS, to prevent eavesdropping and tampering.
+Make sure to validate TLS certificates to prevent Man In The Middle (MITM) attacks.
+[HSTS](https://en.wikipedia.org/wiki/HTTP_Strict_Transport_Security) should be used for browser-oriented operations.
+
+## Next Steps
+
+- **[Custody Model FAQ](/security/deployment-scenarios#frequently-asked-questions)** - Key questions about backend reconstruction and non-custodial guarantees
+- [Recovery Methods](/security/recovery-methods) - Password, passkey, and automatic recovery options
+- [Deployment Scenarios](/security/deployment-scenarios) - Hosting configurations and their security implications
+- [Threat Analysis](/security/threat-analysis) - Potential attack vectors and mitigations
