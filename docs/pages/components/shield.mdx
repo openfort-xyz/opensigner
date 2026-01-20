@@ -139,6 +139,8 @@ Cold share recovery can be also done via project-wide entropy. In this case, **b
 
 When a project is created, an encryption key for this particular project is created and split between shield and the project. This key is reconstructed and used to encrypt/decrypt shares whenever the entropy source is the project.
 
+This type of share recovery also can be enhanced with 2FA, detailed description is provided below.
+
 ### Passkey Recovery
 Cold shares can be encrypted using passkeys.
 
@@ -180,9 +182,13 @@ Shield will store the encrypted contents of the cold share along with the intern
 By *internal passkey ID* we mean the identifier the passkey authenticator gave to that particular passkey.
 OpenSigner also stores the environment in which the passkey was created. This information is mainly extracted from the `User-Agent` token and is meant for both hinting and tracking purposes.
 
-## 2FA (Two-Factor Authentication)
+## 2FA (Two-Factor Authentication) for automatic recovery
 
 Shield supports Two-Factor Authentication (2FA) using One-Time Passwords (OTP) to add an additional layer of security when creating encrypted sessions.
+
+:::info
+2FA is available only for shares with automatic recovery method.
+:::
 
 ### Enabling 2FA
 
