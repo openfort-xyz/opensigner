@@ -337,76 +337,76 @@ Shield API returns various error codes depending on the type of failure encounte
 
 ### OTP Errors
 
-| HTTP Status | Error Code | Message | Description |
-|-------------|------------|---------|-------------|
-| 429 | `OTP_RATE_LIMIT` | Rate limit exceeded to generate OTP | Too many OTP generation attempts. Rate limit has been exceeded for this user. |
-| 422 | `OTP_EXPIRED` | OTP is expired | The provided OTP code has expired (OTPs typically expire after a few minutes). |
-| 400 | `OTP_INVALIDATED` | OTP invalidated after max failed attempts | The OTP has been invalidated due to too many failed verification attempts. |
-| 400 | `OTP_INVALID` | Received otp is invalid | The provided OTP code does not match the expected value. |
-| 400 | `OTP_REQUESTED_BUT_NOT_SENT` | OTP was requested but not sent | OTP code is required but was not provided in the request. |
-| 428 | `OTP_MISSING` | OTP is required for this request | OTP verification is required to complete this operation. |
-| 404 | `OTP_RECORD_NOT_FOUND` | OTP record not found for user | No OTP record exists for the specified user. |
-| 400 | `OTP_USER_INFO_MISSING` | Missing user information like email or phone number | Email or phone number must be provided to send OTP. |
-| 400 | `OTP_NOT_SUPPORTED` | Project doesn't support 2FA | The project does not have 2FA enabled. |
-| 409 | `OTP_ALREADY_ENABLED` | Project already has 2FA enabled | 2FA is already enabled for this project and cannot be enabled again. |
+| HTTP Status | Error Code | Message |
+|-------------|------------|---------|
+| 429 | `OTP_RATE_LIMIT` | Rate limit exceeded to generate OTP |
+| 422 | `OTP_EXPIRED` | OTP is expired |
+| 400 | `OTP_INVALIDATED` | OTP invalidated after max failed attempts |
+| 400 | `OTP_INVALID` | Received otp is invalid |
+| 400 | `OTP_REQUESTED_BUT_NOT_SENT` | OTP was requested but not sent |
+| 428 | `OTP_MISSING` | OTP is required for this request |
+| 404 | `OTP_RECORD_NOT_FOUND` | OTP record not found for user |
+| 400 | `OTP_USER_INFO_MISSING` | Missing user information like email or phone number |
+| 400 | `OTP_NOT_SUPPORTED` | Project doesn't support 2FA |
+| 409 | `OTP_ALREADY_ENABLED` | Project already has 2FA enabled |
 
 ### Project Errors
 
-| HTTP Status | Error Code | Message | Description |
-|-------------|------------|---------|-------------|
-| 404 | `PJ_NOT_FOUND` | Project not found | The specified project does not exist. |
-| 409 | `EC_EXISTS` | Encryption part already exists | An encryption part has already been registered for this project. |
-| 409 | `EC_MISSING` | The requested share have project entropy and encryption part is required | An encryption part must be provided for this operation. |
-| 400 | `EC_INVALID` | Invalid encryption part | The provided encryption part is invalid or malformed. |
-| 400 | `EC_INVALID` | Invalid encryption session | The encryption session ID is invalid, expired, or does not exist. |
+| HTTP Status | Error Code | Message |
+|-------------|------------|---------|
+| 404 | `PJ_NOT_FOUND` | Project not found |
+| 409 | `EC_EXISTS` | Encryption part already exists |
+| 409 | `EC_MISSING` | The requested share have project entropy and encryption part is required |
+| 400 | `EC_INVALID` | Invalid encryption part |
+| 400 | `EC_INVALID` | Invalid encryption session |
 
 ### Share Errors
 
-| HTTP Status | Error Code | Message | Description |
-|-------------|------------|---------|-------------|
-| 404 | `SH_NOT_FOUND` | Share not found | The requested share does not exist. |
-| 409 | `SH_EXISTS` | Share already exists | A share already exists for this user. |
+| HTTP Status | Error Code | Message |
+|-------------|------------|---------|
+| 404 | `SH_NOT_FOUND` | Share not found |
+| 409 | `SH_EXISTS` | Share already exists |
 
 ### User Errors
 
-| HTTP Status | Error Code | Message | Description |
-|-------------|------------|---------|-------------|
-| 404 | `US_NOT_FOUND` | User not found | The specified user does not exist. |
-| 404 | `US_EXT_NOT_FOUND` | External user not found | The external user ID was not found. |
-| 409 | `US_EXT_EXISTS` | External user already exists | A user with this external ID already exists. |
-| 400 | `USER_CONTACTS_MISMATCH` | User contact information mismatch | The provided contact information does not match the stored user contact information. |
-| 400 | `EMAIL_INVALID` | Provided Email is invalid | The email address format is invalid. |
-| 400 | `PHONE_INVALID` | Provided phone number is invalid | The phone number format is invalid. |
+| HTTP Status | Error Code | Message |
+|-------------|------------|---------|
+| 404 | `US_NOT_FOUND` | User not found |
+| 404 | `US_EXT_NOT_FOUND` | External user not found |
+| 409 | `US_EXT_EXISTS` | External user already exists |
+| 400 | `USER_CONTACTS_MISMATCH` | User contact information mismatch |
+| 400 | `EMAIL_INVALID` | Provided Email is invalid |
+| 400 | `PHONE_INVALID` | Provided phone number is invalid |
 
 ### Provider Errors
 
-| HTTP Status | Error Code | Message | Description |
-|-------------|------------|---------|-------------|
-| 400 | `PV_UNKNOWN` | Unknown provider type | The specified provider type is not recognized. |
-| 400 | `PV_MISSING` | Missing provider | Provider information is missing from the request. |
-| 404 | `PV_NOT_FOUND` | Provider not found | The requested authentication provider was not found. |
-| 400 | `PV_CFG_INVALID` | Invalid provider config | The provider configuration is invalid or incomplete. |
-| 400 | `PV_CFG_INVALID` | Missing key type | Key type must be specified for PEM certificates. |
-| 400 | `PV_CFG_INVALID` | Invalid PEM certificate | The provided PEM certificate is invalid or malformed. |
-| 409 | `PV_CFG_INVALID` | JWK and PEM cannot be set at the same time | Cannot configure both JWK and PEM for a single provider. |
-| 409 | `PV_EXISTS` | Custom authentication already registered for this project | A custom authentication provider already exists for this project. |
+| HTTP Status | Error Code | Message |
+|-------------|------------|---------|
+| 400 | `PV_UNKNOWN` | Unknown provider type |
+| 400 | `PV_MISSING` | Missing provider |
+| 404 | `PV_NOT_FOUND` | Provider not found |
+| 400 | `PV_CFG_INVALID` | Invalid provider config |
+| 400 | `PV_CFG_INVALID` | Missing key type |
+| 400 | `PV_CFG_INVALID` | Invalid PEM certificate |
+| 409 | `PV_CFG_INVALID` | JWK and PEM cannot be set at the same time |
+| 409 | `PV_EXISTS` | Custom authentication already registered for this project |
 
 ### Authentication Errors
 
-| HTTP Status | Error Code | Message | Description |
-|-------------|------------|---------|-------------|
-| 401 | `A_MISSING` | Missing API key | API key header is required but not provided. |
-| 401 | `A_MISSING` | Missing API secret | API secret header is required but not provided. |
-| 401 | `A_MISSING` | Missing token | Authorization token is required but not provided. |
-| 401 | `A_MISSING` | Missing auth provider | Auth provider header is required but not provided. |
-| 401 | `A_INVALID` | Invalid API key or API secret | The provided API credentials are invalid. |
-| 401 | `A_INVALID` | Invalid token | The provided authorization token is invalid or expired. |
-| 401 | `A_INVALID` | Invalid auth provider | The specified auth provider is not valid. |
+| HTTP Status | Error Code | Message |
+|-------------|------------|---------|
+| 401 | `A_MISSING` | Missing API key |
+| 401 | `A_MISSING` | Missing API secret |
+| 401 | `A_MISSING` | Missing token |
+| 401 | `A_MISSING` | Missing auth provider |
+| 401 | `A_INVALID` | Invalid API key or API secret |
+| 401 | `A_INVALID` | Invalid token |
+| 401 | `A_INVALID` | Invalid auth provider |
 
 ### General Errors
 
-| HTTP Status | Error Code | Message | Description |
-|-------------|------------|---------|-------------|
-| 500 | `INTERNAL` | Internal error | An unexpected internal server error occurred. |
-| 500 | `MISSING_NOTIFICATION_SERV` | Missing notification service | The notification service is not configured or unavailable. |
-| 400 | `BAD_REQUEST` | Various messages | Generic bad request error with context-specific message. |
+| HTTP Status | Error Code | Message |
+|-------------|------------|---------|
+| 500 | `INTERNAL` | Internal error |
+| 500 | `MISSING_NOTIFICATION_SERV` | Missing notification service |
+| 400 | `BAD_REQUEST` | Various messages |
