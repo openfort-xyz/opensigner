@@ -318,78 +318,89 @@ The `session_id` can then be used with the `X-Encryption-Session` header when re
 
 ## Errors
 
-Shield API returns various error codes depending on the type of failure encountered. Errors are organized by category below.
+Shield API returns various error codes depending on the type of failure encountered. Each error response includes an HTTP status code, an error code, and a descriptive message.
+
+### Error Response Format
+
+```json
+{
+  "message": "Error description",
+  "code": "ERROR_CODE"
+}
+```
 
 ### OTP Errors
 
-| Error | Description |
-|-------|-------------|
-| `rate limit exceeded` | Too many OTP generation attempts. Rate limit has been exceeded for this user. |
-| `failed to generate OTP` | Internal error occurred while generating the OTP code. |
-| `failed to marshal OTP request` | Internal error occurred while processing the OTP request. |
-| `otp was expired` | The provided OTP code has expired (OTPs typically expire after a few minutes). |
-| `otp invalidated after max failed attempts` | The OTP has been invalidated due to too many failed verification attempts. |
-| `received otp is invalid` | The provided OTP code does not match the expected value. |
-| `otp is missing` | OTP code is required but was not provided in the request. |
+| HTTP Status | Error Code | Message | Description |
+|-------------|------------|---------|-------------|
+| 429 | `OTP_RATE_LIMIT` | Rate limit exceeded to generate OTP | Too many OTP generation attempts. Rate limit has been exceeded for this user. |
+| 422 | `OTP_EXPIRED` | OTP is expired | The provided OTP code has expired (OTPs typically expire after a few minutes). |
+| 400 | `OTP_INVALIDATED` | OTP invalidated after max failed attempts | The OTP has been invalidated due to too many failed verification attempts. |
+| 400 | `OTP_INVALID` | Received otp is invalid | The provided OTP code does not match the expected value. |
+| 400 | `OTP_REQUESTED_BUT_NOT_SENT` | OTP was requested but not sent | OTP code is required but was not provided in the request. |
+| 428 | `OTP_MISSING` | OTP is required for this request | OTP verification is required to complete this operation. |
+| 404 | `OTP_RECORD_NOT_FOUND` | OTP record not found for user | No OTP record exists for the specified user. |
+| 400 | `OTP_USER_INFO_MISSING` | Missing user information like email or phone number | Email or phone number must be provided to send OTP. |
+| 400 | `OTP_NOT_SUPPORTED` | Project doesn't support 2FA | The project does not have 2FA enabled. |
+| 409 | `OTP_ALREADY_ENABLED` | Project already has 2FA enabled | 2FA is already enabled for this project and cannot be enabled again. |
 
 ### Project Errors
 
-| Error | Description |
-|-------|-------------|
-| `project not found` | The specified project does not exist. |
-| `encryption part not found` | The encryption part for the project was not found. |
-| `key in DB already exist` | An encryption key already exists for this project. |
-| `data in DB not found` | The requested data was not found in the database. |
-| `encryption part already exists` | An encryption part has already been registered for this project. |
-| `encryption part is required` | An encryption part must be provided for this operation. |
-| `invalid encryption part` | The provided encryption part is invalid or malformed. |
-| `invalid encryption session` | The encryption session ID is invalid, expired, or does not exist. |
-| `invalid encryption key builder type` | The encryption key builder type is not supported. |
-| `reconstructed key mismatch` | The reconstructed encryption key does not match the expected value. |
-| `project part is required` | The project part of the encryption key is required. |
-| `database part is required` | The database part of the encryption key is required. |
-| `failed to split key` | An error occurred while splitting the encryption key. |
-| `otp verification required` | OTP verification is required to complete this operation. |
+| HTTP Status | Error Code | Message | Description |
+|-------------|------------|---------|-------------|
+| 404 | `PJ_NOT_FOUND` | Project not found | The specified project does not exist. |
+| 409 | `EC_EXISTS` | Encryption part already exists | An encryption part has already been registered for this project. |
+| 409 | `EC_MISSING` | The requested share have project entropy and encryption part is required | An encryption part must be provided for this operation. |
+| 400 | `EC_INVALID` | Invalid encryption part | The provided encryption part is invalid or malformed. |
+| 400 | `EC_INVALID` | Invalid encryption session | The encryption session ID is invalid, expired, or does not exist. |
 
 ### Share Errors
 
-| Error | Description |
-|-------|-------------|
-| `share not found` | The requested share does not exist. |
-| `share already exists` | A share already exists for this user. |
+| HTTP Status | Error Code | Message | Description |
+|-------------|------------|---------|-------------|
+| 404 | `SH_NOT_FOUND` | Share not found | The requested share does not exist. |
+| 409 | `SH_EXISTS` | Share already exists | A share already exists for this user. |
 
 ### User Errors
 
-| Error | Description |
-|-------|-------------|
-| `user not found` | The specified user does not exist. |
-| `external user not found` | The external user ID was not found. |
-| `external user already exists` | A user with this external ID already exists. |
-| `user contact information not found` | Contact information (email or phone) not found for this user. |
+| HTTP Status | Error Code | Message | Description |
+|-------------|------------|---------|-------------|
+| 404 | `US_NOT_FOUND` | User not found | The specified user does not exist. |
+| 404 | `US_EXT_NOT_FOUND` | External user not found | The external user ID was not found. |
+| 409 | `US_EXT_EXISTS` | External user already exists | A user with this external ID already exists. |
+| 400 | `USER_CONTACTS_MISMATCH` | User contact information mismatch | The provided contact information does not match the stored user contact information. |
+| 400 | `EMAIL_INVALID` | Provided Email is invalid | The email address format is invalid. |
+| 400 | `PHONE_INVALID` | Provided phone number is invalid | The phone number format is invalid. |
 
 ### Provider Errors
 
-| Error | Description |
-|-------|-------------|
-| `invalid provider config` | The provider configuration is invalid or incomplete. |
-| `unknown provider type` | The specified provider type is not recognized. |
-| `custom authentication already registered for this project` | A custom authentication provider already exists for this project. |
-| `custom authentication not found` | The requested authentication provider was not found. |
-| `provider not configured` | The authentication provider has not been configured for this project. |
-| `provider config mismatch` | The provider configuration does not match the expected format. |
-| `unexpected status code` | The provider returned an unexpected HTTP status code. |
-| `certificate type not supported` | The certificate type is not supported by Shield. |
-| `provider misconfigured` | The provider is misconfigured and cannot be used for authentication. |
-| `session expired` | The authentication session has expired. |
+| HTTP Status | Error Code | Message | Description |
+|-------------|------------|---------|-------------|
+| 400 | `PV_UNKNOWN` | Unknown provider type | The specified provider type is not recognized. |
+| 400 | `PV_MISSING` | Missing provider | Provider information is missing from the request. |
+| 404 | `PV_NOT_FOUND` | Provider not found | The requested authentication provider was not found. |
+| 400 | `PV_CFG_INVALID` | Invalid provider config | The provider configuration is invalid or incomplete. |
+| 400 | `PV_CFG_INVALID` | Missing key type | Key type must be specified for PEM certificates. |
+| 400 | `PV_CFG_INVALID` | Invalid PEM certificate | The provided PEM certificate is invalid or malformed. |
+| 409 | `PV_CFG_INVALID` | JWK and PEM cannot be set at the same time | Cannot configure both JWK and PEM for a single provider. |
+| 409 | `PV_EXISTS` | Custom authentication already registered for this project | A custom authentication provider already exists for this project. |
 
-### Keychain Errors
+### Authentication Errors
 
-| Error | Description |
-|-------|-------------|
-| `keychain not found` | The keychain for the specified user was not found. |
+| HTTP Status | Error Code | Message | Description |
+|-------------|------------|---------|-------------|
+| 401 | `A_MISSING` | Missing API key | API key header is required but not provided. |
+| 401 | `A_MISSING` | Missing API secret | API secret header is required but not provided. |
+| 401 | `A_MISSING` | Missing token | Authorization token is required but not provided. |
+| 401 | `A_MISSING` | Missing auth provider | Auth provider header is required but not provided. |
+| 401 | `A_INVALID` | Invalid API key or API secret | The provided API credentials are invalid. |
+| 401 | `A_INVALID` | Invalid token | The provided authorization token is invalid or expired. |
+| 401 | `A_INVALID` | Invalid auth provider | The specified auth provider is not valid. |
 
-### Infrastructure Errors
+### General Errors
 
-| Error | Description |
-|-------|-------------|
-| `database unavailable` | The database is currently unavailable or unreachable. |
+| HTTP Status | Error Code | Message | Description |
+|-------------|------------|---------|-------------|
+| 500 | `INTERNAL` | Internal error | An unexpected internal server error occurred. |
+| 500 | `MISSING_NOTIFICATION_SERV` | Missing notification service | The notification service is not configured or unavailable. |
+| 400 | `BAD_REQUEST` | Various messages | Generic bad request error with context-specific message. |
