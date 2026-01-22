@@ -82,7 +82,16 @@ export const sidebar: Sidebar =
                 },
                 {
                     text: 'Cold Storage',
-                    link: '/components/shield',
+                    items: [
+                        {
+                            text: 'Overview',
+                            link: '/components/shield',
+                        },
+                        {
+                            text: 'OTP for Automatic Recovery',
+                            link: '/components/cold_storage/otp',
+                        },
+                    ],
                 },
             ]
         },

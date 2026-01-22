@@ -113,7 +113,7 @@ The key is generated using a secure RNG (golang's `crypto/rand`).
 :::
 
 
-## Two-Factor Authentication (OTP) for Automatic Recovery
+## OTP Verification for Automatic Recovery
 
 :::warning[Critical Security Consideration]
 In automatic recovery without OTP, the backend has access to both hot storage and cold storage. Using a valid user JWT, the system can coordinate access to these shares and reconstruct a user's private key on the backend. **No additional user-held secret is required beyond standard user authentication.**
@@ -131,7 +131,7 @@ This reduces the control that the cold storage host has over the stored shares.
 | Scenario | Backend Can Reconstruct Key? | User Action Required? |
 |----------|------------------------------|----------------------|
 | Automatic recovery **without OTP** | ✅ Yes | ❌ No |
-| Automatic recovery **with OTP (OTP)** | ❌ No | ✅ Yes - must provide OTP |
+| Automatic recovery **with OTP** | ❌ No | ✅ Yes - must provide OTP |
 | Password-based recovery | ❌ No | ✅ Yes - must provide password |
 | Passkey-based recovery | ❌ No | ✅ Yes - must authenticate passkey |
 
