@@ -1,0 +1,159 @@
+---
+title: OTP for Automatic Recovery
+description: One-Time Password (OTP) verification for automatic recovery adds an additional layer of security when creating encrypted sessions.
+---
+
+# OTP for Automatic Recovery
+
+Shield supports One-Time Password (OTP) verification to add an additional layer of security when creating encrypted sessions.
+
+:::info
+OTP is available only for shares with automatic recovery method.
+:::
+
+## Enabling OTP
+
+OTP is a project-level feature that must be enabled before it can be used. Once enabled, **OTP cannot be disabled** for a project.
+
+To enable OTP for a project, use the following endpoint:
+
+**Endpoint:** `POST /project/enable-2fa`
+
+**Headers:**
+- `X-API-Key`: Project's API key
+- `X-API-Secret`: Project's API secret
+
+**Response:**
+- `200 OK`: OTP enabled successfully
+- `409 Conflict`: OTP already enabled for this project
+
+## How OTP Works
+
+When OTP is enabled for a project, users must go through an OTP verification flow when creating an encrypted session. Here's the typical flow:
+
+### 1. Request OTP
+
+Before creating an encrypted session, users must request an OTP code.
+
+**Endpoint:** `POST /project/otp`
+
+**Headers:**
+- `X-API-Key`: Project's API key
+- `X-API-Secret`: Project's API secret
+
+**Request Body:**
+```json
+{
+  "user_id": "user_external_id",
+  "email": "user@example.com",
+  "dangerously_skip_verification": false
+}
+```
+
+**OR**
+
+```json
+{
+  "user_id": "user_external_id",
+  "phone": "+1234567890",
+  "dangerously_skip_verification": false
+}
+```
+
+**Parameters:**
+- `user_id` (required): The external user ID
+- `email` (optional): User's email address to receive OTP via email
+- `phone` (optional): User's phone number to receive OTP via SMS
+- `dangerously_skip_verification` (optional, default: false): If set to `true`, skips OTP verification
+
+**Note:** You must provide either `email` or `phone`, but not both.
+
+**The `dangerously_skip_verification` Flag:**
+
+This flag can be used to simplify onboarding for new users. For example:
+- When **creating a new wallet**: Set this flag to `true` to skip OTP verification and streamline the signup process
+- When **recovering an existing wallet**: Set this flag to `false` to require OTP verification for additional security
+
+When this flag is set to `true`, an OTP is generated but not sent to the user, and the OTP verification step can be skipped when creating an encryption session.
+
+**OTP Delivery Methods:**
+
+Shield supports two delivery methods for OTP codes:
+
+1. **Email OTP**: When an email address is provided, the OTP is sent to the user's email
+2. **SMS OTP**: When a phone number is provided, the OTP is sent via SMS to the user's phone
+
+**Response:**
+- `200 OK`: OTP generated and sent successfully
+
+### 2. Create Encryption Session with OTP
+
+After receiving the OTP, users create an encrypted session by providing the OTP code.
+
+**Endpoint:** `POST /project/encryption-session`
+
+**Headers:**
+- `X-API-Key`: Project's API key
+- `X-API-Secret`: Project's API secret
+
+**Request Body:**
+```json
+{
+  "encryption_part": "encryption_part_value",
+  "user_id": "user_external_id",
+  "otp_code": "123456789"
+}
+```
+
+**Parameters:**
+- `encryption_part` (required): The encryption part for the project
+- `user_id` (required): The external user ID
+- `otp_code` (optional): The OTP code received via email or SMS. Required if `dangerously_skip_verification` was `false`
+
+**Response:**
+```json
+{
+  "session_id": "generated_session_id"
+}
+```
+
+The `session_id` can then be used with the `X-Encryption-Session` header when registering, updating, or retrieving shares.
+
+## OTP Security Features
+
+- **OTP Verification**: When OTP is enabled and `dangerously_skip_verification` is `false`, users must provide a valid OTP code to create an encrypted session
+- **Contact Verification**: Shield verifies and stores hashed contact information (email or phone) to ensure consistency across requests
+- **Rate Limiting**: Project-level rate limits prevent abuse of OTP generation
+- **Session Expiry**: Encryption sessions are time-limited for security
+
+## Example Workflows
+
+### New User Signup (Skip Verification)
+```
+1. POST /project/otp with dangerously_skip_verification: true
+2. POST /project/encryption-session (no OTP code needed)
+3. Use session_id to register shares
+```
+
+### Existing User Recovery (With Verification)
+```
+1. POST /project/otp with dangerously_skip_verification: false
+2. User receives OTP via email or SMS
+3. POST /project/encryption-session with OTP code
+4. Use session_id to retrieve shares
+```
+
+## OTP Errors
+
+| HTTP Status | Error Code | Message |
+|-------------|------------|---------|
+| 429 | `OTP_RATE_LIMIT` | Rate limit exceeded to generate OTP |
+| 422 | `OTP_EXPIRED` | OTP is expired |
+| 400 | `OTP_INVALIDATED` | OTP invalidated after max failed attempts |
+| 400 | `OTP_INVALID` | Received otp is invalid |
+| 400 | `OTP_REQUESTED_BUT_NOT_SENT` | OTP was requested but not sent |
+| 428 | `OTP_MISSING` | OTP is required for this request |
+| 404 | `OTP_RECORD_NOT_FOUND` | OTP record not found for user |
+| 400 | `OTP_USER_INFO_MISSING` | Missing user information like email or phone number |
+| 400 | `OTP_NOT_SUPPORTED` | Project doesn't support OTP |
+| 409 | `OTP_ALREADY_ENABLED` | Project already has OTP enabled |
