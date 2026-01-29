@@ -9,9 +9,8 @@
     Non-custodial private key management infrastructure.
     <br />
     <a href="https://opensigner.dev"><strong>Learn more »</strong></a>
-    <br />
-    <br />
-    <a href="https://t.me/openfort">Telegram</a>
+    .
+    <a href="https://t.me/openfort">Support</a>
     · 
     <a href="https://youtu.be/Fwe5cIQNKos">Video Walkthrough</a>
     · 
@@ -20,6 +19,7 @@
 
 </p>
 
+*OpenSigner is currenlty being audited by Quantstamp*
 
 ## About the Project
 
