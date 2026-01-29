@@ -8,8 +8,8 @@
   <p align="center">
     Non-custodial private key management infrastructure.
     <br />
-    <a href="https://opensigner.dev"><strong>Learn more »</strong></a>
-    .
+    <a href="https://opensigner.dev">=Learn more=</a>
+    ·
     <a href="https://t.me/openfort">Support</a>
     · 
     <a href="https://youtu.be/Fwe5cIQNKos">Video Walkthrough</a>
