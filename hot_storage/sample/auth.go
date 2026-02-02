@@ -14,7 +14,7 @@ const (
 	headerAuthProvider    = "X-Auth-Provider"
 	headerCookieFieldName = "X-Cookie-Field"
 
-	auhtProviderDefault = "default"
+	authProviderDefault = "default"
 	authProviderGoogle  = "google"
 	authProviderPlayFab = "playfab"
 
@@ -35,12 +35,12 @@ func validateAuth(r *http.Request) (string, string, error) {
 
 	authProvider := r.Header.Get(headerAuthProvider)
 	if authProvider == "" {
-		authProvider = auhtProviderDefault
+		authProvider = authProviderDefault
 	}
 
 	var userId string
 	switch authProvider {
-	case auhtProviderDefault:
+	case authProviderDefault:
 		userId, err = validateDefaultAuth(token)
 	default:
 		userId, err = validateThirdPartyAuth(token, authProvider)
