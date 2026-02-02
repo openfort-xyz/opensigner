@@ -13,8 +13,9 @@ COPY . .
 COPY ./tsconfig.base.container.json ../tsconfig.base.json
 
 # Install TS dependencies
-RUN yarn
+RUN corepack enable && corepack prepare pnpm@10.28.2 --activate
+RUN pnpm install --frozen-lockfile
 
-RUN yarn build
+RUN pnpm build
 
-ENTRYPOINT ["yarn", "preview"]
+ENTRYPOINT ["pnpm", "preview"]

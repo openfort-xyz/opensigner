@@ -7,9 +7,8 @@ WORKDIR /app
 
 COPY . .
 
-RUN yarn install
-
-RUN npm install @better-auth/cli@1.3.4
+RUN corepack enable && corepack prepare pnpm@10.28.2 --activate
+RUN pnpm install --frozen-lockfile
 
 EXPOSE 3000
 

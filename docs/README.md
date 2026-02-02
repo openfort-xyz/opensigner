@@ -11,23 +11,23 @@ Follow the steps in the D2 tour: [https://d2lang.com/tour/install](https://d2lan
 ### Vocs
 
 ```shell
-yarn
+pnpm
 ```
 
 ## Build
 
 ```shell
-yarn build
+pnpm build
 # Or if working from the root package,
-yarn docs:build
+pnpm docs:build
 ```
 
 ## Serve
 
 ```shell
-yarn dev
+pnpm dev
 # Or if working from the root package,
-yarn docs:dev
+pnpm docs:dev
 ```
 
 
