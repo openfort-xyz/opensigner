@@ -11,7 +11,7 @@ Follow the steps in the D2 tour: [https://d2lang.com/tour/install](https://d2lan
 ### Vocs
 
 ```shell
-pnpm
+pnpm i
 ```
 
 ## Build
