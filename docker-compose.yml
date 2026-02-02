@@ -92,6 +92,7 @@ services:
     environment:
       HOST: ${AUTH_SERVICE_CONTAINER_HOST:-0.0.0.0}
       PORT: ${AUTH_SERVICE_CONTAINER_PORT:-3000}
+      BETTER_AUTH_BASE_URL: ${BETTER_AUTH_BASE_URL:-http://localhost:7052}
       DB_NAME: ${AUTH_SERVICE_DB_NAME:-authservice}
       DB_USER: ${AUTH_SERVICE_DB_NAME:-postgres}
       DB_PASS: ${AUTH_SERVICE_DB_NAME:-postgres_password}
