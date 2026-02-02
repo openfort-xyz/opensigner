@@ -40,7 +40,7 @@ The most relevant files and directories are:
 - `pages/` - contains the actual content of the web pages in markdown (`.mdx`).
 - `sidebar.ts` - contains an index with every page so users can access them from the sidebar. Pages need to be added manually.
 - `public/` - everything in this directory is publicly exposed as a static file from the root path. E.g., `public/manifest.json`
-can be retrived through the URL `https://our.endpoint.example/manifest.json`.
+can be retrieved through the URL `https://our.endpoint.example/manifest.json`.
 - `diagrams/` - contains every `d2` diagram used in the documentation. They are converted to `.svg` diagrams and put in
 `public/diagrams` when building the project. Multi-frame diagrams (those with `scenarios` in their `.d2` file contents)
 generate multiple `.svg` output files for a single `.d2` input file.

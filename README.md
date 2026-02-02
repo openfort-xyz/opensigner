@@ -19,7 +19,7 @@
 
 </p>
 
-*OpenSigner is currenlty being audited by Quantstamp*
+*OpenSigner is currently being audited by Quantstamp*
 
 ## About the Project
 
@@ -62,8 +62,8 @@ make clean build
 ```
 
 > [!WARNING]
-> The clean build will take a some time since the auth service depends on BetterAuth,
-> which uses `@better-auth/cli@latest` for migrations, which takes a some time to install.
+> The clean build will take some time since the auth service depends on BetterAuth,
+> which uses `@better-auth/cli@latest` for migrations, which takes some time to install.
 
 Run it with:
 
@@ -96,7 +96,7 @@ it can be invoked via
 docker-compose -f docker-compose.yml -f docker-compose.map.db.ports.yml up --build
 ```
 
-For the full reference, check out [`docker-compose.yml`](/openfort-xyz/opensigner/blob/main/docker-compose.yml).
+For the full reference, check out [`docker-compose.yml`](docker-compose.yml).
 
 ## License
 
