@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "yarn build",
+  "buildCommand": "pnpm build",
   "outputDirectory": "dist",
   "redirects": [
     {

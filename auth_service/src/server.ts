@@ -17,8 +17,10 @@ const dbname = process.env.DB_NAME || "authservice";
 const dbuser = process.env.DB_USER || "postgres";
 const dbpass = process.env.DB_PASS || "postgres";
 const dsn = `postgres://${dbuser}:${dbpass}@${dbhost}:${dbport}/${dbname}?sslmode=disable`;
+const baseURL = process.env.BETTER_AUTH_BASE_URL
 
 export const auth = betterAuth({
+  baseURL,
   database: new Pool({
     connectionString: dsn,
   }),
@@ -41,6 +43,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  trustedOrigins: ["http://localhost:7051"]
 });
 
 const app = express();

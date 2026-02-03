@@ -2,7 +2,7 @@
 set -e
 
 echo "Running migrations..."
-npm exec @better-auth/cli@1.3.4 migrate -- -y --config src/server.ts
+pnpm dlx @better-auth/cli@1.3.4 migrate --config src/server.ts --yes
 
 echo "Starting app..."
-exec yarn dev --host $HOST
+exec pnpm dev --host "$HOST"

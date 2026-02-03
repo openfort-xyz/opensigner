@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "build": "yarn diagrams && vocs build",
+    "build": "pnpm run diagrams && vocs build",
     "dev": "vocs dev",
     "diagrams": "./diagrams/gen.sh",
     "preview": "vocs preview",

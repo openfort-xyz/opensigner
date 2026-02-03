@@ -61,10 +61,6 @@ Build the project with:
 make clean build
 ```
 
-> [!WARNING]
-> The clean build will take a some time since the auth service depends on BetterAuth,
-> which uses `@better-auth/cli@latest` for migrations, which takes a some time to install.
-
 Run it with:
 
 ```bash
