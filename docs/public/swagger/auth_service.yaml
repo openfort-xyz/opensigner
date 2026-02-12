@@ -39,7 +39,7 @@ paths:
 
   /iam/v1/oauth/pool:
     post:
-      summary: Pool OAuth (polling)
+      summary: Poll OAuth (polling)
       tags: [OAuth]
       parameters:
         - in: query

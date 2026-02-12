@@ -54,7 +54,7 @@ func handleRegisterDeviceV2(w http.ResponseWriter, r *http.Request) {
 
 	authProvider := r.Header.Get(headerAuthProvider)
 	if authProvider == "" {
-		authProvider = auhtProviderDefault
+		authProvider = authProviderDefault
 	}
 
 	userIdAny := r.Context().Value(fieldUserId)
@@ -112,7 +112,7 @@ func handleRecoverDeviceV2(w http.ResponseWriter, r *http.Request) {
 
 	authProvider := r.Header.Get(headerAuthProvider)
 	if authProvider == "" {
-		authProvider = auhtProviderDefault
+		authProvider = authProviderDefault
 	}
 
 	userIdAny := r.Context().Value(fieldUserId)
@@ -309,7 +309,7 @@ func handleCreateDeviceV2(w http.ResponseWriter, r *http.Request) {
 
 	authProvider := r.Header.Get(headerAuthProvider)
 	if authProvider == "" {
-		authProvider = auhtProviderDefault
+		authProvider = authProviderDefault
 	}
 
 	userIdAny := r.Context().Value(fieldUserId)
@@ -446,7 +446,7 @@ func handleRegisterDevice(w http.ResponseWriter, r *http.Request) {
 	userId := r.Context().Value(fieldUserId).(string)
 	authProvider := r.Header.Get(headerAuthProvider)
 	if authProvider == "" {
-		authProvider = auhtProviderDefault
+		authProvider = authProviderDefault
 	}
 
 	var req RegisterEmbeddedRequest
