@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
+	"log"
 	"net/http"
 	"strconv"
-	"time"
+	"strings"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -22,53 +22,75 @@ const (
 	fieldAddress      = "address"
 	actionRegister    = "REGISTER"
 	actionRecover     = "RECOVER"
+
+	errNotFound = "resource not found"
+	errConflict = "resource already exists"
 )
+
+// contentTypeMiddleware validates that POST/PUT/PATCH requests have a JSON Content-Type.
+func contentTypeMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodPatch {
+			ct := r.Header.Get(contentTypeHeader)
+			if ct != "" && !strings.Contains(ct, "application/json") {
+				http.Error(w, "unsupported content type", http.StatusUnsupportedMediaType)
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 
 func listenAndServe(addr string) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", handleHealth)
 	mux.HandleFunc("/v1/devices/init", handleInitDevice)
 	mux.HandleFunc("/v1/devices/register", handleRegisterDevice)
-	mux.HandleFunc("/v1/devices/switch-chain", handleSwitchChain)
 	mux.HandleFunc("/v1/devices/{deviceId}", handleGetDevice)
 	mux.HandleFunc("/v1/devices", handleGetDevices)
 
 	mux.HandleFunc("/v2/devices/create", handleCreateDeviceV2)
 	mux.HandleFunc("/v2/accounts", handleListAccountsV2)
 	mux.HandleFunc("/v2/accounts/signer", handleGetSignerV2)
-	mux.HandleFunc("/v2/accounts/switch-chain", handleSwitchChainV2)
 	mux.HandleFunc("/v2/devices/recover", handleRecoverDeviceV2)
 	mux.HandleFunc("/v2/devices/register", handleRegisterDeviceV2)
 
-	handler := authMiddleware(mux)
+	handler := contentTypeMiddleware(authMiddleware(mux))
 	handler = corsMiddleware(handler)
-	http.ListenAndServe(addr, handler)
+
+	// Health endpoint outside auth middleware
+	root := http.NewServeMux()
+	root.HandleFunc("/health", handleHealth)
+	root.Handle("/", handler)
+
+	if err := http.ListenAndServe(addr, root); err != nil {
+		log.Fatalf("server failed: %v", err)
+	}
 }
 
 func handleRegisterDeviceV2(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	var req RegisterRequestV2
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
 
-	authProvider := r.Header.Get(headerAuthProvider)
-	if authProvider == "" {
-		authProvider = authProviderDefault
-	}
-
 	userIdAny := r.Context().Value(fieldUserId)
 	if userIdAny == nil {
-		io.WriteString(w, "Missing field: userId")
 		unauthorized(w)
 		return
 	}
 	userId := r.Context().Value(fieldUserId).(string)
+	authProvider := r.Context().Value(fieldAuthProvider).(string)
 
 	var account Account
-	if err := db.First(&account, "username = ? AND id = ?", userId, req.Account).Error; err != nil {
+	if err := db.First(&account, "username = ? AND id = ? AND auth_provider = ?", userId, req.Account, authProvider).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			http.Error(w, "account doesn't exist", http.StatusBadRequest)
+			http.Error(w, errNotFound, http.StatusBadRequest)
 			return
 		} else {
 			http.Error(w, "database error", http.StatusInternalServerError)
@@ -76,9 +98,15 @@ func handleRegisterDeviceV2(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	encryptedShare, err := encryptShare(req.Share)
+	if err != nil {
+		http.Error(w, "failed to encrypt share", http.StatusInternalServerError)
+		return
+	}
+
 	device := Device{
 		ID:        uuid.NewString(),
-		Share:     req.Share,
+		Share:     encryptedShare,
 		IsPrimary: false, // with this endpoint we save only "secondary" shares
 		SignerId:  account.SignerId,
 	}
@@ -88,7 +116,6 @@ func handleRegisterDeviceV2(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := EmbeddedResponse{
-		Share:        req.Share,
 		Address:      account.Address,
 		ChainID:      account.ChainId,
 		DeviceID:     device.ID,
@@ -104,29 +131,29 @@ func handleRegisterDeviceV2(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleRecoverDeviceV2(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	var req RecoverEmbeddedRequestV2
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
 
-	authProvider := r.Header.Get(headerAuthProvider)
-	if authProvider == "" {
-		authProvider = authProviderDefault
-	}
-
 	userIdAny := r.Context().Value(fieldUserId)
 	if userIdAny == nil {
-		io.WriteString(w, "Missing field: userId")
 		unauthorized(w)
 		return
 	}
 	userId := r.Context().Value(fieldUserId).(string)
+	authProvider := r.Context().Value(fieldAuthProvider).(string)
 
 	var account Account
-	if err := db.First(&account, "username = ? AND id = ?", userId, req.Account).Error; err != nil {
+	if err := db.First(&account, "username = ? AND id = ? AND auth_provider = ?", userId, req.Account, authProvider).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			http.Error(w, "account doesn't exist", http.StatusBadRequest)
+			http.Error(w, errNotFound, http.StatusBadRequest)
 			return
 		} else {
 			http.Error(w, "database error", http.StatusInternalServerError)
@@ -137,7 +164,7 @@ func handleRecoverDeviceV2(w http.ResponseWriter, r *http.Request) {
 	var device Device
 	if err := db.First(&device, "signer_id = ? AND is_primary = true", account.SignerId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			http.Error(w, "primary device was not found", http.StatusBadRequest)
+			http.Error(w, errNotFound, http.StatusBadRequest)
 			return
 		} else {
 			http.Error(w, "database error", http.StatusInternalServerError)
@@ -145,12 +172,18 @@ func handleRecoverDeviceV2(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	decryptedShare, err := decryptShare(device.Share)
+	if err != nil {
+		http.Error(w, "failed to decrypt share", http.StatusInternalServerError)
+		return
+	}
+
 	resp := RecoverResponseV2{
 		Id:            device.ID,
 		Account:       account.ID,
 		SignerAddress: account.Address,
 		Signer:        fmt.Sprintf("sig_%s", account.SignerId),
-		Share:         device.Share,
+		Share:         decryptedShare,
 		IsPrimary:     device.IsPrimary,
 		User:          userId,
 	}
@@ -160,11 +193,19 @@ func handleRecoverDeviceV2(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleListAccountsV2(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	userId := r.Context().Value(fieldUserId).(string)
 	authProvider := r.Context().Value(fieldAuthProvider).(string)
 
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	if limit == 0 {
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 100 {
 		limit = 100
 	}
 
@@ -200,91 +241,25 @@ func handleListAccountsV2(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-func handleSwitchChainV2(w http.ResponseWriter, r *http.Request) {
-	var req SwitchChainQueriesV2
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
-		return
-	}
-
-	userIdAny := r.Context().Value(fieldUserId)
-	if userIdAny == nil {
-		io.WriteString(w, "Missing field: userId")
-		unauthorized(w)
-		return
-	}
-	userId := r.Context().Value(fieldUserId).(string)
-
-	var account Account
-	if err := db.First(&account, "id = ?", req.Account).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			http.Error(w, "account doesn't exist", http.StatusBadRequest)
-			return
-		} else {
-			http.Error(w, "database error", http.StatusInternalServerError)
-			return
-		}
-	}
-
-	var device Device
-	if err := db.First(&device, "signer_id = ?", account.SignerId).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			http.Error(w, "device not found for account", http.StatusBadRequest)
-			return
-		} else {
-			http.Error(w, "database error", http.StatusInternalServerError)
-			return
-		}
-	}
-
-	newAccount := Account{
-		ID:           uuid.NewString(),
-		Address:      account.Address,
-		Username:     userId,
-		ChainId:      req.ChainId,
-		AuthProvider: account.AuthProvider,
-		SignerId:     account.SignerId,
-	}
-	if err := db.Create(&newAccount).Error; err != nil {
-		http.Error(w, "failed to save new account", http.StatusInternalServerError)
-		return
-	}
-
-	timestamp := 1532009163
-	t := time.Unix(int64(timestamp), 0)
-
-	response := SwitchChainResponseV2{
-		Id:           newAccount.ID,
-		User:         userId,
-		AccountType:  "Externally Owned Account",
-		Address:      account.Address,
-		OwnerAddress: account.Address,
-		ChainType:    "EVM",
-		ChainId:      req.ChainId,
-		CreatedAt:    time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC).Unix(),
-		UpdatedAt:    time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC).Unix(),
-	}
-
-	w.Header().Set(contentTypeHeader, contentTypeJSON)
-	json.NewEncoder(w).Encode(response)
-}
-
 func handleGetSignerV2(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	address := r.URL.Query().Get(fieldAddress)
 	if address == "" {
 		http.Error(w, "missed address parameter", http.StatusBadRequest)
 		return
 	}
 
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+	userId := r.Context().Value(fieldUserId).(string)
+	authProvider := r.Context().Value(fieldAuthProvider).(string)
 
 	var account Account
-	if err := db.Find(&account, "address = ?", address).Error; err != nil {
+	if err := db.First(&account, "address = ? AND username = ? AND auth_provider = ?", address, userId, authProvider).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			http.Error(w, "account by address not found", http.StatusBadRequest)
+			http.Error(w, errNotFound, http.StatusBadRequest)
 			return
 		} else {
 			http.Error(w, "database error", http.StatusInternalServerError)
@@ -301,86 +276,97 @@ func handleGetSignerV2(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleCreateDeviceV2(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	var req CreateEmbeddedRequestV2
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
 
-	authProvider := r.Header.Get(headerAuthProvider)
-	if authProvider == "" {
-		authProvider = authProviderDefault
-	}
-
 	userIdAny := r.Context().Value(fieldUserId)
 	if userIdAny == nil {
-		io.WriteString(w, "Missing field: userId")
 		unauthorized(w)
 		return
 	}
 	userId := r.Context().Value(fieldUserId).(string)
+	authProvider := r.Context().Value(fieldAuthProvider).(string)
 
-	var account Account
-	if err := db.First(&account, "address = ?", req.Address).Error; err != nil {
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			http.Error(w, "database error", http.StatusInternalServerError)
-			return
+	var resp EmbeddedResponse
+	txErr := db.Transaction(func(tx *gorm.DB) error {
+		var account Account
+		if err := tx.First(&account, "address = ? AND auth_provider = ?", req.Address, authProvider).Error; err != nil {
+			if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("database error")
+			}
 		}
-	}
 
-	if account.ID != "" {
-		http.Error(w, "account already exist", http.StatusBadRequest)
+		if account.ID != "" {
+			return fmt.Errorf("conflict")
+		}
+
+		var signerUuid string
+		if req.SignerUuid != nil {
+			signerUuid = *req.SignerUuid
+		} else {
+			signerUuid = uuid.NewString()
+		}
+
+		signer := Signer{ID: signerUuid}
+		if err := tx.Create(&signer).Error; err != nil {
+			return fmt.Errorf("failed to create a signer")
+		}
+
+		encryptedShare, err := encryptShare(req.Share)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt share")
+		}
+
+		device := Device{
+			ID:        uuid.NewString(),
+			Share:     encryptedShare,
+			IsPrimary: true,
+			SignerId:  signer.ID,
+		}
+		if err := tx.Create(&device).Error; err != nil {
+			return fmt.Errorf("failed to register device")
+		}
+
+		newAccount := Account{
+			ID:           uuid.NewString(),
+			Address:      req.Address,
+			Username:     userId,
+			ChainId:      req.ChainId,
+			AuthProvider: authProvider,
+			SignerId:     signer.ID,
+		}
+		if err := tx.Create(&newAccount).Error; err != nil {
+			return fmt.Errorf("failed to create an account")
+		}
+
+		resp = EmbeddedResponse{
+			Address:      req.Address,
+			ChainID:      req.ChainId,
+			DeviceID:     device.ID,
+			Device:       device.ID,
+			Account:      newAccount.ID,
+			OwnerAddress: req.Address,
+			AccountType:  "Externally Owned Account",
+			Signer:       fmt.Sprintf("sig_%s", signer.ID),
+		}
+		return nil
+	})
+
+	if txErr != nil {
+		if txErr.Error() == "conflict" {
+			http.Error(w, errConflict, http.StatusConflict)
+		} else {
+			http.Error(w, txErr.Error(), http.StatusInternalServerError)
+		}
 		return
-	}
-
-	var signerUuid string
-
-	if req.SignerUuid != nil {
-		signerUuid = *req.SignerUuid
-	} else {
-		signerUuid = uuid.NewString()
-	}
-
-	signer := Signer{ID: signerUuid}
-	if err := db.Create(&signer).Error; err != nil {
-		http.Error(w, "failed to create a signer", http.StatusInternalServerError)
-		return
-	}
-
-	device := Device{
-		ID:        uuid.NewString(),
-		Share:     req.Share,
-		IsPrimary: true,
-		SignerId:  signer.ID,
-	}
-	if err := db.Create(&device).Error; err != nil {
-		http.Error(w, "failed to register device", http.StatusInternalServerError)
-		return
-	}
-
-	newAccount := Account{
-		ID:           uuid.NewString(),
-		Address:      req.Address,
-		Username:     userId,
-		ChainId:      req.ChainId,
-		AuthProvider: authProvider,
-		SignerId:     signer.ID,
-	}
-	if err := db.Create(&newAccount).Error; err != nil {
-		http.Error(w, "failed to create an account", http.StatusInternalServerError)
-		return
-	}
-
-	resp := EmbeddedResponse{
-		Share:        req.Share,
-		Address:      req.Address,
-		ChainID:      req.ChainId,
-		DeviceID:     device.ID,
-		Device:       device.ID,
-		Account:      newAccount.ID,
-		OwnerAddress: req.Address,
-		AccountType:  "Externally Owned Account",
-		Signer:       fmt.Sprintf("sig_%s", signer.ID),
 	}
 
 	w.Header().Set(contentTypeHeader, contentTypeJSON)
@@ -388,24 +374,29 @@ func handleCreateDeviceV2(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleInitDevice(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	var req InitEmbeddedRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
 
 	userIdAny := r.Context().Value(fieldUserId)
 	if userIdAny == nil {
-		io.WriteString(w, "Missing field: userId")
 		unauthorized(w)
 		return
 	}
 	userId := r.Context().Value(fieldUserId).(string)
+	authProvider := r.Context().Value(fieldAuthProvider).(string)
 
 	// Check if the user has a device for the given chainId, from the database through GORM.
 	var account Account
 	var nextAction NextAction
-	if err := db.First(&account, "username = ? AND chain_id = ?", userId, req.ChainID).Error; err != nil {
+	if err := db.First(&account, "username = ? AND chain_id = ? AND auth_provider = ?", userId, req.ChainID, authProvider).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			nextAction = NextAction{
 				NextAction: actionRegister,
@@ -422,7 +413,13 @@ func handleInitDevice(w http.ResponseWriter, r *http.Request) {
 		var device Device
 		err := db.First(&device, "signer_id = ? AND is_primary = true", account.SignerId).Error
 		if err != nil {
-			http.Error(w, "no device found for signer but account is created", http.StatusInternalServerError)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+
+		decryptedShare, err := decryptShare(device.Share)
+		if err != nil {
+			http.Error(w, "failed to decrypt share", http.StatusInternalServerError)
 			return
 		}
 
@@ -432,7 +429,7 @@ func handleInitDevice(w http.ResponseWriter, r *http.Request) {
 			Embedded: &Embedded{
 				ChainID: req.ChainID,
 				Address: &account.Address,
-				Share:   &device.Share,
+				Share:   &decryptedShare,
 			},
 		}
 	}
@@ -443,130 +440,109 @@ func handleInitDevice(w http.ResponseWriter, r *http.Request) {
 
 // Devices will be registered to the username extracted from the JWT token.
 func handleRegisterDevice(w http.ResponseWriter, r *http.Request) {
-	userId := r.Context().Value(fieldUserId).(string)
-	authProvider := r.Header.Get(headerAuthProvider)
-	if authProvider == "" {
-		authProvider = authProviderDefault
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
+
+	userId := r.Context().Value(fieldUserId).(string)
+	authProvider := r.Context().Value(fieldAuthProvider).(string)
 
 	var req RegisterEmbeddedRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
 
-	isPrimary := false
-	var account Account
-	if err := db.First(&account, "username = ? AND chain_id = ? AND address = ?", userId, req.ChainID, req.Address).Error; err != nil {
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			http.Error(w, "database error", http.StatusInternalServerError)
-			return
-		}
-		isPrimary = true
-	}
-
-	if !isPrimary {
-		device := Device{
-			ID:        uuid.NewString(),
-			Share:     req.Share,
-			IsPrimary: isPrimary,
-			SignerId:  account.SignerId,
-		}
-		if err := db.Create(&device).Error; err != nil {
-			http.Error(w, "failed to register device", http.StatusInternalServerError)
-			return
+	var resp EmbeddedResponse
+	txErr := db.Transaction(func(tx *gorm.DB) error {
+		isPrimary := false
+		var account Account
+		if err := tx.First(&account, "username = ? AND chain_id = ? AND address = ? AND auth_provider = ?", userId, req.ChainID, req.Address, authProvider).Error; err != nil {
+			if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("database error")
+			}
+			isPrimary = true
 		}
 
-		resp := EmbeddedResponse{
-			Share:    req.Share,
-			Address:  req.Address,
-			ChainID:  req.ChainID,
-			DeviceID: device.ID,
-			Device:   device.ID,
-			Account:  account.ID,
-		}
+		if !isPrimary {
+			encryptedShare, err := encryptShare(req.Share)
+			if err != nil {
+				return fmt.Errorf("failed to encrypt share")
+			}
 
-		w.Header().Set(contentTypeHeader, contentTypeJSON)
-		json.NewEncoder(w).Encode(resp)
-	} else {
-		var signerUuid string
+			device := Device{
+				ID:        uuid.NewString(),
+				Share:     encryptedShare,
+				IsPrimary: false,
+				SignerId:  account.SignerId,
+			}
+			if err := tx.Create(&device).Error; err != nil {
+				return fmt.Errorf("failed to register device")
+			}
 
-		if req.SignerUuid != nil {
-			signerUuid = *req.SignerUuid
+			resp = EmbeddedResponse{
+				Address:  req.Address,
+				ChainID:  req.ChainID,
+				DeviceID: device.ID,
+				Device:   device.ID,
+				Account:  account.ID,
+			}
 		} else {
-			signerUuid = uuid.NewString()
-		}
+			var signerUuid string
+			if req.SignerUuid != nil {
+				signerUuid = *req.SignerUuid
+			} else {
+				signerUuid = uuid.NewString()
+			}
 
-		signer := Signer{ID: signerUuid}
-		if err := db.Create(&signer).Error; err != nil {
-			http.Error(w, "failed to save signer", http.StatusInternalServerError)
-			return
-		}
+			signer := Signer{ID: signerUuid}
+			if err := tx.Create(&signer).Error; err != nil {
+				return fmt.Errorf("failed to save signer")
+			}
 
-		device := Device{
-			ID:        uuid.NewString(),
-			Share:     req.Share,
-			IsPrimary: isPrimary,
-			SignerId:  signer.ID,
-		}
-		if err := db.Create(&device).Error; err != nil {
-			http.Error(w, "failed to register device", http.StatusInternalServerError)
-			return
-		}
+			encryptedShare, err := encryptShare(req.Share)
+			if err != nil {
+				return fmt.Errorf("failed to encrypt share")
+			}
 
-		account := Account{
-			ID:           uuid.NewString(),
-			Address:      req.Address,
-			Username:     userId,
-			ChainId:      req.ChainID,
-			AuthProvider: authProvider,
-			SignerId:     signer.ID,
+			device := Device{
+				ID:        uuid.NewString(),
+				Share:     encryptedShare,
+				IsPrimary: true,
+				SignerId:  signer.ID,
+			}
+			if err := tx.Create(&device).Error; err != nil {
+				return fmt.Errorf("failed to register device")
+			}
+
+			account := Account{
+				ID:           uuid.NewString(),
+				Address:      req.Address,
+				Username:     userId,
+				ChainId:      req.ChainID,
+				AuthProvider: authProvider,
+				SignerId:     signer.ID,
+			}
+			if err := tx.Create(&account).Error; err != nil {
+				return fmt.Errorf("failed to save account")
+			}
+
+			resp = EmbeddedResponse{
+				Address:  req.Address,
+				ChainID:  req.ChainID,
+				DeviceID: device.ID,
+				Device:   device.ID,
+				Account:  account.ID,
+				Signer:   fmt.Sprintf("sig_%s", signerUuid),
+			}
 		}
-		if err := db.Create(&account).Error; err != nil {
-			http.Error(w, "failed to save account", http.StatusInternalServerError)
-			return
-		}
+		return nil
+	})
 
-		resp := EmbeddedResponse{
-			Share:    req.Share,
-			Address:  req.Address,
-			ChainID:  req.ChainID,
-			DeviceID: device.ID,
-			Device:   device.ID,
-			Account:  account.ID,
-			Signer:   fmt.Sprintf("sig_%s", signerUuid),
-		}
-
-		w.Header().Set(contentTypeHeader, contentTypeJSON)
-		json.NewEncoder(w).Encode(resp)
-	}
-}
-
-func handleSwitchChain(w http.ResponseWriter, r *http.Request) {
-	userId := r.Context().Value(fieldUserId).(string)
-
-	var req SwitchChainRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
+	if txErr != nil {
+		http.Error(w, txErr.Error(), http.StatusInternalServerError)
 		return
-	}
-
-	var device Device
-	if err := db.Where("id = ? AND username = ?", req.DeviceID, userId).First(&device).Error; err != nil {
-		http.Error(w, "device not found", http.StatusNotFound)
-		return
-	}
-
-	if err := db.Model(&device).Update("chain_id", req.ChainID).Error; err != nil {
-		http.Error(w, "failed to update device", http.StatusInternalServerError)
-		return
-	}
-
-	resp := EmbeddedResponse{
-		Share:    device.Share,
-		ChainID:  req.ChainID,
-		DeviceID: device.ID,
-		// Address:, there may be a few account relations to one device
 	}
 
 	w.Header().Set(contentTypeHeader, contentTypeJSON)
@@ -590,9 +566,19 @@ func handleGetDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userId := r.Context().Value(fieldUserId).(string)
+	authProvider := r.Context().Value(fieldAuthProvider).(string)
+
+	// Verify device ownership through signer -> account relationship
 	var device Device
-	if err := db.Where("id = ?", deviceId).First(&device).Error; err != nil {
+	if err := db.Where("id = ? AND signer_id IN (SELECT signer_id FROM accounts WHERE username = ? AND auth_provider = ?)", deviceId, userId, authProvider).First(&device).Error; err != nil {
 		http.Error(w, "device not found", http.StatusNotFound)
+		return
+	}
+
+	decryptedShare, err := decryptShare(device.Share)
+	if err != nil {
+		http.Error(w, "failed to decrypt share", http.StatusInternalServerError)
 		return
 	}
 
@@ -600,9 +586,8 @@ func handleGetDevice(w http.ResponseWriter, r *http.Request) {
 		ID:        device.ID,
 		Object:    "device",
 		CreatedAt: device.CreatedAt.Unix(),
-		Share:     device.Share,
+		Share:     decryptedShare,
 		IsPrimary: device.IsPrimary,
-		// Address:, there may be a few accounts relation to one device
 	}
 
 	w.Header().Set(contentTypeHeader, contentTypeJSON)
@@ -611,11 +596,12 @@ func handleGetDevice(w http.ResponseWriter, r *http.Request) {
 
 func handleGetPrimaryDevice(w http.ResponseWriter, r *http.Request) {
 	userId := r.Context().Value(fieldUserId).(string)
+	authProvider := r.Context().Value(fieldAuthProvider).(string)
 
 	var account Account
-	if err := db.First(&account, "username = ?", userId).Error; err != nil {
+	if err := db.First(&account, "username = ? AND auth_provider = ?", userId, authProvider).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			http.Error(w, "account by username not found", http.StatusBadRequest)
+			http.Error(w, errNotFound, http.StatusBadRequest)
 			return
 		} else {
 			http.Error(w, "database error", http.StatusInternalServerError)
@@ -625,7 +611,13 @@ func handleGetPrimaryDevice(w http.ResponseWriter, r *http.Request) {
 
 	var device Device
 	if err := db.Where("signer_id = ? AND is_primary = ?", account.SignerId, true).First(&device).Error; err != nil {
-		http.Error(w, "primary device not found", http.StatusNotFound)
+		http.Error(w, errNotFound, http.StatusNotFound)
+		return
+	}
+
+	decryptedShare, err := decryptShare(device.Share)
+	if err != nil {
+		http.Error(w, "failed to decrypt share", http.StatusInternalServerError)
 		return
 	}
 
@@ -634,7 +626,7 @@ func handleGetPrimaryDevice(w http.ResponseWriter, r *http.Request) {
 		Object:    "device",
 		CreatedAt: device.CreatedAt.Unix(),
 		Address:   account.Address,
-		Share:     device.Share,
+		Share:     decryptedShare,
 		IsPrimary: device.IsPrimary,
 	}
 
@@ -664,7 +656,10 @@ func handleListDevices(w http.ResponseWriter, r *http.Request) {
 	authProvider := r.Context().Value(fieldAuthProvider).(string)
 
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	if limit == 0 {
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 100 {
 		limit = 100
 	}
 
@@ -697,7 +692,6 @@ func handleListDevices(w http.ResponseWriter, r *http.Request) {
 			Object:    "device",
 			CreatedAt: d.CreatedAt.Unix(),
 			Address:   signerAccountMap[d.SignerId].Address,
-			Share:     d.Share,
 			IsPrimary: d.IsPrimary,
 		}
 	}
@@ -717,21 +711,33 @@ func handleListDevices(w http.ResponseWriter, r *http.Request) {
 
 func handleCreateDevice(w http.ResponseWriter, r *http.Request) {
 	var req CreateDeviceRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
 
+	userId := r.Context().Value(fieldUserId).(string)
+	authProvider := r.Context().Value(fieldAuthProvider).(string)
+
 	var account Account
-	err := db.Find(&account, "id = ?", req.AccountId).Error
+	if err := db.First(&account, "id = ? AND username = ? AND auth_provider = ?", req.AccountId, userId, authProvider).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, errNotFound, http.StatusBadRequest)
+			return
+		}
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+
+	encryptedShare, err := encryptShare(req.Share)
 	if err != nil {
-		http.Error(w, "account with such ID wasn't found", http.StatusBadRequest)
+		http.Error(w, "failed to encrypt share", http.StatusInternalServerError)
 		return
 	}
 
 	device := Device{
 		ID:        uuid.NewString(),
-		Share:     req.Share,
+		Share:     encryptedShare,
 		IsPrimary: false,
 		SignerId:  account.SignerId,
 	}
@@ -745,11 +751,10 @@ func handleCreateDevice(w http.ResponseWriter, r *http.Request) {
 		Object:    "device",
 		CreatedAt: device.CreatedAt.Unix(),
 		Address:   account.Address,
-		Share:     device.Share,
 		IsPrimary: device.IsPrimary,
 	}
 
-	w.WriteHeader(http.StatusCreated)
 	w.Header().Set(contentTypeHeader, contentTypeJSON)
+	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(resp)
 }

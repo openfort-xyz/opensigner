@@ -25,6 +25,13 @@ var (
 	ErrDuplicateToken = errors.New("only one token delivery method (header or cookie) is allowed")
 	ErrMissingToken   = errors.New("missing token")
 	ErrInvalidToken   = errors.New("invalid token")
+
+	allowedCookieFields = map[string]bool{
+		"better-auth.session_token":             true,
+		"better-auth.session_token.ct":          true,
+		"__Secure-better-auth.session_token":    true,
+		"__Secure-better-auth.session_token.ct": true,
+	}
 )
 
 func validateAuth(r *http.Request) (string, string, error) {
@@ -116,6 +123,10 @@ func getTokenFromCookie(r *http.Request) (string, error) {
 	cookieFieldName := r.Header.Get(headerCookieFieldName)
 	if cookieFieldName == "" {
 		return "", ErrMissingToken
+	}
+
+	if !allowedCookieFields[cookieFieldName] {
+		return "", ErrInvalidToken
 	}
 
 	cookie, err := r.Cookie(cookieFieldName)

@@ -6,4 +6,5 @@ WORKDIR /app
 
 COPY . .
 
+USER node
 ENTRYPOINT [ "npx", "http-server", "." ]

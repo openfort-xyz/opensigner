@@ -80,6 +80,8 @@ input[type="password"] {
     padding: 10px;
     margin: 10px 0;
     border-radius: 3px;
+    word-break: break-all;
+    white-space: pre-wrap;
 }
 .status.success {
     background-color: #d4edda;

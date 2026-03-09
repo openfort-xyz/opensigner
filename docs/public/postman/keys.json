@@ -186,34 +186,6 @@
 			"name": "Hot Storage",
 			"item": [
 				{
-					"name": "Switch Chain",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"chainId\": {{chainIdAlt}},\n    \"deviceId\": \"{{deviceId}}\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{hot_storage_server}}/v1/devices/switch-chain",
-							"host": [
-								"{{hot_storage_server}}"
-							],
-							"path": [
-								"v1",
-								"devices",
-								"switch-chain"
-							]
-						}
-					},
-					"response": []
-				},
-				{
 					"name": "Create device",
 					"request": {
 						"method": "POST",
@@ -420,10 +392,6 @@
 		},
 		{
 			"key": "cookieFieldName",
-			"value": ""
-		},
-		{
-			"key": "chainIdAlt",
 			"value": ""
 		}
 	]

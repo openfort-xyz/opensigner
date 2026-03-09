@@ -1,0 +1,8 @@
+services:
+  auth_service:
+    environment:
+      DB_SSLMODE: disable
+
+  hot_storage:
+    environment:
+      DB_SSLMODE: disable

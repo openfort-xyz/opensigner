@@ -96,18 +96,6 @@ class Openfort {
     );
   }
 
-  async switchChain(chainId, deviceId, requestId = null) {
-    return await this._makeRequest(
-      "POST",
-      "/v1/devices/switch-chain",
-      {
-        chainId,
-        deviceId,
-      },
-      requestId,
-    );
-  }
-
   async disable(account, requestId = null) {
     return await this._makeRequest(
       "POST",

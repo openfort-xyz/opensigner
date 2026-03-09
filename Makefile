@@ -10,7 +10,7 @@ clean:
 	docker-compose down --rmi 'all' -v
 
 run:
-	docker compose up postgres mysql auth_service iframe iframe-sample hot_storage cold_storage
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml up postgres mysql auth_service iframe iframe-sample hot_storage cold_storage
 
 docs:
 	docker-compose up docs

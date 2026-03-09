@@ -46,7 +46,7 @@ private key reconstruction in the cold storage. The following section explains i
 The cold storage has the cold share, but it is encrypted with a key it has no access to.
 The key used to encrypt the cold share was split into shares and deleted after its first usage.
 The cold storage kept one of these shares, while the admin kept the other share.
-When the admin calls the cold storage `/v2/devices/register` endpoint, it provides
+When the admin calls the cold storage share retrieval endpoint, it provides
 its share as a one-time input for reconstructing the encryption key and decrypting the cold share.
 
 To enforce this one-time usage, the cold storage deletes the encryption key share passed

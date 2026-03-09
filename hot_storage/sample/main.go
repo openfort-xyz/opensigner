@@ -13,6 +13,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := initEncryptionKey(); err != nil {
+		slog.Error(fmt.Sprintf("Failed to initialize encryption: %v", err))
+		os.Exit(1)
+	}
+
 	err := initDB()
 	if err != nil {
 		slog.Error(fmt.Sprintf("Failed to initialize DB: %v", err))

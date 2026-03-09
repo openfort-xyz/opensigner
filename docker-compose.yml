@@ -36,10 +36,11 @@ services:
       - "3306"
     restart: always
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 15s
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
+      start_period: 30s
 
   iframe:
     container_name: iframe
@@ -94,10 +95,13 @@ services:
       PORT: ${AUTH_SERVICE_CONTAINER_PORT:-3000}
       BETTER_AUTH_BASE_URL: ${BETTER_AUTH_BASE_URL:-http://localhost:7052}
       DB_NAME: ${AUTH_SERVICE_DB_NAME:-authservice}
-      DB_USER: ${AUTH_SERVICE_DB_NAME:-postgres}
-      DB_PASS: ${AUTH_SERVICE_DB_NAME:-postgres_password}
-      DB_HOST: ${AUTH_SERVICE_DB_NAME:-ofpostgres}
-      DB_PORT: ${AUTH_SERVICE_DB_NAME:-5432}
+      DB_USER: ${AUTH_SERVICE_DB_USER:-postgres}
+      DB_PASS: ${AUTH_SERVICE_DB_PASS:-postgres_password}
+      DB_HOST: ${AUTH_SERVICE_DB_HOST:-ofpostgres}
+      DB_PORT: ${AUTH_SERVICE_DB_PORT:-5432}
+      DB_SSLMODE: ${AUTH_SERVICE_DB_SSLMODE:-require}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:7050,http://localhost:7051}
     networks:
       - db_network
     expose:
@@ -125,8 +129,8 @@ services:
     environment:
       DB_DRIVER: ${COLD_STORAGE_DB_DRIVER:-mysql}
       DB_NAME: ${COLD_STORAGE_DB_NAME:-shield}
-      DB_USER: ${COLD_STORAGE_DB_USER:-root}
-      DB_PASS: ${COLD_STORAGE_DB_PASS:-root_password}
+      DB_USER: ${COLD_STORAGE_DB_USER:-mysql_user}
+      DB_PASS: ${COLD_STORAGE_DB_PASS:-mysql_password}
       DB_HOST: ${COLD_STORAGE_DB_HOST:-ofmysql}
       DB_PORT: ${COLD_STORAGE_DB_PORT:-3306}
     networks:
@@ -134,7 +138,7 @@ services:
     expose:
       - "${COLD_STORAGE_CONTAINER_PORT:-8080}"
     ports:
-      - "${COLD_STORAGE_HOST_PORT:-7053}:${HOST_STORAGE_CONTAINER_PORT:-8080}"
+      - "${COLD_STORAGE_HOST_PORT:-7053}:${COLD_STORAGE_CONTAINER_PORT:-8080}"
     restart: unless-stopped
 
   hot_storage:
@@ -148,10 +152,13 @@ services:
       PORT: ${HOT_STORAGE_CONTAINER_PORT:-8080}
       AUTH_SERVER_URL: ${AUTH_SERVER_URL:-http://authservice:3000}
       DB_NAME: ${HOT_STORAGE_DB_NAME:-hotstorage}
-      DB_USER: ${HOT_STORAGE_DB_NAME:-postgres}
-      DB_PASS: ${HOT_STORAGE_DB_NAME:-postgres_password}
-      DB_HOST: ${HOT_STORAGE_DB_NAME:-ofpostgres}
-      DB_PORT: ${HOT_STORAGE_DB_NAME:-5432}
+      DB_USER: ${HOT_STORAGE_DB_USER:-postgres}
+      DB_PASS: ${HOT_STORAGE_DB_PASS:-postgres_password}
+      DB_HOST: ${HOT_STORAGE_DB_HOST:-ofpostgres}
+      DB_PORT: ${HOT_STORAGE_DB_PORT:-5432}
+      DB_SSLMODE: ${HOT_STORAGE_DB_SSLMODE:-require}
+      SHARE_ENCRYPTION_KEY: ${SHARE_ENCRYPTION_KEY:?SHARE_ENCRYPTION_KEY must be set (64 hex chars)}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:7050,http://localhost:7051}
     networks:
       - db_network
     expose:

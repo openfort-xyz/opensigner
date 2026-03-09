@@ -29,11 +29,6 @@ type RegisterEmbeddedRequest struct {
 	SignerUuid *string `json:"signerUuid"`
 }
 
-type SwitchChainRequest struct {
-	ChainID  int64  `json:"chainId"`
-	DeviceID string `json:"deviceId"`
-}
-
 type ExportedEmbeddedRequest struct {
 	Address string `json:"address"`
 }
@@ -73,7 +68,7 @@ type Signer struct {
 type Account struct {
 	gorm.Model
 	ID           string `gorm:"primaryKey" json:"id"`
-	Address      string `json:"address"`
+	Address      string `gorm:"uniqueIndex:idx_account_address" json:"address"`
 	Username     string `json:"username"` // also referred as userId in the code
 	ChainId      int64  `json:"chainId"`
 	AuthProvider string `json:"auth_provider"`
@@ -131,11 +126,6 @@ type RecoverEmbeddedRequestV2 struct {
 	Account string `json:"account"`
 }
 
-type SwitchChainQueriesV2 struct {
-	Account string `json:"account"`
-	ChainId int64  `json:"chainId"`
-}
-
 type RegisterRequestV2 struct {
 	Account string `json:"account"`
 	Share   string `json:"share"`
@@ -143,18 +133,6 @@ type RegisterRequestV2 struct {
 
 type GetSignerResponse struct {
 	Id string `json:"id"`
-}
-
-type SwitchChainResponseV2 struct {
-	Id           string `json:"id"` // account ID
-	User         string `json:"user"`
-	AccountType  string `json:"accountType"` // EOA, Smart Account etc.
-	Address      string `json:"address"`
-	OwnerAddress string `json:"ownerAddress"`
-	ChainType    string `json:"chainType"`
-	ChainId      int64  `json:"chainId"`
-	CreatedAt    int64  `json:"createdAt"`
-	UpdatedAt    int64  `json:"updatedAt"`
 }
 
 type RecoverResponseV2 struct {

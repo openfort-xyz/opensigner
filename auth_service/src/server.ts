@@ -11,13 +11,24 @@ import { toNodeHandler } from "better-auth/node";
 import { Pool } from "pg";
 import type { Request, Response } from "express";
 
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret) {
+  console.error("FATAL: JWT_SECRET environment variable must be set");
+  process.exit(1);
+}
+
 const dbhost = process.env.DB_HOST || "localhost";
 const dbport = process.env.DB_PORT || "5432";
 const dbname = process.env.DB_NAME || "authservice";
 const dbuser = process.env.DB_USER || "postgres";
 const dbpass = process.env.DB_PASS || "postgres";
-const dsn = `postgres://${dbuser}:${dbpass}@${dbhost}:${dbport}/${dbname}?sslmode=disable`;
+const dbsslmode = process.env.DB_SSLMODE || "require";
+const dsn = `postgres://${dbuser}:${dbpass}@${dbhost}:${dbport}/${dbname}?sslmode=${dbsslmode}`;
 const baseURL = process.env.BETTER_AUTH_BASE_URL
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",")
+  : ["http://localhost:7050", "http://localhost:7051"];
 
 export const auth = betterAuth({
   baseURL,
@@ -38,17 +49,23 @@ export const auth = betterAuth({
     }),
   ],
   jwt: {
-    secret: process.env.JWT_SECRET || "secret",
+    secret: jwtSecret,
   },
   emailAndPassword: {
     enabled: true,
   },
-  trustedOrigins: ["http://localhost:7051"]
+  trustedOrigins: allowedOrigins
 });
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: allowedOrigins,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  }),
+);
 
 app.all("/api/auth/*splat", toNodeHandler(auth));
 
@@ -59,13 +76,26 @@ app.get("/.well-known/jwks.json", (req: Request, res: Response) => {
 
 app.use(express.json());
 
-// app.use(
-//   cors({
-//     origin: "http://localhost:7051",
-//     methods: ["GET", "POST", "PUT", "DELETE"],
-//     credentials: true, // Allow credentials (cookies, authorization headers, etc.)
-//   }),
-// );
+// Origin validation endpoint for nginx auth_request subrequest.
+// Nginx sends X-Request-Origin header; returns 200 if allowed, 403 if not.
+// Also returns X-Allowed-Origins header for CSP frame-ancestors.
+app.get("/v1/projects/validate-origin", (req: Request, res: Response) => {
+  // Default missing origin to a safe value that won't match any allowed origin,
+  // matching the backend's pattern (ProjectController.ts defaults to "openfort.io").
+  const requestOrigin = (req.headers["x-request-origin"] as string | undefined) || "openfort.io";
+  const allowedOriginsStr = allowedOrigins.join(" ");
+
+  const isAllowed = allowedOrigins.some(
+    (origin) => requestOrigin === origin
+  );
+
+  if (isAllowed) {
+    res.set("X-Allowed-Origins", allowedOriginsStr);
+    res.sendStatus(200);
+  } else {
+    res.sendStatus(403);
+  }
+});
 
 app.get("/health", (req: Request, res: Response) => {
   res.json({ status: "ok" });

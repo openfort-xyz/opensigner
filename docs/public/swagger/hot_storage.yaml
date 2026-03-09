@@ -4,36 +4,6 @@ info:
   version: 1.0.0
 
 paths:
-  /v1/devices/switch-chain:
-    post:
-      summary: Switch the chain of a device
-      security:
-        - pk_access_token: []
-        - pk_third_party: []
-      parameters:
-        - in: header
-          name: Authorization
-          schema:
-            type: string
-            example: Bearer eyJhbGciOiJFZERTQSIsImtpZCI6IkphWDNMY3Q1cVR5cnFqR0pPdThBZ0lITmtnRFZMTkVNIn0.eyJuYW1lIjoiRGVtbyIsImVtYWlsIjoiZGVtb0BleGFtcGxlLmNvbSIsImVtYWlsVmVyaWZpZWQiOmZhbHNlLCJjcmVhdGVkQXQiOiIyMDI1LTA3LTMxVDEwOjE2OjA5LjIwMFoiLCJ1cGRhdGVkQXQiOiIyMDI1LTA3LTMxVDEwOjE2OjA5LjIwMFoiLCJ1c2VybmFtZSI6ImRlbW8iLCJkaXNwbGF5VXNlcm5hbWUiOiJkZW1vIiwiaWQiOiJhQjU4ZmhNaFRvWVc3cjR6N3BwQzRnNW5pd2JGNWM2YSIsImlhdCI6MTc1Mzk2MDg4MiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDozMDA1IiwiYXVkIjoiaHR0cDovL2xvY2FsaG9zdDozMDA1IiwiZXhwIjoxNzUzOTYxNzgyLCJzdWIiOiJhQjU4ZmhNaFRvWVc3cjR6N3BwQzRnNW5pd2JGNWM2YSJ9.Blv-aUcAJw0rCcZk_rTlum013yY9vWANzuOfzbeM47cJb-Agy_wFRyFIigbHFULHiy5fvQCTl0NP_h9MPmqnDA
-          required: true
-          description: JWT token for project authentication.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SwitchChainRequest'
-      responses:
-        '200':
-          description: Device chain switched
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EmbeddedResponse'
-        '400':
-          description: Invalid request
-
   /v2/accounts:
     get:
       operationId: getAccountsV2
@@ -483,23 +453,3 @@ components:
         "desc"
       ]
 
-    SwitchChainRequest:
-      type: object
-      properties:
-        chainId:
-          type: integer
-        deviceId:
-          type: string
-      required: [chainId, deviceId]
-
-    EmbeddedResponse:
-      type: object
-      properties:
-        share:
-          type: string
-        address:
-          type: string
-        chainId:
-          type: integer
-        deviceId:
-          type: string

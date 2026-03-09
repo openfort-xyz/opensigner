@@ -67,10 +67,10 @@
 	</div>
 
 	<div class="section">
-		<h2>Create Shield Project</h2>
+		<h2>Create Cold Storage (Shield) Project</h2>
 		<div id="create-shield-project-status">
 			<div class="form-group">
-				<label>Shield Project Name:</label>
+				<label>Cold Storage Project Name:</label>
 				<input type="text" id="shieldProjectName" placeholder="Your project's name" />
 			</div>
 			<button onclick="createShieldProject()" id="createShieldProjectBtn">
@@ -81,7 +81,7 @@
 	</div>
 
 	<div class="section">
-		<h2>Setup Shield Auth Provider</h2>
+		<h2>Setup Cold Storage (Shield) Auth Provider</h2>
 		<div id="setup-shield-auth-provider">
 			<button onclick="setupShieldAuthProvider()" id="setupShieldAuthProviderBtn">
 				Setup Auth Provider
@@ -91,32 +91,32 @@
 	</div>
 
 	<div class="section">
-		<h2>Register Shield Share for User</h2>
+		<h2>Register Cold Storage (Shield) Share for User</h2>
 		<label>Share Contents</label>
 		<input type="text" id="shieldRegisterShareContent" placeholder="Contents of your share">
 		<div id="register-shield-share-for-user">
 			<button onclick="registerShieldShareForUser()" id="registerShieldShareForUserBtn">
-				Register Shield Share for User
+				Register Cold Storage Share
 			</button>
 		</div>
 		<div id="shieldShareRegistrationStatus"></div>
 	</div>
 
 	<div class="section">
-		<h2>Get Shield Share for User</h2>
+		<h2>Get Cold Storage (Shield) Share for User</h2>
 		<div id="get-shield-share-for-user">
 			<button onclick="getShieldShareForUser()" id="getShieldShareForUserBtn">
-				Get Shield Share for User
+				Get Cold Storage Share
 			</button>
 		</div>
 		<div id="shieldShareStatus"></div>
 	</div>
 
 	<div class="section">
-		<h2>Delete Shield Share for User</h2>
+		<h2>Delete Cold Storage (Shield) Share for User</h2>
 		<div id="delete-shield-share-for-user">
 			<button onclick="deleteShieldShareForUser()" id="getShieldShareForUserBtn">
-				Delete Shield Share for User
+				Delete Cold Storage Share
 			</button>
 		</div>
 		<div id="shieldDeleteShareStatus"></div>
@@ -160,14 +160,8 @@
 		<br /><br />
 
 		<h3>iFrame Communication</h3>
-		<button onclick="configureIframe()" id="configureIframeBtn" disabled>
-			Configure (iFrame)
-		</button>
 		<button onclick="signMessage()" id="signIframeBtn" disabled>
 			Sign Message (iFrame)
-		</button>
-		<button onclick="switchChainIframe()" id="switchChainIframeBtn" disabled>
-			Switch Chain (iFrame)
 		</button>
 		<button onclick="createAccountIframe()" id="createIframeBtn" disabled>
 			Create (iFrame)
@@ -232,7 +226,7 @@
 
 		async function deleteShieldShareForUser() {
 			if (!shieldProjectId || !shieldProjectApiKey || !shieldProjectApiSecret) {
-				showStatus("Please create a shield project first", "error", "shieldDeleteShareStatus");
+				showStatus("Please create a cold storage project first", "error", "shieldDeleteShareStatus");
 				return;
 			}
 
@@ -250,16 +244,16 @@
 			);
 
 			if (response.ok) {
-				showStatus(`Shield share deleted successfully!`, "success", "shieldDeleteShareStatus");
+				showStatus(`Cold storage share deleted successfully!`, "success", "shieldDeleteShareStatus");
 			} else {
 				const errorData = await response.json();
-				showStatus(`Failed to delete shield share: ${errorData.message || "Unknown error"}`, "error", "shieldDeleteShareStatus");
+				showStatus(`Failed to delete cold storage share: ${errorData.message || "Unknown error"}`, "error", "shieldDeleteShareStatus");
 			}
 		}
 
 		async function registerShieldShareForUser() {
 			if (!shieldProjectId || !shieldProjectApiKey || !shieldProjectApiSecret || !shieldProjectEncryptionShare) {
-				showStatus("Please create a shield project first", "error", "shieldShareRegistrationStatus");
+				showStatus("Please create a cold storage project first", "error", "shieldShareRegistrationStatus");
 				return;
 			}
 
@@ -289,17 +283,17 @@
 			);
 
 			if (response.ok) {
-				showStatus(`Shield share registered successfully!`, "success", "shieldShareRegistrationStatus");
+				showStatus(`Cold storage share registered successfully!`, "success", "shieldShareRegistrationStatus");
 			} else {
 				const errorData = await response.json();
-				showStatus(`Failed to register shield share: ${errorData.message || "Unknown error"}`, "error", "shieldShareRegistrationStatus");
+				showStatus(`Failed to register cold storage share: ${errorData.message || "Unknown error"}`, "error", "shieldShareRegistrationStatus");
 			}
 		}
 
 
 		async function getShieldShareForUser() {
 			if (!shieldProjectId || !shieldProjectApiKey || !shieldProjectApiSecret) {
-				showStatus("Please create a shield project first", "error", "shieldShareStatus");
+				showStatus("Please create a cold storage project first", "error", "shieldShareStatus");
 				return;
 			}
 
@@ -319,17 +313,17 @@
 
 			if (response.ok) {
 				const data = await response.json();
-				showStatus(`Shield share for user: ${JSON.stringify(data)}`, "success", "shieldShareStatus");
+				showStatus(`Cold storage share for user: ${JSON.stringify(data)}`, "success", "shieldShareStatus");
 			} else {
 				const errorData = await response.json();
-				showStatus(`Failed to get shield share: ${errorData.message || "Unknown error"}`, "error", "shieldShareStatus");
+				showStatus(`Failed to get cold storage share: ${errorData.message || "Unknown error"}`, "error", "shieldShareStatus");
 			}
 		}
 
 
 		async function setupShieldAuthProvider() {
 			if (!shieldProjectId || !shieldProjectApiKey || !shieldProjectApiSecret || !shieldProjectEncryptionShare) {
-				showStatus("Please create a shield project first", "error", "authProviderStatus");
+				showStatus("Please create a cold storage project first", "error", "authProviderStatus");
 				return;
 			}
 
@@ -355,7 +349,7 @@
 			if (response.ok) {
 				const data = await response.json();
 				shieldAuthProviderId = data["providers"][0]["provider_id"];
-				showStatus(`Auth provider setup successful!<br>Provider ID: ${shieldAuthProviderId}`, "success", "authProviderStatus");
+				showStatus(`Auth provider setup successful!\nProvider ID: ${shieldAuthProviderId}`, "success", "authProviderStatus");
 			} else {
 				const errorData = await response.json();
 				showStatus(`Auth provider setup failed: ${errorData.message || "Unknown error"}`, "error", "authProviderStatus");
@@ -393,11 +387,11 @@
 				shieldProjectApiSecret = data.api_secret;
 				shieldProjectEncryptionShare = data.encryption_part;
 
-				showStatus(`Shield project created!<br>ID:\t${shieldProjectId}<br>API Key:\t${shieldProjectApiKey}<br>API Secret:\t${shieldProjectApiSecret}<br>Encryption Share:\t${shieldProjectEncryptionShare}`, "success", "shieldProjectStatus");
-				log(`Shield project created: ${shieldProjectId}`);
+				showStatus(`Cold storage project created!\nID: ${shieldProjectId}\nAPI Key: ${shieldProjectApiKey}\nAPI Secret: ${shieldProjectApiSecret}\nEncryption Share: ${shieldProjectEncryptionShare}`, "success", "shieldProjectStatus");
+				log(`Cold storage project created: ${shieldProjectId}`);
 			} else {
 				showStatus(
-					`Shield project creation failed: ${data.message || "Unknown error"}`,
+					`Cold storage project creation failed: ${data.message || "Unknown error"}`,
 					"error",
 					"shieldProjectStatus"
 				);
@@ -423,8 +417,14 @@
 		}
 
 		function showStatus(message, type = "success", statusDivId = "authStatus") {
+			const allowedTypes = ["success", "error", "info"];
+			const safeType = allowedTypes.includes(type) ? type : "info";
 			const statusDiv = document.getElementById(statusDivId);
-			statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+			while (statusDiv.firstChild) statusDiv.removeChild(statusDiv.firstChild);
+			const div = document.createElement("div");
+			div.className = `status ${safeType}`;
+			div.textContent = message;
+			statusDiv.appendChild(div);
 		}
 
 		function log(message) {
@@ -447,22 +447,22 @@
 				return;
 			}
 
-		try {
-			const response = await fetch(
-				`${AUTH_SERVER}/api/auth/sign-up/email`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
+			try {
+				const response = await fetch(
+					`${AUTH_SERVER}/api/auth/sign-up/email`,
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							email: email,
+							username: username,
+							name: name,
+							password: password,
+						}),
 					},
-					body: JSON.stringify({
-						email: email,
-						username: username,
-						name: name,
-						password: password,
-					}),
-				},
-			);
+				);
 
 				const data = await response.json();
 
@@ -493,20 +493,20 @@
 				return;
 			}
 
-		try {
-			const response = await fetch(
-				`${AUTH_SERVER}/api/auth/sign-in/username`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
+			try {
+				const response = await fetch(
+					`${AUTH_SERVER}/api/auth/sign-in/username`,
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							username: username,
+							password: password,
+						}),
 					},
-					body: JSON.stringify({
-						username: username,
-						password: password,
-					}),
-				},
-			);
+				);
 
 				const data = await response.json();
 
@@ -564,9 +564,7 @@
 					document.getElementById("registerBtn").disabled = false;
 
 					// Enable iframe buttons as well
-					document.getElementById("configureIframeBtn").disabled = false;
 					document.getElementById("signIframeBtn").disabled = false;
-					document.getElementById("switchChainIframeBtn").disabled = false;
 					document.getElementById("createIframeBtn").disabled = false;
 					document.getElementById("recoverIframeBtn").disabled = false;
 
@@ -595,9 +593,7 @@
 			document.getElementById("listAccountsBtn").disabled = true;
 			document.getElementById("primaryBtn").disabled = true;
 			document.getElementById("registerBtn").disabled = true;
-			document.getElementById("configureIframeBtn").disabled = true;
 			document.getElementById("signIframeBtn").disabled = true;
-			document.getElementById("switchChainIframeBtn").disabled = true;
 			document.getElementById("createIframeBtn").disabled = true;
 			document.getElementById("recoverIframeBtn").disabled = true;
 
@@ -636,6 +632,12 @@
 			} catch (error) {
 				log("ERROR initializing client: " + error.message);
 			}
+		}
+
+		async function ensureIframeConnection() {
+			if (iframeConnection) return;
+			createIframe(IFRAME_SERVER);
+			await connectToIframe();
 		}
 
 		async function initDevice() {
@@ -782,15 +784,8 @@
 				messenger: messenger,
 				timeout: 5000,
 				methods: {
-					configure: async (request) => {
-						// Called by parent window to configure iframe
-						return await window.configure(request);
-					},
 					sign: async (request) => {
 						return await window.sign(request);
-					},
-					switchChain: async (request) => {
-						return await window.switchChain(request);
 					},
 					updateAuthentication: async (request) => {
 						return await window.updateAuthentication(request);
@@ -813,88 +808,6 @@
 			log("iFrame connection established");
 		}
 
-
-		async function configureIframe() {
-			// Initialize iframe connection
-			console.log("Initializing iframe connection...");
-			let iframe = createIframe(IFRAME_SERVER);
-			await connectToIframe();
-
-			if (!iframeConnection) {
-				log("ERROR: iFrame connection not established");
-				return;
-			}
-
-			const publishableKey = document.getElementById("publishableKey").value;
-			const chainId = parseInt(document.getElementById("chainId").value) || 1;
-			// const address = document.getElementById("address").value;
-			// const share = document.getElementById("share").value;
-
-			// if (!publishableKey || !address || !share) {
-			// 	log("ERROR: Please fill in publishableKey, address, and share");
-			// 	return;
-			// }
-
-			try {
-				log(`Calling configure via iframe...`);
-				const request = {
-					uuid: generateUUID(),
-					action: "configure",
-					publishableKey: jwtToken, // TODO: should Hot Storage check this field instead of Authorization?
-					accessToken: jwtToken,
-					chainId: chainId,
-					userEntropy: "TODO",
-					projectEntropy: "TODO",
-					playerID: userId,
-					thirdPartyProvider: null, // TODO: configure in shield
-					thirdPartyTokenType: "jwt",
-					encryptionKey: null, // TODO ?
-					encryptionPart: shieldProjectEncryptionShare,
-					encryptionSession: null,
-					openfortURL: HOT_STORAGE_SERVER,
-					shieldURL: COLD_STORAGE_SERVER,
-					shieldAPIKey: shieldProjectApiKey,
-					recovery: {
-						// Whether its using Openfort (either third-party or not) or a custom provider to verify the access token
-						auth: "custom",
-						// The auth token, either idToken or accessToken
-						token: jwtToken,
-						// When using a third party auth provider, the provider name
-						authProvider: "authservice",
-						// When using a third party auth provider, the token type
-						tokenType: "jwt",
-						// When using encryption sessions, the session ID
-						encryptionSession: null,
-					}
-				};
-
-				// const config: ConfigureRequest = {
-				// uuid: randomUUID(),
-				// action: Event.CONFIGURE,
-				// chainId: iframeConfiguration.chainId,
-				// recovery: iframeConfiguration.recovery,
-				// publishableKey: this.sdkConfiguration.baseConfiguration.publishableKey,
-				// shieldAPIKey:
-				// this.sdkConfiguration.shieldConfiguration?.shieldPublishableKey || '',
-				// accessToken: iframeConfiguration.accessToken,
-				// playerID: iframeConfiguration.playerID,
-				// thirdPartyProvider: iframeConfiguration.thirdPartyProvider,
-				// thirdPartyTokenType: iframeConfiguration.thirdPartyTokenType,
-				// encryptionKey: iframeConfiguration.password,
-				// encryptionPart:
-				// this.sdkConfiguration?.shieldConfiguration?.shieldEncryptionKey ?? null,
-				// encryptionSession:
-				// iframeConfiguration.recovery?.encryptionSession ?? null,
-				// openfortURL: this.sdkConfiguration.backendUrl,
-				// shieldURL: this.sdkConfiguration.shieldUrl,
-				// };
-
-				const result = await iframeConnection.configure(request);
-				log("configure result: " + JSON.stringify(result, null, 2));
-			} catch (error) {
-				log("ERROR configure iframe: " + error.message);
-			}
-		}
 
 		async function signMessage() {
 			if (!iframeConnection) {
@@ -933,42 +846,15 @@
 			}
 		}
 
-		async function switchChainIframe() {
-			if (!iframeConnection) {
-				log("ERROR: iFrame connection not established");
-				return;
-			}
-
+		async function createAccountIframe() {
 			const chainId = parseInt(document.getElementById("chainId").value) || 1;
 
 			try {
-				log(`Calling switchChain via iframe to chainId: ${chainId}`);
-				const request = {
-					uuid: generateUUID(),
-					chainId: chainId,
-					requestConfiguration: {
-						token: jwtToken,
-						thirdPartyProvider: null,
-						thirdPartyTokenType: "jwt",
-						publishableKey: jwtToken,
-						openfortURL: HOT_STORAGE_SERVER,
-					},
-				};
-
-				const result = await iframeConnection.switchChain(request);
-				log("switchChain result: " + JSON.stringify(result, null, 2));
+				await ensureIframeConnection();
 			} catch (error) {
-				log("ERROR switchChain iframe: " + error.message);
-			}
-		}
-
-		async function createAccountIframe() {
-			if (!iframeConnection) {
-				log("ERROR: iFrame connection not established");
+				log("ERROR: Failed to establish iFrame connection: " + error.message);
 				return;
 			}
-
-			const chainId = parseInt(document.getElementById("chainId").value) || 1;
 
 			try {
 				log("Calling create via iframe...");
@@ -1012,9 +898,11 @@
 			}
 		}
 
-		function recoverAccIframe() {
-			if (!iframeConnection) {
-				log("ERROR: iFrame connection not established");
+		async function recoverAccIframe() {
+			try {
+				await ensureIframeConnection();
+			} catch (error) {
+				log("ERROR: Failed to establish iFrame connection: " + error.message);
 				return;
 			}
 			// Show the modal
@@ -1073,10 +961,7 @@
 		}
 
 		function generateUUID() {
-			return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-				var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-				return v.toString(16);
-			});
+			return crypto.randomUUID();
 		}
 	</script>
 </body>
