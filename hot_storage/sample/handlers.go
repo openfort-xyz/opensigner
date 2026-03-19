@@ -735,7 +735,7 @@ func handleImportShare(w http.ResponseWriter, r *http.Request) {
 			return fmt.Errorf("conflict")
 		}
 
-		signerId := req.SignerId
+		signerId := strings.TrimPrefix(req.SignerId, "sig_")
 		if signerId == "" {
 			signerId = uuid.NewString()
 		}
@@ -760,14 +760,22 @@ func handleImportShare(w http.ResponseWriter, r *http.Request) {
 			return fmt.Errorf("failed to create device")
 		}
 
-		accountId := req.AccountId
+		accountId := req.ID
 		if accountId == "" {
 			accountId = uuid.NewString()
 		}
 
+		var accAddress string
+
+		if req.SmartAccount != nil {
+			accAddress = *req.OwnerAddress // Because we have to always save EOA address
+		} else {
+			accAddress = req.Address
+		}
+
 		newAccount := Account{
 			ID:           accountId,
-			Address:      req.Address,
+			Address:      accAddress,
 			Username:     req.Username,
 			ChainId:      req.ChainId,
 			SignerId:     signer.ID,
@@ -778,9 +786,10 @@ func handleImportShare(w http.ResponseWriter, r *http.Request) {
 		}
 
 		resp = ImportShareResponse{
-			AccountId: newAccount.ID,
-			Address:   newAccount.Address,
-			SignerId:  signer.ID,
+			ID:       newAccount.ID,
+			Wallet:   req.Wallet,
+			Address:  newAccount.Address,
+			SignerId: signer.ID,
 		}
 		return nil
 	})

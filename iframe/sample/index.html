@@ -204,17 +204,49 @@
 		</div>
 	</div>
 
-	<!-- Modal for Account ID Input -->
+	<!-- Modal for Account Recovery -->
 	<div id="accountIdModal"
 		style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4);">
 		<div
-			style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 300px; border-radius: 5px;">
+			style="background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 400px; border-radius: 5px;">
 			<span onclick="closeAccountIdModal()"
 				style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
-			<h3>Enter Account ID</h3>
-			<input type="text" id="accountIdInput" placeholder="Account ID"
-				style="width: 100%; padding: 8px; margin: 10px 0; box-sizing: border-box;">
-			<div style="text-align: right; margin-top: 10px;">
+			<h3>Account Recovery</h3>
+
+			<div style="margin: 10px 0;">
+				<label style="font-weight: bold; display: block; margin-bottom: 5px;">Account ID</label>
+				<input type="text" id="accountIdInput" placeholder="Account ID"
+					style="width: 100%; padding: 8px; box-sizing: border-box;">
+			</div>
+
+			<div style="margin: 10px 0;">
+				<label style="font-weight: bold; display: block; margin-bottom: 5px;">Recovery Method</label>
+				<select id="recoveryMethodSelect" onchange="onRecoveryMethodChange()"
+					style="width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 3px;">
+					<option value="project">Project Entropy (default)</option>
+					<option value="password">Password</option>
+					<option value="passkey">Passkey</option>
+				</select>
+			</div>
+
+			<!-- Password input (hidden by default) -->
+			<div id="passwordRecoverySection" style="display: none; margin: 10px 0;">
+				<label style="font-weight: bold; display: block; margin-bottom: 5px;">Recovery Password</label>
+				<input type="password" id="recoveryPasswordInput" placeholder="Enter your recovery password"
+					style="width: 100%; padding: 8px; box-sizing: border-box;">
+			</div>
+
+			<!-- Passkey input (hidden by default) -->
+			<div id="passkeyRecoverySection" style="display: none; margin: 10px 0;">
+				<label style="font-weight: bold; display: block; margin-bottom: 5px;">Passkey ID</label>
+				<input type="text" id="passkeyIdInput" placeholder="Passkey identifier"
+					style="width: 100%; padding: 8px; margin-bottom: 8px; box-sizing: border-box;">
+				<label style="font-weight: bold; display: block; margin-bottom: 5px;">Passkey Key (base64url)</label>
+				<input type="text" id="passkeyKeyInput" placeholder="Base64url-encoded passkey key"
+					style="width: 100%; padding: 8px; box-sizing: border-box;">
+			</div>
+
+			<div style="text-align: right; margin-top: 15px;">
 				<button onclick="closeAccountIdModal()" style="margin-right: 10px;">Cancel</button>
 				<button onclick="confirmRecover()">Recover</button>
 			</div>
@@ -931,9 +963,20 @@
 			document.getElementById("accountIdModal").style.display = "block";
 		}
 
+		function onRecoveryMethodChange() {
+			const method = document.getElementById("recoveryMethodSelect").value;
+			document.getElementById("passwordRecoverySection").style.display = method === "password" ? "block" : "none";
+			document.getElementById("passkeyRecoverySection").style.display = method === "passkey" ? "block" : "none";
+		}
+
 		function closeAccountIdModal() {
 			document.getElementById("accountIdModal").style.display = "none";
 			document.getElementById("accountIdInput").value = "";
+			document.getElementById("recoveryMethodSelect").value = "project";
+			document.getElementById("recoveryPasswordInput").value = "";
+			document.getElementById("passkeyIdInput").value = "";
+			document.getElementById("passkeyKeyInput").value = "";
+			onRecoveryMethodChange();
 		}
 
 		async function confirmRecover() {
@@ -943,22 +986,44 @@
 				return;
 			}
 
+			const recoveryMethod = document.getElementById("recoveryMethodSelect").value;
+
+			// Validate method-specific inputs
+			let encryptionKey = null;
+			let passkey = null;
+			let encryptionPart = null;
+
+			if (recoveryMethod === "password") {
+				const password = document.getElementById("recoveryPasswordInput").value;
+				if (!password) {
+					log("ERROR: Please enter a recovery password");
+					return;
+				}
+				encryptionKey = password;
+			} else if (recoveryMethod === "passkey") {
+				const passkeyId = document.getElementById("passkeyIdInput").value.trim();
+				const passkeyKey = document.getElementById("passkeyKeyInput").value.trim();
+				if (!passkeyId || !passkeyKey) {
+					log("ERROR: Please enter both passkey ID and passkey key");
+					return;
+				}
+				passkey = { id: passkeyId, key: passkeyKey };
+			} else {
+				// project entropy (default)
+				encryptionPart = shieldProjectEncryptionShare;
+			}
+
 			closeAccountIdModal();
 
 			try {
-				log(`Calling recover via iframe for account ID: ${accountId}`);
+				log(`Calling recover via iframe for account ID: ${accountId} (method: ${recoveryMethod})`);
 				const request = {
 					uuid: generateUUID(),
 					recovery: {
-						// Whether its using Openfort (either third-party or not) or a custom provider to verify the access token
 						auth: "custom",
-						// The auth token, either idToken or accessToken
 						token: jwtToken,
-						// When using a third party auth provider, the provider name
 						authProvider: "authservice",
-						// When using a third party auth provider, the token type
 						tokenType: "jwt",
-						// When using encryption sessions, the session ID
 						encryptionSession: null,
 					},
 					publishableKey: jwtToken,
@@ -966,19 +1031,27 @@
 					accessToken: jwtToken,
 					playerID: userId,
 					account: accountId,
-					thirdPartyProvider: null, // TODO: configure in shield
+					thirdPartyProvider: null,
 					thirdPartyTokenType: "jwt",
-					encryptionKey: null, // TODO ?
-					encryptionPart: shieldProjectEncryptionShare,
+					encryptionKey: encryptionKey,
+					encryptionPart: encryptionPart,
 					encryptionSession: null,
+					passkey: passkey,
 					openfortURL: HOT_STORAGE_SERVER,
 					shieldURL: COLD_STORAGE_SERVER,
 				};
 
-				const result = await iframeConnection.recover(request);
+				log("recover request: " + JSON.stringify(request, null, 2));
+
+				// Race with a timeout so we can detect hangs
+				const timeoutMs = 30000;
+				const result = await Promise.race([
+					iframeConnection.recover(request),
+					new Promise((_, reject) => setTimeout(() => reject(new Error(`recover timed out after ${timeoutMs/1000}s — check browser console for iframe errors`)), timeoutMs)),
+				]);
 				log("recover result: " + JSON.stringify(result, null, 2));
 			} catch (error) {
-				log("ERROR recover iframe: " + error.message);
+				log("ERROR recover iframe: " + (error.message || JSON.stringify(error)));
 			}
 		}
 

@@ -145,28 +145,37 @@ type RecoverResponseV2 struct {
 	User          string `json:"user"`
 }
 
-type ExportShareResponse struct {
-	AccountId    string `json:"accountId"`
-	Address      string `json:"address"`
-	ChainId      int64  `json:"chainId"`
-	AuthProvider string `json:"authProvider"`
-	SignerId     string `json:"signerId"`
-	Share        string `json:"share"`
-	Username     string `json:"username"`
+type SmartAccountData struct {
+	ImplementationType    string  `json:"implementationType,omitempty"`
+	FactoryAddress        string  `json:"factoryAddress,omitempty"`
+	ImplementationAddress string  `json:"implementationAddress,omitempty"`
+	Salt                  string  `json:"salt,omitempty"`
+	DeployedTx            string  `json:"deployedTx,omitempty"`
+	DeployedAt            float64 `json:"deployedAt,omitempty"`
+	Active                bool    `json:"active,omitempty"`
 }
 
 type ImportShareRequest struct {
+	// AccountV2Response fields
+	ID           string            `json:"id"`
+	Wallet       string            `json:"wallet,omitempty"`
+	AccountType  string            `json:"accountType,omitempty"`
+	Address      string            `json:"address"`
+	OwnerAddress *string           `json:"ownerAddress"`
+	ChainType    string            `json:"chainType,omitempty"`
+	ChainId      int64             `json:"chainId,omitempty"`
+	SmartAccount *SmartAccountData `json:"smartAccount,omitempty"`
+	// Export-specific fields
+	Share    string `json:"share"`
+	SignerId string `json:"signerId,omitempty"`
+	// Added by the sample UI
 	Username     string `json:"username"`
-	AccountId    string `json:"accountId"`
-	Address      string `json:"address"`
-	ChainId      int64  `json:"chainId"`
-	SignerId     string `json:"signerId"`
-	Share        string `json:"share"`
 	AuthProvider string `json:"authProvider"`
 }
 
 type ImportShareResponse struct {
-	AccountId string `json:"accountId"`
-	Address   string `json:"address"`
-	SignerId  string `json:"signerId"`
+	ID       string `json:"id"`
+	Wallet   string `json:"wallet"`
+	Address  string `json:"address"`
+	SignerId string `json:"signerId"`
 }
