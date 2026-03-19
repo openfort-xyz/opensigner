@@ -123,7 +123,29 @@
 	</div>
 
 
+	<!-- Import Share (Hot Storage) -->
+	<div class="section">
+		<h2>Import Share (Hot Storage)</h2>
+		<div class="form-group">
+			<label><strong>Paste exported data:</strong></label>
+			<textarea id="importData" rows="10" style="width: 100%; font-family: monospace; font-size: 12px;" placeholder='Paste the exported JSON here'></textarea>
+		</div>
+		<br />
+		<button onclick="importShare()">Import Share</button>
+		<div id="importShareStatus"></div>
+	</div>
 
+	<!-- Import Cold Storage (Shield) Share -->
+	<div class="section">
+		<h2>Import Cold Storage (Shield) Share</h2>
+		<div class="form-group">
+			<label><strong>Paste Shield share data:</strong></label>
+			<textarea id="importColdData" rows="10" style="width: 100%; font-family: monospace; font-size: 12px;" placeholder='{"secret": "...", "entropy": "...", "reference": "...", "storage_method_id": 0}'></textarea>
+		</div>
+		<br />
+		<button onclick="importColdShare()">Import Cold Storage Share</button>
+		<div id="importColdShareStatus"></div>
+	</div>
 
 	<!-- Openfort API Demo -->
 	<div class="section">
@@ -957,6 +979,89 @@
 				log("recover result: " + JSON.stringify(result, null, 2));
 			} catch (error) {
 				log("ERROR recover iframe: " + error.message);
+			}
+		}
+
+		async function importShare() {
+			const importText = document.getElementById("importData").value.trim();
+			if (!importText) {
+				showStatus("Please paste exported data", "error", "importShareStatus");
+				return;
+			}
+
+			let importData;
+			try {
+				importData = JSON.parse(importText);
+				importData.username = userId;
+				importData.authProvider = "default"; // Just a hardcoded value
+			} catch (e) {
+				showStatus("Invalid JSON data", "error", "importShareStatus");
+				return;
+			}
+
+			if (!openfortClient) {
+				showStatus("Please initialize the Openfort client first", "error", "importShareStatus");
+				return;
+			}
+
+			try {
+				log("Importing hot storage share...");
+				const hotResult = await openfortClient.importShare(importData);
+				log("Hot storage share imported: " + JSON.stringify(hotResult, null, 2));
+
+				showStatus("Share imported successfully!", "success", "importShareStatus");
+			} catch (error) {
+				showStatus(`Import failed: ${error.message}`, "error", "importShareStatus");
+				log("ERROR import: " + error.message);
+			}
+		}
+
+		async function importColdShare() {
+			const importText = document.getElementById("importColdData").value.trim();
+			if (!importText) {
+				showStatus("Please paste Shield share data", "error", "importColdShareStatus");
+				return;
+			}
+
+			let importData;
+			try {
+				importData = JSON.parse(importText);
+			} catch (e) {
+				showStatus("Invalid JSON data", "error", "importColdShareStatus");
+				return;
+			}
+
+			if (!shieldProjectApiKey || !shieldProjectApiSecret) {
+				showStatus("Please create a Cold Storage (Shield) project first", "error", "importColdShareStatus");
+				return;
+			}
+
+			try {
+				log("Importing cold storage share...");
+				const response = await fetch(
+					`${COLD_STORAGE_SERVER}/shares/migration/import`,
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							"X-API-Key": shieldProjectApiKey,
+							"X-API-Secret": shieldProjectApiSecret,
+						},
+						body: JSON.stringify(importData),
+					}
+				);
+
+				if (response.ok) {
+					log("Cold storage share imported successfully");
+					showStatus("Cold storage share imported successfully!", "success", "importColdShareStatus");
+				} else {
+					const errorText = await response.text();
+					log("Cold storage import failed: " + errorText);
+					showStatus(`Cold storage import failed: ${errorText}`, "error", "importColdShareStatus");
+				}
+			} catch (error) {
+				showStatus(`Import failed: ${error.message}`, "error", "importColdShareStatus");
+				log("ERROR cold import: " + error.message);
 			}
 		}
 

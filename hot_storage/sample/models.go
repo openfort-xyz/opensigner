@@ -144,3 +144,29 @@ type RecoverResponseV2 struct {
 	IsPrimary     bool   `json:"isPrimary"`
 	User          string `json:"user"`
 }
+
+type ExportShareResponse struct {
+	AccountId    string `json:"accountId"`
+	Address      string `json:"address"`
+	ChainId      int64  `json:"chainId"`
+	AuthProvider string `json:"authProvider"`
+	SignerId     string `json:"signerId"`
+	Share        string `json:"share"`
+	Username     string `json:"username"`
+}
+
+type ImportShareRequest struct {
+	Username     string `json:"username"`
+	AccountId    string `json:"accountId"`
+	Address      string `json:"address"`
+	ChainId      int64  `json:"chainId"`
+	SignerId     string `json:"signerId"`
+	Share        string `json:"share"`
+	AuthProvider string `json:"authProvider"`
+}
+
+type ImportShareResponse struct {
+	AccountId string `json:"accountId"`
+	Address   string `json:"address"`
+	SignerId  string `json:"signerId"`
+}

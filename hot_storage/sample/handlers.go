@@ -53,6 +53,7 @@ func listenAndServe(addr string) {
 	mux.HandleFunc("/v2/accounts/signer", handleGetSignerV2)
 	mux.HandleFunc("/v2/devices/recover", handleRecoverDeviceV2)
 	mux.HandleFunc("/v2/devices/register", handleRegisterDeviceV2)
+	mux.HandleFunc("/v2/accounts/import-share", handleImportShare)
 
 	handler := contentTypeMiddleware(authMiddleware(mux))
 	handler = corsMiddleware(handler)
@@ -706,6 +707,95 @@ func handleListDevices(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(contentTypeHeader, contentTypeJSON)
+	json.NewEncoder(w).Encode(resp)
+}
+
+func handleImportShare(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req ImportShareRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if req.Address == "" || req.Share == "" {
+		http.Error(w, "address and share are required", http.StatusBadRequest)
+		return
+	}
+
+	var resp ImportShareResponse
+	txErr := db.Transaction(func(tx *gorm.DB) error {
+		// Check if account already exists at this address
+		var existing Account
+		if err := tx.First(&existing, "address = ?", req.Address).Error; err == nil {
+			return fmt.Errorf("conflict")
+		}
+
+		signerId := req.SignerId
+		if signerId == "" {
+			signerId = uuid.NewString()
+		}
+
+		signer := Signer{ID: signerId}
+		if err := tx.Create(&signer).Error; err != nil {
+			return fmt.Errorf("failed to create signer")
+		}
+
+		encryptedShare, err := encryptShare(req.Share)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt share")
+		}
+
+		device := Device{
+			ID:        uuid.NewString(),
+			Share:     encryptedShare,
+			IsPrimary: true,
+			SignerId:  signer.ID,
+		}
+		if err := tx.Create(&device).Error; err != nil {
+			return fmt.Errorf("failed to create device")
+		}
+
+		accountId := req.AccountId
+		if accountId == "" {
+			accountId = uuid.NewString()
+		}
+
+		newAccount := Account{
+			ID:           accountId,
+			Address:      req.Address,
+			Username:     req.Username,
+			ChainId:      req.ChainId,
+			SignerId:     signer.ID,
+			AuthProvider: req.AuthProvider,
+		}
+		if err := tx.Create(&newAccount).Error; err != nil {
+			return fmt.Errorf("failed to create account")
+		}
+
+		resp = ImportShareResponse{
+			AccountId: newAccount.ID,
+			Address:   newAccount.Address,
+			SignerId:  signer.ID,
+		}
+		return nil
+	})
+
+	if txErr != nil {
+		if txErr.Error() == "conflict" {
+			http.Error(w, errConflict, http.StatusConflict)
+		} else {
+			http.Error(w, txErr.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.Header().Set(contentTypeHeader, contentTypeJSON)
+	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(resp)
 }
 
