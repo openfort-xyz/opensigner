@@ -75,6 +75,13 @@ type Account struct {
 	SignerId     string `json:"signerId"`
 }
 
+type MigratedAccountData struct {
+	gorm.Model
+	ID              string `gorm:"primaryKey" json:"id"`
+	Wallet          string `json:"wallet"`
+	FormerOwnerUser string `json:"former_user"` // used as a PRF seed for passkeys at Openfort
+}
+
 type DeviceResponse struct {
 	ID        string `json:"id"`
 	Object    string `json:"object"`
@@ -168,6 +175,7 @@ type ImportShareRequest struct {
 	// Export-specific fields
 	Share    string `json:"share"`
 	SignerId string `json:"signerId,omitempty"`
+	UserId   string `json:"userId"`
 	// Added by the sample UI
 	Username     string `json:"username"`
 	AuthProvider string `json:"authProvider"`

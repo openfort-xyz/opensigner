@@ -54,6 +54,7 @@ func listenAndServe(addr string) {
 	mux.HandleFunc("/v2/devices/recover", handleRecoverDeviceV2)
 	mux.HandleFunc("/v2/devices/register", handleRegisterDeviceV2)
 	mux.HandleFunc("/v2/accounts/import-share", handleImportShare)
+	mux.HandleFunc("/v2/accounts/migrated-data", handleGetMigratedAccountData)
 
 	handler := contentTypeMiddleware(authMiddleware(mux))
 	handler = corsMiddleware(handler)
@@ -785,6 +786,15 @@ func handleImportShare(w http.ResponseWriter, r *http.Request) {
 			return fmt.Errorf("failed to create account")
 		}
 
+		newMigrateAccData := MigratedAccountData{
+			ID:              accountId,
+			Wallet:          req.Wallet,
+			FormerOwnerUser: req.UserId,
+		}
+		if err := tx.Create(&newMigrateAccData).Error; err != nil {
+			return fmt.Errorf("failed to create migrated account data")
+		}
+
 		resp = ImportShareResponse{
 			ID:       newAccount.ID,
 			Wallet:   req.Wallet,
@@ -806,6 +816,32 @@ func handleImportShare(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set(contentTypeHeader, contentTypeJSON)
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(resp)
+}
+
+func handleGetMigratedAccountData(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	accountId := r.URL.Query().Get("accountId")
+	if accountId == "" {
+		http.Error(w, "accountId query parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	var data MigratedAccountData
+	if err := db.First(&data, "id = ?", accountId).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, errNotFound, http.StatusNotFound)
+			return
+		}
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(contentTypeHeader, contentTypeJSON)
+	json.NewEncoder(w).Encode(data)
 }
 
 func handleCreateDevice(w http.ResponseWriter, r *http.Request) {

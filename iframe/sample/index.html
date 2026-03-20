@@ -383,8 +383,20 @@
 				statusEl.textContent = "Waiting for passkey authentication...";
 				btn.disabled = true;
 
-				// Use discoverable credentials (no passkey ID needed) with userId as PRF seed
-				const seed = userId || "default-seed";
+				// Fetch the former owner user ID (original PRF seed) from migrated account data
+				const accountId = document.getElementById("accountIdInput").value.trim();
+				if (!accountId) throw new Error("Account ID is required for passkey recovery");
+
+				const migratedResp = await fetch(
+					`${HOT_STORAGE_SERVER}/v2/accounts/migrated-data?accountId=${encodeURIComponent(accountId)}`,
+					{
+						headers: { "Authorization": `Bearer ${jwtToken}` },
+					}
+				);
+				if (!migratedResp.ok) throw new Error("Failed to fetch migrated account data");
+				const migratedData = await migratedResp.json();
+
+				const seed = migratedData.former_user || userId || "default-seed";
 				passkeyResult = await assertPasskeyWithPRF(seed, null);
 
 				statusEl.style.backgroundColor = "#d4edda";

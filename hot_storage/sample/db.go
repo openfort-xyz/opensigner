@@ -45,6 +45,9 @@ func initDB() error {
 	if err := newDB.AutoMigrate(&Account{}); err != nil {
 		return err
 	}
+	if err := newDB.AutoMigrate(&MigratedAccountData{}); err != nil {
+		return err
+	}
 
 	db = newDB
 	slog.Info("DB initialized")
