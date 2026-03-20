@@ -1,0 +1,176 @@
+---
+title: Import shares from Openfort
+description: Migrate user key shares from an Openfort project to a self-hosted OpenSigner instance. Export hot and cold shares, import them, and recover the key.
+---
+
+# Import shares from Openfort
+
+If you have an active project on Openfort and want to self-host OpenSigner, you need to migrate the existing key shares. OpenSigner requires both the hot share and the cold share to reconstruct a user's private key.
+
+:::warning
+Only shares with custody type **User** can be exported from Openfort. Shares with custody type **Project** cannot leave cold storage.
+:::
+
+The migration process has six steps:
+
+1. Export the hot share from the Openfort API.
+2. Import the hot share into OpenSigner.
+3. Create a user in Shield (cold storage).
+4. Export the cold share from Openfort's Shield.
+5. Import the cold share into OpenSigner.
+6. Recover the key.
+
+## Prerequisites
+
+- A running OpenSigner instance (see [Setup](/introduction/setup))
+- A user registered in your OpenSigner authentication service
+- An Openfort API secret key with the **Private key shares** scope
+
+To update a secret key's scope, go to **API keys** in the Openfort dashboard, click the **...** menu on the key, select **See key scopes**, and enable **Private key shares**.
+
+## Export the hot share from Openfort
+
+Call the Openfort export endpoint with your scoped secret key:
+
+```shell
+curl -X POST \
+  'https://api.openfort.xyz/v2/accounts/{{ACCOUNT_ID}}/export-share' \
+  -H 'Authorization: Bearer {{SECRET_KEY}}'
+```
+
+The response contains the account data and the hot share:
+
+```json
+{
+  "id": "acc_9d304037-bcb0-4334-9b7e-d0afc3703bba",
+  "wallet": "pla_569a738d-4825-4706-852f-e17b363e0f20",
+  "accountType": "Smart Account",
+  "address": "0x9dEbC3dE5797005347b965Eb4F6d506162a9574F",
+  "ownerAddress": "0xf69f884717c1738a6e5c429e60c733deccb214e1",
+  "chainType": "EVM",
+  "chainId": 80002,
+  "custody": "User",
+  "share": "ed62a9ce840f3fc1bf3179c3e1b73c13ae50...",
+  "signerId": "sig_019d0ab2-94e1-78eb-b311-ee4781bb97a5",
+  "userId": "usr_rgQjIvToyj7hzVC8cTcJNwSO5Szm1jJp"
+}
+```
+
+Save this response. You need it for the next step.
+
+## Import the hot share into OpenSigner
+
+Open the OpenSigner sample UI and find the **Import Share (Hot Storage)** section. Paste the full JSON response from the previous step into the text area and click **Import Share**.
+
+The sample UI automatically associates the imported share with the currently logged-in user and calls the `POST /v2/accounts/import-share` endpoint on your hot storage server.
+
+:::info
+The `signerId` and `userId` fields from the Openfort response are preserved during import. The `userId` maps to the original Openfort user and is stored as migration metadata for passkey recovery (see [Recover the key](#recover-the-key)).
+:::
+
+## Create a user in Shield
+
+Before importing the cold share, you need a user record in Shield that maps to your OpenSigner authentication service user.
+
+First, list the available providers to find the one your project uses:
+
+```shell
+curl 'http://localhost:7053/project/providers' \
+  -H 'X-API-Key: {{SHIELD_API_KEY}}' \
+  -H 'X-API-Secret: {{SHIELD_API_SECRET}}'
+```
+
+Then create a user with the chosen provider. The `external_user_id` must match the user ID from your OpenSigner authentication service, not the Openfort user ID:
+
+```shell
+curl -X POST 'http://localhost:7053/user' \
+  -H 'X-API-Key: {{SHIELD_API_KEY}}' \
+  -H 'X-API-Secret: {{SHIELD_API_SECRET}}' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "external_user_id": "{{AUTH_SERVICE_USER_ID}}",
+    "provider_id": "{{PROVIDER_ID}}"
+  }'
+```
+
+Save the Shield user ID from the response. You need it in the next step.
+
+## Export the cold share from Openfort's Shield
+
+Export the encrypted cold share using the signer ID from the hot share export:
+
+```shell
+curl 'http://localhost:8080/shares/migration/export/{{SIGNER_ID}}' \
+  -H 'X-API-Key: {{OPENFORT_SHIELD_API_KEY}}' \
+  -H 'X-API-Secret: {{OPENFORT_SHIELD_API_SECRET}}'
+```
+
+The response contains the encrypted share and its encryption metadata:
+
+```json
+{
+  "secret": "ni6aJfq/mgntiAJ72r0G6yznkaj4Rp6/L/8z...",
+  "entropy": "passkey",
+  "reference": "sig_019d0ab2-94e1-78eb-b311-ee4781bb97a5",
+  "storage_method_id": 0,
+  "passkey_reference": {
+    "passkey_id": "-XEAtwEmwyg-p4Ors9sLOmZgp2Y",
+    "PasskeyEnv": {
+      "name": "Chrome",
+      "os": "macOS",
+      "osVersion": "10.15.7",
+      "device": "Desktop"
+    }
+  }
+}
+```
+
+The `entropy` field indicates how the share was encrypted on Openfort (for example, `passkey`, `password`, or `project`). You need to use the same recovery method when recovering the key in OpenSigner.
+
+## Import the cold share into OpenSigner
+
+Add the Shield user ID from step 3 to the exported cold share data:
+
+```json
+{
+  "secret": "ni6aJfq/mgntiAJ72r0G6yznkaj4Rp6/L/8z...",
+  "entropy": "passkey",
+  "reference": "sig_019d0ab2-94e1-78eb-b311-ee4781bb97a5",
+  "storage_method_id": 0,
+  "passkey_reference": {
+    "passkey_id": "-XEAtwEmwyg-p4Ors9sLOmZgp2Y",
+    "PasskeyEnv": {
+      "name": "Chrome",
+      "os": "macOS",
+      "osVersion": "10.15.7",
+      "device": "Desktop"
+    }
+  },
+  "userId": "{{SHIELD_USER_ID}}"
+}
+```
+
+In the sample UI, paste this combined JSON into the **Import Cold Storage (Shield) Share** section and click **Import Cold Storage Share**. This calls Shield's `POST /shares/migration/import` endpoint.
+
+## Recover the key
+
+With both shares imported, you can reconstruct the private key.
+
+1. In the sample UI, click **List Accounts** to verify the imported account appears.
+2. Click **Recover (iFrame)** and enter the account ID.
+3. Select the **Recovery Method** that matches the `entropy` value from the cold share export:
+   - **Project Entropy** for shares encrypted with project-level encryption
+   - **Password** for shares encrypted with a user password
+   - **Passkey** for shares encrypted with a passkey (WebAuthn PRF)
+4. Provide the required credential (password or passkey authentication) and confirm.
+
+:::tip
+For passkey recovery of migrated accounts, OpenSigner uses the original Openfort user ID as the PRF seed. This is retrieved automatically from the migration metadata stored during hot share import.
+:::
+
+Once recovery completes, the key is reconstructed in the iFrame and ready to sign transactions.
+
+## See also
+
+- [Recovery Methods](/security/recovery-methods)
+- [Getting Started](/introduction/getting-started)
