@@ -191,6 +191,10 @@
 		<button onclick="recoverAccIframe()" id="recoverIframeBtn" disabled>
 			Recover (iFrame)
 		</button>
+		<button onclick="registerPasskey()" id="registerPasskeyBtn" disabled
+			style="background-color: #28a745;">
+			Register Passkey (Touch ID)
+		</button>
 		<br />
 		<div>
 			<label>Message to Sign:</label>
@@ -236,14 +240,17 @@
 					style="width: 100%; padding: 8px; box-sizing: border-box;">
 			</div>
 
-			<!-- Passkey input (hidden by default) -->
+			<!-- Passkey section (hidden by default) -->
 			<div id="passkeyRecoverySection" style="display: none; margin: 10px 0;">
-				<label style="font-weight: bold; display: block; margin-bottom: 5px;">Passkey ID</label>
-				<input type="text" id="passkeyIdInput" placeholder="Passkey identifier"
-					style="width: 100%; padding: 8px; margin-bottom: 8px; box-sizing: border-box;">
-				<label style="font-weight: bold; display: block; margin-bottom: 5px;">Passkey Key (base64url)</label>
-				<input type="text" id="passkeyKeyInput" placeholder="Base64url-encoded passkey key"
-					style="width: 100%; padding: 8px; box-sizing: border-box;">
+				<p style="font-size: 13px; color: #555; margin-bottom: 10px;">
+					Click the button below to authenticate with your passkey (Touch ID / security key).
+					The encryption key will be derived automatically via WebAuthn PRF.
+				</p>
+				<div id="passkeyStatus" style="display: none; padding: 8px; margin-bottom: 8px; border-radius: 3px; font-size: 13px;"></div>
+				<button type="button" onclick="authenticatePasskey()" id="passkeyAuthBtn"
+					style="width: 100%; padding: 10px; background-color: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;">
+					Authenticate with Passkey
+				</button>
 			</div>
 
 			<div style="text-align: right; margin-top: 15px;">
@@ -272,6 +279,129 @@
 		let shieldProjectApiKey = null;
 		let shieldProjectApiSecret = null;
 		let shieldProjectEncryptionShare = null;
+
+		// Passkey state (populated by WebAuthn ceremony)
+		let passkeyResult = null; // { id: string, key: string } after successful auth
+
+		// --- WebAuthn PRF helpers ---
+		const PASSKEY_RP_ID = "localhost";
+		const PASSKEY_RP_NAME = "OpenSigner Demo";
+
+		function arrayBufferToBase64URL(buffer) {
+			const bytes = new Uint8Array(buffer);
+			let str = "";
+			for (const b of bytes) str += String.fromCharCode(b);
+			return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+		}
+
+		function base64URLToArrayBuffer(base64url) {
+			const base64 = base64url.replace(/-/g, "+").replace(/_/g, "/");
+			const padded = base64 + "=".repeat((4 - base64.length % 4) % 4);
+			const binary = atob(padded);
+			const bytes = new Uint8Array(binary.length);
+			for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+			return bytes.buffer;
+		}
+
+		async function deriveKeyFromPRF(credential) {
+			const extResults = credential.getClientExtensionResults();
+			if (!extResults.prf || !extResults.prf.results || !extResults.prf.results.first) {
+				throw new Error("PRF extension not supported by this authenticator. Passkey recovery requires PRF support.");
+			}
+			const rawBits = extResults.prf.results.first;
+			const cryptoKey = await crypto.subtle.importKey(
+				"raw", rawBits, { name: "AES-CBC", length: 256 }, true, ["encrypt", "decrypt"]
+			);
+			const exported = await crypto.subtle.exportKey("raw", cryptoKey);
+			return arrayBufferToBase64URL(exported);
+		}
+
+		async function createPasskeyWithPRF(seed) {
+			const challenge = crypto.getRandomValues(new Uint8Array(32));
+			const passkeyName = "opensigner-" + Math.random().toString(36).substring(2, 8);
+			const credential = await navigator.credentials.create({
+				publicKey: {
+					challenge,
+					rp: { id: PASSKEY_RP_ID, name: PASSKEY_RP_NAME },
+					user: {
+						id: new TextEncoder().encode(passkeyName),
+						name: passkeyName,
+						displayName: PASSKEY_RP_NAME,
+					},
+					pubKeyCredParams: [
+						{ alg: -7, type: "public-key" },   // ES256
+						{ alg: -257, type: "public-key" },  // RS256 fallback
+					],
+					authenticatorSelection: {
+						residentKey: "required",
+						userVerification: "required",
+					},
+					extensions: {
+						prf: { eval: { first: new TextEncoder().encode(seed) } },
+					},
+					timeout: 60000,
+					attestation: "direct",
+				},
+			});
+			if (!credential) throw new Error("Passkey creation cancelled");
+			const key = await deriveKeyFromPRF(credential);
+			return { id: arrayBufferToBase64URL(credential.rawId), key };
+		}
+
+		async function assertPasskeyWithPRF(seed, passkeyId) {
+			const options = {
+				publicKey: {
+					challenge: crypto.getRandomValues(new Uint8Array(32)),
+					rpId: PASSKEY_RP_ID,
+					userVerification: "required",
+					extensions: {
+						prf: { eval: { first: new TextEncoder().encode(seed) } },
+					},
+					timeout: 60000,
+				},
+			};
+			// If we have a known passkey ID, restrict to it; otherwise use discoverable
+			if (passkeyId) {
+				options.publicKey.allowCredentials = [{
+					id: base64URLToArrayBuffer(passkeyId),
+					type: "public-key",
+				}];
+			}
+			const credential = await navigator.credentials.get(options);
+			if (!credential) throw new Error("Passkey authentication cancelled");
+			const key = await deriveKeyFromPRF(credential);
+			return { id: arrayBufferToBase64URL(credential.rawId), key };
+		}
+
+		async function authenticatePasskey() {
+			const statusEl = document.getElementById("passkeyStatus");
+			const btn = document.getElementById("passkeyAuthBtn");
+			try {
+				statusEl.style.display = "block";
+				statusEl.style.backgroundColor = "#fff3cd";
+				statusEl.style.color = "#856404";
+				statusEl.textContent = "Waiting for passkey authentication...";
+				btn.disabled = true;
+
+				// Use discoverable credentials (no passkey ID needed) with userId as PRF seed
+				const seed = userId || "default-seed";
+				passkeyResult = await assertPasskeyWithPRF(seed, null);
+
+				statusEl.style.backgroundColor = "#d4edda";
+				statusEl.style.color = "#155724";
+				statusEl.textContent = "Passkey authenticated. ID: " + passkeyResult.id.substring(0, 16) + "...";
+				btn.textContent = "Re-authenticate with Passkey";
+				log("Passkey authenticated, ID: " + passkeyResult.id);
+			} catch (error) {
+				statusEl.style.backgroundColor = "#f8d7da";
+				statusEl.style.color = "#721c24";
+				statusEl.textContent = "Passkey error: " + error.message;
+				passkeyResult = null;
+				log("Passkey error: " + error.message);
+			} finally {
+				btn.disabled = false;
+			}
+		}
 		let shieldAuthProviderId = null;
 		let openfortClient = null;
 		let userId = null;
@@ -621,6 +751,7 @@
 					document.getElementById("signIframeBtn").disabled = false;
 					document.getElementById("createIframeBtn").disabled = false;
 					document.getElementById("recoverIframeBtn").disabled = false;
+					document.getElementById("registerPasskeyBtn").disabled = false;
 
 				} else {
 					showStatus(
@@ -650,6 +781,7 @@
 			document.getElementById("signIframeBtn").disabled = true;
 			document.getElementById("createIframeBtn").disabled = true;
 			document.getElementById("recoverIframeBtn").disabled = true;
+			document.getElementById("registerPasskeyBtn").disabled = true;
 
 			showStatus("Logged out successfully");
 			log("User logged out");
@@ -900,6 +1032,57 @@
 			}
 		}
 
+		async function registerPasskey() {
+			try {
+				await ensureIframeConnection();
+			} catch (error) {
+				log("ERROR: Failed to establish iFrame connection: " + error.message);
+				return;
+			}
+
+			try {
+				const seed = userId || "default-seed";
+				log("Creating passkey via Touch ID / security key...");
+				const result = await createPasskeyWithPRF(seed);
+				log("Passkey created! ID: " + result.id);
+				log("Now calling setRecoveryMethod via iframe...");
+
+				const request = {
+					uuid: generateUUID(),
+					// Previous recovery method (project entropy by default)
+					previousRecoveryMethod: "password", // TODO: detect current method
+					previousPassword: null,
+					previousEncryptionSession: null,
+					previousEncryptionPart: shieldProjectEncryptionShare,
+					// New recovery method: passkey
+					recoveryMethod: "passkey",
+					passkeyId: result.id,
+					passkeyKey: result.key,
+					// Auth config
+					recovery: {
+						auth: "custom",
+						token: jwtToken,
+						authProvider: "authservice",
+						tokenType: "jwt",
+					},
+					publishableKey: jwtToken,
+					shieldAPIKey: shieldProjectApiKey,
+					accessToken: jwtToken,
+					playerID: userId,
+					thirdPartyProvider: null,
+					thirdPartyTokenType: "jwt",
+					encryptionPart: shieldProjectEncryptionShare,
+					openfortURL: HOT_STORAGE_SERVER,
+					shieldURL: COLD_STORAGE_SERVER,
+				};
+
+				const setResult = await iframeConnection.setRecoveryMethod(request);
+				log("setRecoveryMethod result: " + JSON.stringify(setResult, null, 2));
+			} catch (error) {
+				log("ERROR register passkey: " + (error.message || JSON.stringify(error)));
+			}
+		}
+
 		async function createAccountIframe() {
 			const chainId = parseInt(document.getElementById("chainId").value) || 1;
 
@@ -974,8 +1157,11 @@
 			document.getElementById("accountIdInput").value = "";
 			document.getElementById("recoveryMethodSelect").value = "project";
 			document.getElementById("recoveryPasswordInput").value = "";
-			document.getElementById("passkeyIdInput").value = "";
-			document.getElementById("passkeyKeyInput").value = "";
+			passkeyResult = null;
+			const statusEl = document.getElementById("passkeyStatus");
+			statusEl.style.display = "none";
+			statusEl.textContent = "";
+			document.getElementById("passkeyAuthBtn").textContent = "Authenticate with Passkey";
 			onRecoveryMethodChange();
 		}
 
@@ -1001,13 +1187,11 @@
 				}
 				encryptionKey = password;
 			} else if (recoveryMethod === "passkey") {
-				const passkeyId = document.getElementById("passkeyIdInput").value.trim();
-				const passkeyKey = document.getElementById("passkeyKeyInput").value.trim();
-				if (!passkeyId || !passkeyKey) {
-					log("ERROR: Please enter both passkey ID and passkey key");
+				if (!passkeyResult) {
+					log("ERROR: Please authenticate with your passkey first (click the green button)");
 					return;
 				}
-				passkey = { id: passkeyId, key: passkeyKey };
+				passkey = { id: passkeyResult.id, key: passkeyResult.key };
 			} else {
 				// project entropy (default)
 				encryptionPart = shieldProjectEncryptionShare;
