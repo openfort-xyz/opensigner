@@ -728,6 +728,9 @@ func handleImportShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userId := r.Context().Value(fieldUserId).(string)
+	authProvider := r.Context().Value(fieldAuthProvider).(string)
+
 	var resp ImportShareResponse
 	txErr := db.Transaction(func(tx *gorm.DB) error {
 		// Check if account already exists at this address
@@ -769,6 +772,9 @@ func handleImportShare(w http.ResponseWriter, r *http.Request) {
 		var accAddress string
 
 		if req.SmartAccount != nil {
+			if req.OwnerAddress == nil {
+				return fmt.Errorf("ownerAddress is required for smart accounts")
+			}
 			accAddress = *req.OwnerAddress // Because we have to always save EOA address
 		} else {
 			accAddress = req.Address
@@ -777,10 +783,10 @@ func handleImportShare(w http.ResponseWriter, r *http.Request) {
 		newAccount := Account{
 			ID:           accountId,
 			Address:      accAddress,
-			Username:     req.Username,
+			Username:     userId,
 			ChainId:      req.ChainId,
 			SignerId:     signer.ID,
-			AuthProvider: req.AuthProvider,
+			AuthProvider: authProvider,
 		}
 		if err := tx.Create(&newAccount).Error; err != nil {
 			return fmt.Errorf("failed to create account")
@@ -827,6 +833,19 @@ func handleGetMigratedAccountData(w http.ResponseWriter, r *http.Request) {
 	accountId := r.URL.Query().Get("accountId")
 	if accountId == "" {
 		http.Error(w, "accountId query parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	userId := r.Context().Value(fieldUserId).(string)
+	authProvider := r.Context().Value(fieldAuthProvider).(string)
+
+	var account Account
+	if err := db.First(&account, "id = ? AND username = ? AND auth_provider = ?", accountId, userId, authProvider).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, errNotFound, http.StatusNotFound)
+			return
+		}
+		http.Error(w, "database error", http.StatusInternalServerError)
 		return
 	}
 

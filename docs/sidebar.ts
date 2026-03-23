@@ -21,6 +21,10 @@ export const sidebar: Sidebar =
                     text: 'Getting Started',
                     link: '/introduction/getting-started',
                 },
+                {
+                    text: 'Import Shares from Openfort',
+                    link: '/introduction/import-share-from-openfort',
+                },
             ]
         },
         {
