@@ -125,7 +125,7 @@ The response contains the encrypted share and its encryption metadata:
 }
 ```
 
-The `entropy` field indicates how the share was encrypted on Openfort (for example, `passkey`, `password`, or `project`). You need to use the same recovery method when recovering the key in OpenSigner.
+The `entropy` field indicates how the share was encrypted on Openfort (for example, `passkey`, `user`, or `project`). You need to use the same recovery method when recovering the key in OpenSigner. If the Openfort export shows `password` as the entropy value, the sample UI automatically converts it to `user` (the value Shield expects for password-based entropy).
 
 ## Import the cold share into OpenSigner
 
@@ -159,9 +159,9 @@ With both shares imported, you can reconstruct the private key.
 1. In the sample UI, click **List Accounts** to verify the imported account appears.
 2. Click **Recover (iFrame)** and enter the account ID.
 3. Select the **Recovery Method** that matches the `entropy` value from the cold share export:
-   - **Project Entropy** for shares encrypted with project-level encryption
-   - **Password** for shares encrypted with a user password
-   - **Passkey** for shares encrypted with a passkey (WebAuthn PRF)
+   - **Project Entropy** for `project` entropy
+   - **Password** for `user` (or `password`) entropy
+   - **Passkey** for `passkey` entropy
 4. Provide the required credential (password or passkey authentication) and confirm.
 
 :::tip

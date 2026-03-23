@@ -1300,6 +1300,11 @@
 				return;
 			}
 
+			// Normalize Openfort entropy values to Shield-compatible values
+			if (importData.entropy === "password") {
+				importData.entropy = "user";
+			}
+
 			if (!shieldProjectApiKey || !shieldProjectApiSecret) {
 				showStatus("Please create a Cold Storage (Shield) project first", "error", "importColdShareStatus");
 				return;
