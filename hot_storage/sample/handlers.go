@@ -53,6 +53,8 @@ func listenAndServe(addr string) {
 	mux.HandleFunc("/v2/accounts/signer", handleGetSignerV2)
 	mux.HandleFunc("/v2/devices/recover", handleRecoverDeviceV2)
 	mux.HandleFunc("/v2/devices/register", handleRegisterDeviceV2)
+	mux.HandleFunc("/v2/accounts/import-share", handleImportShare)
+	mux.HandleFunc("/v2/accounts/migrated-data", handleGetMigratedAccountData)
 
 	handler := contentTypeMiddleware(authMiddleware(mux))
 	handler = corsMiddleware(handler)
@@ -707,6 +709,158 @@ func handleListDevices(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set(contentTypeHeader, contentTypeJSON)
 	json.NewEncoder(w).Encode(resp)
+}
+
+func handleImportShare(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req ImportShareRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if req.Address == "" || req.Share == "" {
+		http.Error(w, "address and share are required", http.StatusBadRequest)
+		return
+	}
+
+	userId := r.Context().Value(fieldUserId).(string)
+	authProvider := r.Context().Value(fieldAuthProvider).(string)
+
+	var resp ImportShareResponse
+	txErr := db.Transaction(func(tx *gorm.DB) error {
+		// Check if account already exists at this address
+		var existing Account
+		if err := tx.First(&existing, "address = ?", req.Address).Error; err == nil {
+			return fmt.Errorf("conflict")
+		}
+
+		signerId := strings.TrimPrefix(req.SignerId, "sig_")
+		if signerId == "" {
+			signerId = uuid.NewString()
+		}
+
+		signer := Signer{ID: signerId}
+		if err := tx.Create(&signer).Error; err != nil {
+			return fmt.Errorf("failed to create signer")
+		}
+
+		encryptedShare, err := encryptShare(req.Share)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt share")
+		}
+
+		device := Device{
+			ID:        uuid.NewString(),
+			Share:     encryptedShare,
+			IsPrimary: true,
+			SignerId:  signer.ID,
+		}
+		if err := tx.Create(&device).Error; err != nil {
+			return fmt.Errorf("failed to create device")
+		}
+
+		accountId := req.ID
+		if accountId == "" {
+			accountId = uuid.NewString()
+		}
+
+		var accAddress string
+
+		if req.SmartAccount != nil {
+			if req.OwnerAddress == nil {
+				return fmt.Errorf("ownerAddress is required for smart accounts")
+			}
+			accAddress = *req.OwnerAddress // Because we have to always save EOA address
+		} else {
+			accAddress = req.Address
+		}
+
+		newAccount := Account{
+			ID:           accountId,
+			Address:      accAddress,
+			Username:     userId,
+			ChainId:      req.ChainId,
+			SignerId:     signer.ID,
+			AuthProvider: authProvider,
+		}
+		if err := tx.Create(&newAccount).Error; err != nil {
+			return fmt.Errorf("failed to create account")
+		}
+
+		newMigrateAccData := MigratedAccountData{
+			ID:              accountId,
+			Wallet:          req.Wallet,
+			FormerOwnerUser: req.UserId,
+		}
+		if err := tx.Create(&newMigrateAccData).Error; err != nil {
+			return fmt.Errorf("failed to create migrated account data")
+		}
+
+		resp = ImportShareResponse{
+			ID:       newAccount.ID,
+			Wallet:   req.Wallet,
+			Address:  newAccount.Address,
+			SignerId: signer.ID,
+		}
+		return nil
+	})
+
+	if txErr != nil {
+		if txErr.Error() == "conflict" {
+			http.Error(w, errConflict, http.StatusConflict)
+		} else {
+			http.Error(w, txErr.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.Header().Set(contentTypeHeader, contentTypeJSON)
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(resp)
+}
+
+func handleGetMigratedAccountData(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	accountId := r.URL.Query().Get("accountId")
+	if accountId == "" {
+		http.Error(w, "accountId query parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	userId := r.Context().Value(fieldUserId).(string)
+	authProvider := r.Context().Value(fieldAuthProvider).(string)
+
+	var account Account
+	if err := db.First(&account, "id = ? AND username = ? AND auth_provider = ?", accountId, userId, authProvider).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, errNotFound, http.StatusNotFound)
+			return
+		}
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+
+	var data MigratedAccountData
+	if err := db.First(&data, "id = ?", accountId).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, errNotFound, http.StatusNotFound)
+			return
+		}
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(contentTypeHeader, contentTypeJSON)
+	json.NewEncoder(w).Encode(data)
 }
 
 func handleCreateDevice(w http.ResponseWriter, r *http.Request) {

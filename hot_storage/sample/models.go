@@ -75,6 +75,13 @@ type Account struct {
 	SignerId     string `json:"signerId"`
 }
 
+type MigratedAccountData struct {
+	gorm.Model
+	ID              string `gorm:"primaryKey" json:"id"`
+	Wallet          string `json:"wallet"`
+	FormerOwnerUser string `json:"former_user"` // used as a PRF seed for passkeys at Openfort
+}
+
 type DeviceResponse struct {
 	ID        string `json:"id"`
 	Object    string `json:"object"`
@@ -143,4 +150,40 @@ type RecoverResponseV2 struct {
 	Share         string `json:"share"`
 	IsPrimary     bool   `json:"isPrimary"`
 	User          string `json:"user"`
+}
+
+type SmartAccountData struct {
+	ImplementationType    string  `json:"implementationType,omitempty"`
+	FactoryAddress        string  `json:"factoryAddress,omitempty"`
+	ImplementationAddress string  `json:"implementationAddress,omitempty"`
+	Salt                  string  `json:"salt,omitempty"`
+	DeployedTx            string  `json:"deployedTx,omitempty"`
+	DeployedAt            float64 `json:"deployedAt,omitempty"`
+	Active                bool    `json:"active,omitempty"`
+}
+
+type ImportShareRequest struct {
+	// AccountV2Response fields
+	ID           string            `json:"id"`
+	Wallet       string            `json:"wallet,omitempty"`
+	AccountType  string            `json:"accountType,omitempty"`
+	Address      string            `json:"address"`
+	OwnerAddress *string           `json:"ownerAddress"`
+	ChainType    string            `json:"chainType,omitempty"`
+	ChainId      int64             `json:"chainId,omitempty"`
+	SmartAccount *SmartAccountData `json:"smartAccount,omitempty"`
+	// Export-specific fields
+	Share    string `json:"share"`
+	SignerId string `json:"signerId,omitempty"`
+	UserId   string `json:"userId"`
+	// Added by the sample UI
+	Username     string `json:"username"`
+	AuthProvider string `json:"authProvider"`
+}
+
+type ImportShareResponse struct {
+	ID       string `json:"id"`
+	Wallet   string `json:"wallet"`
+	Address  string `json:"address"`
+	SignerId string `json:"signerId"`
 }

@@ -199,6 +199,15 @@ class Openfort {
       requestId,
     );
   }
+
+  async importShare(shareData, requestId = null) {
+    return await this._makeRequest(
+      "POST",
+      `/v2/accounts/import-share`,
+      shareData,
+      requestId,
+    );
+  }
 }
 
 // Make it globally available

@@ -123,7 +123,29 @@
 	</div>
 
 
+	<!-- Import Share (Hot Storage) -->
+	<div class="section">
+		<h2>Import Share (Hot Storage)</h2>
+		<div class="form-group">
+			<label><strong>Paste exported data:</strong></label>
+			<textarea id="importData" rows="10" style="width: 100%; font-family: monospace; font-size: 12px;" placeholder='Paste the exported JSON here'></textarea>
+		</div>
+		<br />
+		<button onclick="importShare()">Import Share</button>
+		<div id="importShareStatus"></div>
+	</div>
 
+	<!-- Import Cold Storage (Shield) Share -->
+	<div class="section">
+		<h2>Import Cold Storage (Shield) Share</h2>
+		<div class="form-group">
+			<label><strong>Paste Shield share data:</strong></label>
+			<textarea id="importColdData" rows="10" style="width: 100%; font-family: monospace; font-size: 12px;" placeholder='{"secret": "...", "entropy": "...", "reference": "...", "storage_method_id": 0}'></textarea>
+		</div>
+		<br />
+		<button onclick="importColdShare()">Import Cold Storage Share</button>
+		<div id="importColdShareStatus"></div>
+	</div>
 
 	<!-- Openfort API Demo -->
 	<div class="section">
@@ -169,6 +191,10 @@
 		<button onclick="recoverAccIframe()" id="recoverIframeBtn" disabled>
 			Recover (iFrame)
 		</button>
+		<button onclick="registerPasskey()" id="registerPasskeyBtn" disabled
+			style="background-color: #28a745;">
+			Register Passkey (Touch ID)
+		</button>
 		<br />
 		<div>
 			<label>Message to Sign:</label>
@@ -182,17 +208,52 @@
 		</div>
 	</div>
 
-	<!-- Modal for Account ID Input -->
+	<!-- Modal for Account Recovery -->
 	<div id="accountIdModal"
 		style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4);">
 		<div
-			style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 300px; border-radius: 5px;">
+			style="background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 400px; border-radius: 5px;">
 			<span onclick="closeAccountIdModal()"
 				style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
-			<h3>Enter Account ID</h3>
-			<input type="text" id="accountIdInput" placeholder="Account ID"
-				style="width: 100%; padding: 8px; margin: 10px 0; box-sizing: border-box;">
-			<div style="text-align: right; margin-top: 10px;">
+			<h3>Account Recovery</h3>
+
+			<div style="margin: 10px 0;">
+				<label style="font-weight: bold; display: block; margin-bottom: 5px;">Account ID</label>
+				<input type="text" id="accountIdInput" placeholder="Account ID"
+					style="width: 100%; padding: 8px; box-sizing: border-box;">
+			</div>
+
+			<div style="margin: 10px 0;">
+				<label style="font-weight: bold; display: block; margin-bottom: 5px;">Recovery Method</label>
+				<select id="recoveryMethodSelect" onchange="onRecoveryMethodChange()"
+					style="width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 3px;">
+					<option value="project">Project Entropy (default)</option>
+					<option value="password">Password</option>
+					<option value="passkey">Passkey</option>
+				</select>
+			</div>
+
+			<!-- Password input (hidden by default) -->
+			<div id="passwordRecoverySection" style="display: none; margin: 10px 0;">
+				<label style="font-weight: bold; display: block; margin-bottom: 5px;">Recovery Password</label>
+				<input type="password" id="recoveryPasswordInput" placeholder="Enter your recovery password"
+					style="width: 100%; padding: 8px; box-sizing: border-box;">
+			</div>
+
+			<!-- Passkey section (hidden by default) -->
+			<div id="passkeyRecoverySection" style="display: none; margin: 10px 0;">
+				<p style="font-size: 13px; color: #555; margin-bottom: 10px;">
+					Click the button below to authenticate with your passkey (Touch ID / security key).
+					The encryption key will be derived automatically via WebAuthn PRF.
+				</p>
+				<div id="passkeyStatus" style="display: none; padding: 8px; margin-bottom: 8px; border-radius: 3px; font-size: 13px;"></div>
+				<button type="button" onclick="authenticatePasskey()" id="passkeyAuthBtn"
+					style="width: 100%; padding: 10px; background-color: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;">
+					Authenticate with Passkey
+				</button>
+			</div>
+
+			<div style="text-align: right; margin-top: 15px;">
 				<button onclick="closeAccountIdModal()" style="margin-right: 10px;">Cancel</button>
 				<button onclick="confirmRecover()">Recover</button>
 			</div>
@@ -218,6 +279,141 @@
 		let shieldProjectApiKey = null;
 		let shieldProjectApiSecret = null;
 		let shieldProjectEncryptionShare = null;
+
+		// Passkey state (populated by WebAuthn ceremony)
+		let passkeyResult = null; // { id: string, key: string } after successful auth
+
+		// --- WebAuthn PRF helpers ---
+		const PASSKEY_RP_ID = "localhost";
+		const PASSKEY_RP_NAME = "OpenSigner Demo";
+
+		function arrayBufferToBase64URL(buffer) {
+			const bytes = new Uint8Array(buffer);
+			let str = "";
+			for (const b of bytes) str += String.fromCharCode(b);
+			return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+		}
+
+		function base64URLToArrayBuffer(base64url) {
+			const base64 = base64url.replace(/-/g, "+").replace(/_/g, "/");
+			const padded = base64 + "=".repeat((4 - base64.length % 4) % 4);
+			const binary = atob(padded);
+			const bytes = new Uint8Array(binary.length);
+			for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+			return bytes.buffer;
+		}
+
+		async function deriveKeyFromPRF(credential) {
+			const extResults = credential.getClientExtensionResults();
+			if (!extResults.prf || !extResults.prf.results || !extResults.prf.results.first) {
+				throw new Error("PRF extension not supported by this authenticator. Passkey recovery requires PRF support.");
+			}
+			const rawBits = extResults.prf.results.first;
+			const cryptoKey = await crypto.subtle.importKey(
+				"raw", rawBits, { name: "AES-CBC", length: 256 }, true, ["encrypt", "decrypt"]
+			);
+			const exported = await crypto.subtle.exportKey("raw", cryptoKey);
+			return arrayBufferToBase64URL(exported);
+		}
+
+		async function createPasskeyWithPRF(seed) {
+			const challenge = crypto.getRandomValues(new Uint8Array(32));
+			const passkeyName = "opensigner-" + Math.random().toString(36).substring(2, 8);
+			const credential = await navigator.credentials.create({
+				publicKey: {
+					challenge,
+					rp: { id: PASSKEY_RP_ID, name: PASSKEY_RP_NAME },
+					user: {
+						id: new TextEncoder().encode(passkeyName),
+						name: passkeyName,
+						displayName: PASSKEY_RP_NAME,
+					},
+					pubKeyCredParams: [
+						{ alg: -7, type: "public-key" },   // ES256
+						{ alg: -257, type: "public-key" },  // RS256 fallback
+					],
+					authenticatorSelection: {
+						residentKey: "required",
+						userVerification: "required",
+					},
+					extensions: {
+						prf: { eval: { first: new TextEncoder().encode(seed) } },
+					},
+					timeout: 60000,
+					attestation: "direct",
+				},
+			});
+			if (!credential) throw new Error("Passkey creation cancelled");
+			const key = await deriveKeyFromPRF(credential);
+			return { id: arrayBufferToBase64URL(credential.rawId), key };
+		}
+
+		async function assertPasskeyWithPRF(seed, passkeyId) {
+			const options = {
+				publicKey: {
+					challenge: crypto.getRandomValues(new Uint8Array(32)),
+					rpId: PASSKEY_RP_ID,
+					userVerification: "required",
+					extensions: {
+						prf: { eval: { first: new TextEncoder().encode(seed) } },
+					},
+					timeout: 60000,
+				},
+			};
+			// If we have a known passkey ID, restrict to it; otherwise use discoverable
+			if (passkeyId) {
+				options.publicKey.allowCredentials = [{
+					id: base64URLToArrayBuffer(passkeyId),
+					type: "public-key",
+				}];
+			}
+			const credential = await navigator.credentials.get(options);
+			if (!credential) throw new Error("Passkey authentication cancelled");
+			const key = await deriveKeyFromPRF(credential);
+			return { id: arrayBufferToBase64URL(credential.rawId), key };
+		}
+
+		async function authenticatePasskey() {
+			const statusEl = document.getElementById("passkeyStatus");
+			const btn = document.getElementById("passkeyAuthBtn");
+			try {
+				statusEl.style.display = "block";
+				statusEl.style.backgroundColor = "#fff3cd";
+				statusEl.style.color = "#856404";
+				statusEl.textContent = "Waiting for passkey authentication...";
+				btn.disabled = true;
+
+				// Fetch the former owner user ID (original PRF seed) from migrated account data
+				const accountId = document.getElementById("accountIdInput").value.trim();
+				if (!accountId) throw new Error("Account ID is required for passkey recovery");
+
+				const migratedResp = await fetch(
+					`${HOT_STORAGE_SERVER}/v2/accounts/migrated-data?accountId=${encodeURIComponent(accountId)}`,
+					{
+						headers: { "Authorization": `Bearer ${jwtToken}` },
+					}
+				);
+				if (!migratedResp.ok) throw new Error("Failed to fetch migrated account data");
+				const migratedData = await migratedResp.json();
+
+				const seed = migratedData.former_user || userId || "default-seed";
+				passkeyResult = await assertPasskeyWithPRF(seed, null);
+
+				statusEl.style.backgroundColor = "#d4edda";
+				statusEl.style.color = "#155724";
+				statusEl.textContent = "Passkey authenticated. ID: " + passkeyResult.id.substring(0, 16) + "...";
+				btn.textContent = "Re-authenticate with Passkey";
+				log("Passkey authenticated, ID: " + passkeyResult.id);
+			} catch (error) {
+				statusEl.style.backgroundColor = "#f8d7da";
+				statusEl.style.color = "#721c24";
+				statusEl.textContent = "Passkey error: " + error.message;
+				passkeyResult = null;
+				log("Passkey error: " + error.message);
+			} finally {
+				btn.disabled = false;
+			}
+		}
 		let shieldAuthProviderId = null;
 		let openfortClient = null;
 		let userId = null;
@@ -567,6 +763,7 @@
 					document.getElementById("signIframeBtn").disabled = false;
 					document.getElementById("createIframeBtn").disabled = false;
 					document.getElementById("recoverIframeBtn").disabled = false;
+					document.getElementById("registerPasskeyBtn").disabled = false;
 
 				} else {
 					showStatus(
@@ -596,6 +793,7 @@
 			document.getElementById("signIframeBtn").disabled = true;
 			document.getElementById("createIframeBtn").disabled = true;
 			document.getElementById("recoverIframeBtn").disabled = true;
+			document.getElementById("registerPasskeyBtn").disabled = true;
 
 			showStatus("Logged out successfully");
 			log("User logged out");
@@ -846,6 +1044,57 @@
 			}
 		}
 
+		async function registerPasskey() {
+			try {
+				await ensureIframeConnection();
+			} catch (error) {
+				log("ERROR: Failed to establish iFrame connection: " + error.message);
+				return;
+			}
+
+			try {
+				const seed = userId || "default-seed";
+				log("Creating passkey via Touch ID / security key...");
+				const result = await createPasskeyWithPRF(seed);
+				log("Passkey created! ID: " + result.id);
+				log("Now calling setRecoveryMethod via iframe...");
+
+				const request = {
+					uuid: generateUUID(),
+					// Previous recovery method (project entropy by default)
+					previousRecoveryMethod: "password", // TODO: detect current method
+					previousPassword: null,
+					previousEncryptionSession: null,
+					previousEncryptionPart: shieldProjectEncryptionShare,
+					// New recovery method: passkey
+					recoveryMethod: "passkey",
+					passkeyId: result.id,
+					passkeyKey: result.key,
+					// Auth config
+					recovery: {
+						auth: "custom",
+						token: jwtToken,
+						authProvider: "authservice",
+						tokenType: "jwt",
+					},
+					publishableKey: jwtToken,
+					shieldAPIKey: shieldProjectApiKey,
+					accessToken: jwtToken,
+					playerID: userId,
+					thirdPartyProvider: null,
+					thirdPartyTokenType: "jwt",
+					encryptionPart: shieldProjectEncryptionShare,
+					openfortURL: HOT_STORAGE_SERVER,
+					shieldURL: COLD_STORAGE_SERVER,
+				};
+
+				const setResult = await iframeConnection.setRecoveryMethod(request);
+				log("setRecoveryMethod result: " + JSON.stringify(setResult, null, 2));
+			} catch (error) {
+				log("ERROR register passkey: " + (error.message || JSON.stringify(error)));
+			}
+		}
+
 		async function createAccountIframe() {
 			const chainId = parseInt(document.getElementById("chainId").value) || 1;
 
@@ -909,9 +1158,23 @@
 			document.getElementById("accountIdModal").style.display = "block";
 		}
 
+		function onRecoveryMethodChange() {
+			const method = document.getElementById("recoveryMethodSelect").value;
+			document.getElementById("passwordRecoverySection").style.display = method === "password" ? "block" : "none";
+			document.getElementById("passkeyRecoverySection").style.display = method === "passkey" ? "block" : "none";
+		}
+
 		function closeAccountIdModal() {
 			document.getElementById("accountIdModal").style.display = "none";
 			document.getElementById("accountIdInput").value = "";
+			document.getElementById("recoveryMethodSelect").value = "project";
+			document.getElementById("recoveryPasswordInput").value = "";
+			passkeyResult = null;
+			const statusEl = document.getElementById("passkeyStatus");
+			statusEl.style.display = "none";
+			statusEl.textContent = "";
+			document.getElementById("passkeyAuthBtn").textContent = "Authenticate with Passkey";
+			onRecoveryMethodChange();
 		}
 
 		async function confirmRecover() {
@@ -921,22 +1184,42 @@
 				return;
 			}
 
+			const recoveryMethod = document.getElementById("recoveryMethodSelect").value;
+
+			// Validate method-specific inputs
+			let encryptionKey = null;
+			let passkey = null;
+			let encryptionPart = null;
+
+			if (recoveryMethod === "password") {
+				const password = document.getElementById("recoveryPasswordInput").value;
+				if (!password) {
+					log("ERROR: Please enter a recovery password");
+					return;
+				}
+				encryptionKey = password;
+			} else if (recoveryMethod === "passkey") {
+				if (!passkeyResult) {
+					log("ERROR: Please authenticate with your passkey first (click the green button)");
+					return;
+				}
+				passkey = { id: passkeyResult.id, key: passkeyResult.key };
+			} else {
+				// project entropy (default)
+				encryptionPart = shieldProjectEncryptionShare;
+			}
+
 			closeAccountIdModal();
 
 			try {
-				log(`Calling recover via iframe for account ID: ${accountId}`);
+				log(`Calling recover via iframe for account ID: ${accountId} (method: ${recoveryMethod})`);
 				const request = {
 					uuid: generateUUID(),
 					recovery: {
-						// Whether its using Openfort (either third-party or not) or a custom provider to verify the access token
 						auth: "custom",
-						// The auth token, either idToken or accessToken
 						token: jwtToken,
-						// When using a third party auth provider, the provider name
 						authProvider: "authservice",
-						// When using a third party auth provider, the token type
 						tokenType: "jwt",
-						// When using encryption sessions, the session ID
 						encryptionSession: null,
 					},
 					publishableKey: jwtToken,
@@ -944,19 +1227,115 @@
 					accessToken: jwtToken,
 					playerID: userId,
 					account: accountId,
-					thirdPartyProvider: null, // TODO: configure in shield
+					thirdPartyProvider: null,
 					thirdPartyTokenType: "jwt",
-					encryptionKey: null, // TODO ?
-					encryptionPart: shieldProjectEncryptionShare,
+					encryptionKey: encryptionKey,
+					encryptionPart: encryptionPart,
 					encryptionSession: null,
+					passkey: passkey,
 					openfortURL: HOT_STORAGE_SERVER,
 					shieldURL: COLD_STORAGE_SERVER,
 				};
 
-				const result = await iframeConnection.recover(request);
+				log("recover request: " + JSON.stringify(request, null, 2));
+
+				// Race with a timeout so we can detect hangs
+				const timeoutMs = 30000;
+				const result = await Promise.race([
+					iframeConnection.recover(request),
+					new Promise((_, reject) => setTimeout(() => reject(new Error(`recover timed out after ${timeoutMs/1000}s — check browser console for iframe errors`)), timeoutMs)),
+				]);
 				log("recover result: " + JSON.stringify(result, null, 2));
 			} catch (error) {
-				log("ERROR recover iframe: " + error.message);
+				log("ERROR recover iframe: " + (error.message || JSON.stringify(error)));
+			}
+		}
+
+		async function importShare() {
+			const importText = document.getElementById("importData").value.trim();
+			if (!importText) {
+				showStatus("Please paste exported data", "error", "importShareStatus");
+				return;
+			}
+
+			let importData;
+			try {
+				importData = JSON.parse(importText);
+				importData.username = userId;
+				importData.authProvider = "default"; // Just a hardcoded value
+			} catch (e) {
+				showStatus("Invalid JSON data", "error", "importShareStatus");
+				return;
+			}
+
+			if (!openfortClient) {
+				showStatus("Please initialize the Openfort client first", "error", "importShareStatus");
+				return;
+			}
+
+			try {
+				log("Importing hot storage share...");
+				const hotResult = await openfortClient.importShare(importData);
+				log("Hot storage share imported: " + JSON.stringify(hotResult, null, 2));
+
+				showStatus("Share imported successfully!", "success", "importShareStatus");
+			} catch (error) {
+				showStatus(`Import failed: ${error.message}`, "error", "importShareStatus");
+				log("ERROR import: " + error.message);
+			}
+		}
+
+		async function importColdShare() {
+			const importText = document.getElementById("importColdData").value.trim();
+			if (!importText) {
+				showStatus("Please paste Shield share data", "error", "importColdShareStatus");
+				return;
+			}
+
+			let importData;
+			try {
+				importData = JSON.parse(importText);
+			} catch (e) {
+				showStatus("Invalid JSON data", "error", "importColdShareStatus");
+				return;
+			}
+
+			// Normalize Openfort entropy values to Shield-compatible values
+			if (importData.entropy === "password") {
+				importData.entropy = "user";
+			}
+
+			if (!shieldProjectApiKey || !shieldProjectApiSecret) {
+				showStatus("Please create a Cold Storage (Shield) project first", "error", "importColdShareStatus");
+				return;
+			}
+
+			try {
+				log("Importing cold storage share...");
+				const response = await fetch(
+					`${COLD_STORAGE_SERVER}/shares/migration/import`,
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							"X-API-Key": shieldProjectApiKey,
+							"X-API-Secret": shieldProjectApiSecret,
+						},
+						body: JSON.stringify(importData),
+					}
+				);
+
+				if (response.ok) {
+					log("Cold storage share imported successfully");
+					showStatus("Cold storage share imported successfully!", "success", "importColdShareStatus");
+				} else {
+					const errorText = await response.text();
+					log("Cold storage import failed: " + errorText);
+					showStatus(`Cold storage import failed: ${errorText}`, "error", "importColdShareStatus");
+				}
+			} catch (error) {
+				showStatus(`Import failed: ${error.message}`, "error", "importColdShareStatus");
+				log("ERROR cold import: " + error.message);
 			}
 		}
 
