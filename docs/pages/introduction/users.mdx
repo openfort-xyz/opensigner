@@ -33,11 +33,11 @@ Whenever a request is performed, Shield knows which authentication provider it s
 
 Shield identifies to which project users belong via the `X-API-Key` header, which maps them to their project. Users themselves are mapped using personal keys/tokens. How these keys/tokens look depends on what kind of provider they're using to authenticate.
 
-### Openfort Provider
+### Openfort provider
 
 The Openfort provider relies on the user's Openfort `publishable_key` to properly identify and authenticate its users.
 
-### Custom Providers
+### Custom providers
 
 A custom provider is an external source in charge of authenticating users. Custom providers rely on externally signed `JWT` tokens to **identify and authenticate users**.
 

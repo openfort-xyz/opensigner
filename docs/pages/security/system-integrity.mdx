@@ -1,20 +1,20 @@
 ---
-title: System Integrity
+title: System integrity
 description: Verify OpenSigner component integrity using Cosign attestation, Rekor transparency logs, and SHA-256 checksums for client-side iframe asset verification.
 ---
 
-# System Integrity
+# System integrity
 
 This page covers how to verify that OpenSigner components are authentic and haven't been tampered with.
 
 ## Attestation
 
 Openfort's public images are attested through [Cosign](https://github.com/sigstore/cosign).
-Github generates a unique key for each workflow run, and signs the images built by the workflow.
+GitHub generates a unique key for each workflow run, and signs the images built by the workflow.
 Openfort has no access to these keys, ensuring the signed builds have not been tampered with
 or created with any method other than the automated release workflows.
 
-### Verifying Images
+### Verify images
 
 To validate that an image was built, published, and signed by the Openfort CI workflows, users can run:
 
@@ -25,7 +25,7 @@ gh attestation verify \
     --signer-workflow ' <source code repository>/<workflow file>'
 ```
 
-### Example: Verify Shield Image
+### Example: verify Shield image
 
 ```bash
 gh attestation verify \
@@ -34,7 +34,7 @@ gh attestation verify \
     --signer-workflow openfort-xyz/shield/.github/workflows/docker-image.yml
 ```
 
-### Verify by Tag
+### Verify by tag
 
 Although digests are the recommended way to refer to images, images can also be verified by tag:
 
@@ -45,7 +45,7 @@ gh attestation verify \
     --signer-workflow openfort-xyz/shield/.github/workflows/docker-image.yml
 ```
 
-### Alternative: Rekor Logs
+### Alternative: Rekor logs
 
 Alternatively, images can be verified by manually checking the Rekor logs and searching for the image digest,
 for example:
@@ -53,14 +53,14 @@ for example:
 [https://search.sigstore.dev/?hash=61fb0ac9b409ebcff5c10910708774e4a1bcfda6818ddc4b2f28330f12d7773c](https://search.sigstore.dev/?hash=61fb0ac9b409ebcff5c10910708774e4a1bcfda6818ddc4b2f28330f12d7773c).
 
 
-## Derived Checksums
+## Derived checksums
 
 The iframe serves static assets, and checksums for these assets are generated at build time using SHA-256.
 Because iframe builds are attested, these checksums are also transitively attested.
 
 The published checksums can be compared to those computed by the user after downloading the static assets. If any mismatch is found, the iframe's execution can be aborted.
 
-### Example Build Output
+### Example build output
 
 Here's an example of the output generated when building the iframe:
 
@@ -81,7 +81,7 @@ This checksum does not prove that the `iframe` is intact. The `iframe` still rel
 Attackers can still divert traffic to unwanted places or load additional assets not covered by the build-time checksum generation.
 :::
 
-### Client-Side Verification
+### Client-side verification
 
 To verify checksums client-side:
 

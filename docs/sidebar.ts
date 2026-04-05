@@ -18,11 +18,11 @@ export const sidebar: Sidebar =
                     link: '/introduction/setup',
                 },
                 {
-                    text: 'Getting Started',
+                    text: 'Getting started',
                     link: '/introduction/getting-started',
                 },
                 {
-                    text: 'Import Shares from Openfort',
+                    text: 'Import shares from Openfort',
                     link: '/introduction/import-share-from-openfort',
                 },
             ]
@@ -35,19 +35,19 @@ export const sidebar: Sidebar =
                     link: '/security/overview',
                 },
                 {
-                    text: 'Recovery Methods',
+                    text: 'Recovery methods',
                     link: '/security/recovery-methods',
                 },
                 {
-                    text: 'Deployment Scenarios',
+                    text: 'Deployment scenarios',
                     link: '/security/deployment-scenarios',
                 },
                 {
-                    text: 'Threat Analysis',
+                    text: 'Threat analysis',
                     link: '/security/threat-analysis',
                 },
                 {
-                    text: 'System Integrity',
+                    text: 'System integrity',
                     link: '/security/system-integrity',
                 },
             ]
@@ -56,15 +56,15 @@ export const sidebar: Sidebar =
             text: 'Actions',
             items: [
                 {
-                    text: 'Creating a Key',
+                    text: 'Create a key',
                     link: '/actions/signup',
                 },
                 {
-                    text: 'Recovering a Key',
+                    text: 'Recover a key',
                     link: '/actions/login',
                 },
                 {
-                    text: 'Using a Key',
+                    text: 'Use a key',
                     link: '/actions/operation',
                 },
             ]
@@ -81,18 +81,18 @@ export const sidebar: Sidebar =
                     link: '/components/iframe',
                 },
                 {
-                    text: 'Hot Storage',
+                    text: 'Hot storage',
                     link: '/components/hot_storage',
                 },
                 {
-                    text: 'Cold Storage',
+                    text: 'Cold storage',
                     items: [
                         {
                             text: 'Overview',
                             link: '/components/shield',
                         },
                         {
-                            text: 'OTP for Automatic Recovery',
+                            text: 'OTP for automatic recovery',
                             link: '/components/cold_storage/otp',
                         },
                     ],
@@ -103,19 +103,19 @@ export const sidebar: Sidebar =
             text: "APIs",
             items: [
                 {
-                    text: 'Postman Collection',
+                    text: 'Postman collection',
                     link: '/apis/postman',
                 },
                 {
-                    text: 'Authentication Service',
+                    text: 'Authentication service',
                     link: '/apis/auth_service',
                 },
                 {
-                    text: 'Hot Storage',
+                    text: 'Hot storage',
                     link: '/apis/hot_storage',
                 },
                 {
-                    text: 'Cold Storage',
+                    text: 'Cold storage',
                     link: '/apis/cold_storage',
                 },
             ]
