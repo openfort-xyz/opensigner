@@ -202,6 +202,309 @@ paths:
         '401':
           description: Error response - Unauthorized
 
+  /v2/accounts/signer:
+    get:
+      operationId: getSignerV2
+      summary: Get the signer for an account
+      description: Returns the signer ID associated with an account at the given address for the authenticated user.
+      parameters:
+        - name: address
+          in: query
+          description: The blockchain address of the account.
+          required: true
+          schema:
+            type: string
+          example: '0xf7b4c54cca21cccf42796502bf94e2838fbd44c4'
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSignerResponse'
+        '400':
+          description: Account not found or missing address parameter.
+        '401':
+          description: Error response - Unauthorized
+
+  /v2/accounts/import-share:
+    post:
+      operationId: importShare
+      summary: Import a key share from an external source
+      description: Imports a key share during migration from another system. Creates a new account, signer, and device, and records migration metadata. Returns 409 Conflict if an account already exists at the given address.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - address
+                - share
+                - userId
+              properties:
+                id:
+                  type: string
+                  description: Account ID to assign (generated if omitted)
+                  example: "acc_6f6c9067-89fa-4fc8-ac72-c242a268c584"
+                wallet:
+                  type: string
+                  description: Wallet identifier from the source system
+                  example: "wal_a1b2c3d4-5678-90ab-cdef-1234567890ab"
+                accountType:
+                  type: string
+                  description: Type of account (Smart Account or Externally Owned Account)
+                  example: "Smart Account"
+                address:
+                  type: string
+                  description: Blockchain address of the account
+                  example: "0xf7b4c54cca21cccf42796502bf94e2838fbd44c4"
+                ownerAddress:
+                  type: string
+                  description: Owner EOA address (required for smart accounts)
+                  example: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+                chainType:
+                  type: string
+                  description: Chain type (EVM or SVM)
+                  example: "EVM"
+                chainId:
+                  type: integer
+                  description: Chain ID
+                  example: 80002
+                smartAccount:
+                  type: object
+                  description: Smart account data (only for Smart Accounts)
+                  properties:
+                    implementationType:
+                      type: string
+                    factoryAddress:
+                      type: string
+                    implementationAddress:
+                      type: string
+                    salt:
+                      type: string
+                share:
+                  type: string
+                  description: The key share data to import
+                  example: "7d526b7e99fbf52850a183..."
+                signerId:
+                  type: string
+                  description: Signer ID to assign (generated if omitted, sig_ prefix stripped)
+                  example: "sig_a1b2c3d4-5678-90ab-cdef-1234567890ab"
+                userId:
+                  type: string
+                  description: User ID from the source system (stored as migration metadata)
+                  example: "pla_6f6c9067-89fa-4fc8-ac72-c242a268c584"
+      responses:
+        '201':
+          description: Share imported successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportShareResponse'
+        '400':
+          description: Missing required fields.
+        '401':
+          description: Error response - Unauthorized
+        '409':
+          description: An account already exists at the given address.
+
+  /v2/accounts/migrated-data:
+    get:
+      operationId: getMigratedAccountData
+      summary: Get migration metadata for an account
+      description: Returns migration metadata for an account that was imported from an external system. The authenticated user must own the account.
+      parameters:
+        - name: accountId
+          in: query
+          description: The account ID to look up migration data for.
+          required: true
+          schema:
+            type: string
+          example: "acc_6f6c9067-89fa-4fc8-ac72-c242a268c584"
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MigratedAccountDataResponse'
+        '400':
+          description: Missing accountId parameter.
+        '401':
+          description: Error response - Unauthorized
+        '404':
+          description: Account or migration data not found.
+
+  /v1/devices/init:
+    post:
+      operationId: initDevice
+      summary: Initialize device registration or recovery
+      description: |
+        Determines whether a user needs to register a new device or recover an existing one for a given chain.
+        Returns `REGISTER` if no account exists for the user on the specified chain, or `RECOVER` with the primary device share if an account already exists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - chainId
+              properties:
+                chainId:
+                  type: integer
+                  format: int64
+                  description: The chain ID to initialize for.
+                  example: 80002
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NextActionResponse'
+        '401':
+          description: Error response - Unauthorized
+
+  /v1/devices/register:
+    post:
+      operationId: registerDeviceV1
+      summary: Register a device (v1)
+      description: Registers a new device for a user. If no account exists for the user on the given chain and address, a new account is created and the device is marked as primary. Otherwise, the device is added as a secondary device.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - chainId
+                - address
+                - share
+              properties:
+                chainId:
+                  type: integer
+                  format: int64
+                  description: The chain ID.
+                  example: 80002
+                address:
+                  type: string
+                  description: Blockchain address.
+                  example: "0xf7b4c54cca21cccf42796502bf94e2838fbd44c4"
+                share:
+                  type: string
+                  description: The encrypted share data.
+                  example: "7d526b7e99fbf52850a183..."
+                signerUuid:
+                  type: string
+                  description: Signer UUID to assign (optional, generated if omitted).
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmbeddedV1Response'
+        '401':
+          description: Error response - Unauthorized
+
+  /v1/devices/{deviceId}:
+    get:
+      operationId: getDevice
+      summary: Get a device by ID
+      description: |
+        Returns details for a specific device, including its decrypted share.
+        Use the special value `primary` as the device ID to retrieve the primary device for the authenticated user.
+      parameters:
+        - name: deviceId
+          in: path
+          description: The device ID, or `primary` to get the primary device.
+          required: true
+          schema:
+            type: string
+          example: "dev_7a8b9c0d-1234-5678-90ab-cdef12345678"
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceResponse'
+        '401':
+          description: Error response - Unauthorized
+        '404':
+          description: Device not found.
+
+  /v1/devices:
+    get:
+      operationId: listDevices
+      summary: List devices for the authenticated user
+      description: Returns a paginated list of devices belonging to the authenticated user across all their accounts.
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of devices to return (default 100, max 100).
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceListResponse'
+        '401':
+          description: Error response - Unauthorized
+    post:
+      operationId: createDevice
+      summary: Create a device for an existing account
+      description: Creates a new device and associates it with an existing account. The share is encrypted and stored.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - accountId
+                - address
+                - chainId
+                - share
+              properties:
+                accountId:
+                  type: string
+                  description: The account ID to associate the device with.
+                  example: "acc_6f6c9067-89fa-4fc8-ac72-c242a268c584"
+                address:
+                  type: string
+                  description: Blockchain address.
+                  example: "0xf7b4c54cca21cccf42796502bf94e2838fbd44c4"
+                chainId:
+                  type: integer
+                  format: int64
+                  description: The chain ID.
+                  example: 80002
+                share:
+                  type: string
+                  description: The encrypted share data.
+                  example: "7d526b7e99fbf52850a183..."
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceResponse'
+        '400':
+          description: Account not found.
+        '401':
+          description: Error response - Unauthorized
+
 components:
   schemas:
     EmbeddedV2Response:
@@ -446,10 +749,200 @@ components:
           format: int32
           description: Total number of records available
 
+    GetSignerResponse:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          description: Signer identifier
+          example: "sig_a1b2c3d4-5678-90ab-cdef-1234567890ab"
+
+    ImportShareResponse:
+      type: object
+      required:
+        - id
+        - wallet
+        - address
+        - signerId
+      properties:
+        id:
+          type: string
+          description: Account ID
+          example: "acc_6f6c9067-89fa-4fc8-ac72-c242a268c584"
+        wallet:
+          type: string
+          description: Wallet identifier from the source system
+          example: "wal_a1b2c3d4-5678-90ab-cdef-1234567890ab"
+        address:
+          type: string
+          description: Account address
+          example: "0xf7b4c54cca21cccf42796502bf94e2838fbd44c4"
+        signerId:
+          type: string
+          description: Signer identifier
+          example: "sig_a1b2c3d4-5678-90ab-cdef-1234567890ab"
+
+    MigratedAccountDataResponse:
+      type: object
+      required:
+        - id
+        - wallet
+        - former_user
+      properties:
+        id:
+          type: string
+          description: Account ID
+          example: "acc_6f6c9067-89fa-4fc8-ac72-c242a268c584"
+        wallet:
+          type: string
+          description: Wallet identifier from the source system
+          example: "wal_a1b2c3d4-5678-90ab-cdef-1234567890ab"
+        former_user:
+          type: string
+          description: User ID from the source system
+          example: "pla_6f6c9067-89fa-4fc8-ac72-c242a268c584"
+
+    NextActionResponse:
+      type: object
+      required:
+        - nextAction
+        - player
+      properties:
+        nextAction:
+          type: string
+          enum:
+            - REGISTER
+            - RECOVER
+          description: The action the client should take next.
+        player:
+          type: string
+          description: The authenticated user ID.
+        embedded:
+          type: object
+          description: Device and share data (present when nextAction is RECOVER).
+          properties:
+            share:
+              type: string
+              description: Decrypted share (only for RECOVER).
+            ownerAddress:
+              type: string
+              description: Owner address.
+            address:
+              type: string
+              description: Account address (only for RECOVER).
+            chainId:
+              type: integer
+              format: int64
+              description: Chain ID.
+            deviceId:
+              type: string
+              description: Device identifier.
+
+    EmbeddedV1Response:
+      type: object
+      properties:
+        share:
+          type: string
+          description: The encrypted share data.
+        address:
+          type: string
+          description: Account blockchain address.
+        chainId:
+          type: integer
+          format: int64
+          description: Chain ID.
+        deviceId:
+          type: string
+          description: Device identifier.
+        device:
+          type: string
+          description: Device ID.
+        account:
+          type: string
+          description: Account ID (starts with acc_).
+        ownerAddress:
+          type: string
+          description: Owner address of the account.
+        accountType:
+          type: string
+          description: Type of account.
+        signer:
+          type: string
+          description: Signer identifier (starts with sig_).
+
+    DeviceResponse:
+      type: object
+      required:
+        - id
+        - object
+        - createdAt
+        - share
+        - isPrimary
+      properties:
+        id:
+          type: string
+          description: Unique device identifier.
+          example: "dev_7a8b9c0d-1234-5678-90ab-cdef12345678"
+        object:
+          type: string
+          enum:
+            - device
+          description: Object type indicator.
+        createdAt:
+          type: integer
+          format: int64
+          description: Device creation timestamp (Unix seconds).
+        address:
+          type: string
+          description: Account address (present when retrieving primary device).
+        share:
+          type: string
+          description: Decrypted share data.
+        isPrimary:
+          type: boolean
+          description: Whether this is the primary device for the account.
+
+    DeviceListResponse:
+      type: object
+      required:
+        - object
+        - url
+        - data
+        - start
+        - end
+        - total
+      properties:
+        object:
+          type: string
+          enum:
+            - list
+          description: Response type indicator.
+        url:
+          type: string
+          description: URL of the list endpoint.
+        data:
+          type: array
+          description: Array of device records.
+          items:
+            $ref: '#/components/schemas/DeviceResponse'
+        start:
+          type: integer
+          format: int32
+          description: Starting index of the results.
+        end:
+          type: integer
+          format: int32
+          description: Ending index of the results.
+        total:
+          type: integer
+          format: int32
+          description: Total number of records available.
+
     SortOrder:
-      type: string,
-      "enum": [
-        "asc",
-        "desc"
-      ]
+      type: string
+      enum:
+        - asc
+        - desc
 

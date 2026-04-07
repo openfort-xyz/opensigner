@@ -19,9 +19,9 @@ There are a couple of exceptions for this: handling project and authentication p
 
 In any case, the API specifics can be found in [Shield's official repository](https://github.com/openfort-xyz/shield) `README.md`.
 
-Shield is fully written in golang and it relies on a MySQL-compatible database for its persistence layer.
+Shield is fully written in Go and it relies on a MySQL-compatible database for its persistence layer.
 
-All database interactions are done using golang's ORM, `gorm`. Database migrations are done via `goose`.
+All database interactions are done using Go's ORM, `gorm`. Database migrations are done via `goose`.
 
 The app's entrypoint is CLI-based. Its two main command branches are `db` and `server`.
 
@@ -50,7 +50,7 @@ The `server` command starts Shield. `server` also detects pending DB migrations 
 
 Shield's codebase is structured following a hexagonal architecture approach. That is, each layer is self-contained, and different layers communicate only through agreed-upon ports. When exploring the codebase, start in `server.go` and then go all the way down through whatever handler, service, and repository you need to look for.
 
-Shield also features mock entity repositories. This allows anyone to run shield's tests without having to have an actual database up and running. Tests can be run via `go test` or `gotestsum` as it's usual in golang projects.
+Shield also features mock entity repositories. This allows anyone to run shield's tests without having to have an actual database up and running. Tests can be run via `go test` or `gotestsum` as it's usual in Go projects.
 
 ## Prerequisites
 
@@ -82,6 +82,18 @@ CORS_EXTRA_ALLOWED_HEADERS=
 ```
 
 `OPENFORT_BASE_URL` refers to the **Hot Storage**. Shield learns about the authentication service once an Authentication Provider is configured for a certain project.
+
+## Versioning
+
+The provided `docker-compose.yml` pins Shield to a specific release image. The current version is `v0.2.40`:
+
+```yaml
+image: ghcr.io/openfort-xyz/shield:v0.2.40
+```
+
+Shield images are published to the GitHub Container Registry under `ghcr.io/openfort-xyz/shield`. To check for newer versions, visit the [Shield repository releases](https://github.com/openfort-xyz/shield/releases) or list available tags in the registry.
+
+When upgrading, review the release notes for breaking changes before updating the tag in your `docker-compose.yml`. After updating, restart the container — Shield automatically applies any pending database migrations on startup.
 
 ## Deployment
 
