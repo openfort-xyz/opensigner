@@ -1,9 +1,9 @@
 ---
-title: Recovering a Key
+title: Recover a key
 description: Learn how OpenSigner recovers private keys on new devices using password, passkey, or automatic recovery with OTP through the iFrame and cold storage workflow.
 ---
 
-# Recovering a Key
+# Recover a key
 
 Before recovering a key, the user must call hot storage to retrieve their list of accounts and select the one to recover.
 Once selected, pass the account UUID to the iFrame, which handles the recovery process.
@@ -14,7 +14,7 @@ The process differs depending on the recovery method:
 - **Automatic Recovery**: Cold share is decrypted server-side using project entropy
 - **Passkey Recovery**: User authenticates with a passkey to derive the decryption key
 
-## Password Recovery
+## Password recovery
 
 The user recovers the key through the iFrame. The iFrame attempts to reconstruct the key
 and fails because the local share is missing. This share is stored on each device after the user recovers it for the first time on that device.
@@ -22,15 +22,15 @@ and fails because the local share is missing. This share is stored on each devic
 Instead, the iFrame fetches the hot and cold shares with the JWT token it obtains from the auth service,
 reconstructs the key, splits it again, and:
 
-- Discard the cold share.
-- Store the local share in the device.
-- Store the hot share in the hot storage.
+- Discards the cold share.
+- Stores the local share on the device.
+- Stores the hot share in the hot storage.
 
 The diagram below shows this process in detail.
 
 ![Login user with password-based recovery](/diagrams/login_new_device_password.svg)
 
-## Automatic Recovery
+## Automatic recovery
 
 :::info
 `Admin` and `User` can be the same entity, though this defeats the purpose of automatic recovery.
@@ -54,9 +54,9 @@ by the admin after using it once.
 
 ![Cold share reconstruction](/diagrams/enc_key_reconstruction.svg)
 
-### OTP with Automatic Recovery
+### OTP with automatic recovery
 
-The flow is the same as with usual automatic recovery above, the only difference is in encrypted session creation - it requires some actions from user.
+The flow is the same as automatic recovery above. The only difference is in encrypted session creation—it requires action from the user.
 The diagram below shows only the encrypted session creation flow.
 
 ![Login user with automatic recovery and OTP](/diagrams/login_new_device_automatic_otp.svg)
@@ -64,7 +64,7 @@ The diagram below shows only the encrypted session creation flow.
 As shown in the diagram, the admin must request an OTP for the user before proceeding with encrypted session creation.
 If a session is created without the OTP, the cold storage does not return the share to the iFrame, causing the entire key recovery process to fail.
 
-## Passkey Recovery
+## Passkey recovery
 
 When cold shares are encrypted using passkeys, OpenSigner stores the necessary information for it to know
 which passkey it should ask for.

@@ -1,12 +1,12 @@
 ---
-title: Cold Storage API
+title: Cold storage API
 description: Complete API reference for the OpenSigner Cold Storage (Shield) with Swagger docs covering error codes for OTP, projects, shares, users, and authentication.
 ---
 
 import Warning from './ui_warning.mdx'
 import SwaggerViewer from '../../lib/swaggerviewer.tsx'
 
-# Cold Storage API
+# Cold storage API
 
 <Warning />
 
@@ -16,7 +16,7 @@ import SwaggerViewer from '../../lib/swaggerviewer.tsx'
 
 Shield API returns various error codes depending on the type of failure encountered. Each error response includes an HTTP status code, an error code, and a descriptive message.
 
-### Error Response Format
+### Error response format
 
 ```json
 {
@@ -25,7 +25,7 @@ Shield API returns various error codes depending on the type of failure encounte
 }
 ```
 
-### OTP Errors
+### OTP errors
 
 | HTTP Status | Error Code | Message |
 |-------------|------------|---------|
@@ -40,7 +40,7 @@ Shield API returns various error codes depending on the type of failure encounte
 | 400 | `OTP_NOT_SUPPORTED` | Project doesn't support OTP |
 | 409 | `OTP_ALREADY_ENABLED` | Project already has OTP enabled |
 
-### Project Errors
+### Project errors
 
 | HTTP Status | Error Code | Message |
 |-------------|------------|---------|
@@ -50,14 +50,14 @@ Shield API returns various error codes depending on the type of failure encounte
 | 400 | `EC_INVALID` | Invalid encryption part |
 | 400 | `EC_INVALID` | Invalid encryption session |
 
-### Share Errors
+### Share errors
 
 | HTTP Status | Error Code | Message |
 |-------------|------------|---------|
 | 404 | `SH_NOT_FOUND` | Share not found |
 | 409 | `SH_EXISTS` | Share already exists |
 
-### User Errors
+### User errors
 
 | HTTP Status | Error Code | Message |
 |-------------|------------|---------|
@@ -68,7 +68,7 @@ Shield API returns various error codes depending on the type of failure encounte
 | 400 | `EMAIL_INVALID` | Provided Email is invalid |
 | 400 | `PHONE_INVALID` | Provided phone number is invalid |
 
-### Provider Errors
+### Provider errors
 
 | HTTP Status | Error Code | Message |
 |-------------|------------|---------|
@@ -81,7 +81,7 @@ Shield API returns various error codes depending on the type of failure encounte
 | 409 | `PV_CFG_INVALID` | JWK and PEM cannot be set at the same time |
 | 409 | `PV_EXISTS` | Custom authentication already registered for this project |
 
-### Authentication Errors
+### Authentication errors
 
 | HTTP Status | Error Code | Message |
 |-------------|------------|---------|
@@ -93,7 +93,7 @@ Shield API returns various error codes depending on the type of failure encounte
 | 401 | `A_INVALID` | Invalid token |
 | 401 | `A_INVALID` | Invalid auth provider |
 
-### General Errors
+### General errors
 
 | HTTP Status | Error Code | Message |
 |-------------|------------|---------|

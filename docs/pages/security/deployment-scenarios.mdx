@@ -1,14 +1,14 @@
 ---
-title: Deployment Scenarios
+title: Deployment scenarios
 description: Explore six OpenSigner deployment scenarios from fully self-hosted to fully managed, with security trade-offs and custody implications for each configuration.
 ---
 
-# Deployment Scenarios
+# Deployment scenarios
 
 Due to the modular nature of the system, users can run or implement their own components.
 Hybrid scenarios are possible where Openfort hosts some components while others are self-hosted.
 
-## Scenario Overview
+## Scenario overview
 
 This section evaluates the following scenarios, where the components are hosted by a third party such as Openfort
 (<span style={{ color:'#fc3c2f' }}>**TP**</span>) or self-hosted (<span style={{ color:'#3b7eee' }}>**SH**</span>):
@@ -23,7 +23,7 @@ This section evaluates the following scenarios, where the components are hosted 
 | [Scenario 6](/security/deployment-scenarios#scenario-6-fully-hosted) | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> | <span style={{ color:'#fc3c2f' }}>**TP**</span> |
 
 
-### Scenario 1: Fully Self-Hosted
+### Scenario 1: fully self-hosted
 
 | Cold Storage | Auth Service | Hot Storage | iFrame |
 |---|---|---|---|
@@ -41,7 +41,7 @@ policies, as in this Google Cloud example that [requires attestation](https://cl
 Developers may also opt to go one step further and make some of their configuration public to show that
 attestation requirements are in place in their infrastructure.
 
-#### Noteworthy Risks
+#### Noteworthy risks
 
 - **Execution environment**: The hardware and the OS running the storage services (and the DBs they rely on) have access to the processes' memory and could
     extract sensitive data such as key shares from the programs' memory.
@@ -64,7 +64,7 @@ Scenario 1, as the iframe is loaded from the same origin as the rest of the comp
 served by the hosting party.
 
 
-### Scenario 2: Self-Hosted Auth + Cold Storage
+### Scenario 2: self-hosted auth + cold storage
 
 | Cold Storage | Auth Service | Hot Storage | iFrame |
 |---|---|---|---|
@@ -78,7 +78,7 @@ As mentioned before, iframe builds are attested and those feature derived checks
 The iframe is meant to be called via RPC methods from another app, so it is possible for both developers and end users to verify if the obtained static assets' checksums match those provided by the official build logs.
 
 
-### Scenario 3: Self-Hosted Hot Storage
+### Scenario 3: self-hosted hot storage
 
 | Cold Storage | Auth Service | Hot Storage | iFrame |
 |---|---|---|---|
@@ -96,7 +96,7 @@ share keeping, password-based recovery provides more protection than automatic r
 the Host has access to all the required entropy to decrypt the cold storage share.
 
 
-### Scenario 4: Self-Hosted Cold Storage
+### Scenario 4: self-hosted cold storage
 
 | Cold Storage | Auth Service | Hot Storage | iFrame |
 |---|---|---|---|
@@ -111,7 +111,7 @@ Unlike in Scenario 3, the hot shares are not encrypted with user
 entropy which makes them vulnerable to access token forgery.
 
 
-### Scenario 5: Self-Hosted Auth Service
+### Scenario 5: self-hosted auth service
 
 | Cold Storage | Auth Service | Hot Storage | iFrame |
 |---|---|---|---|
@@ -122,7 +122,7 @@ Combined with the brute-force risk mentioned in Scenario 3,
 this can be enough to reconstruct the users' private keys.
 
 
-### Scenario 6: Fully Hosted
+### Scenario 6: fully hosted
 
 > Fully hosted by a third party, such as Openfort.
 
@@ -156,11 +156,11 @@ Another important aspect to take into account when using automatic recovery is w
 If the organization in charge of the cold storage starts a project within it, the organization can reconstruct the project-wide encryption key on their own.
 Projects must be managed by someone who doesn't directly control the cold storage to avoid this scenario.
 
-## Frequently Asked Questions
+## Custody and key reconstruction
 
-### Does the backend ever have access to enough shares to reconstruct a private key?
+### Backend access to key shares
 
-**In automatic recovery mode without OTP: It depends on Hosting.**
+**In automatic recovery mode without OTP, the answer depends on the hosting configuration.**
 
 - **Scenario 6 (Fully Hosted by a Host such as Openfort): No.**
   The Host (such as Openfort) holds the *Shield Encryption Part*. You (Developer) hold the *Developer Encryption Part*.
@@ -177,7 +177,7 @@ Projects must be managed by someone who doesn't directly control the cold storag
 - **Passkey recovery**: Cold share encryption key is derived client-side via PRF extension; backend never has access
 - **Automatic + OTP**: OTP verification is required, which requires active user participation that cannot be forged
 
-### What prevents backend-side reconstruction in non-custodial deployments?
+### Protection mechanisms for non-custodial deployments
 
 | Protection Mechanism | How It Works | Backend Access Blocked? |
 |---------------------|--------------|------------------------|
@@ -187,9 +187,9 @@ Projects must be managed by someone who doesn't directly control the cold storag
 | **OTP/OTP for Automatic** | OTP sent to user's email/phone required for decryption | ✅ Yes |
 | **Split Hosting** | Hot and cold storage hosted by different, mutually-untrusting parties | ✅ Yes |
 
-### Is the open-source configuration custodial by default?
+### Open-source custody model
 
-**Yes, if you host everything yourself.** In a fully self-hosted setup (Scenario 1):
+**The open-source configuration is custodial by default when you host everything yourself.** In a fully self-hosted setup (Scenario 1):
 
 1. You control Hot Storage.
 2. You control Shield (Cold Storage).

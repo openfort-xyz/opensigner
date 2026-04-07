@@ -1,9 +1,9 @@
 ---
-title: Shield Component
+title: Shield component
 description: Explore the OpenSigner Shield cold storage component built in Go with MySQL, supporting password, passkey, and automatic recovery with OTP for key shares.
 ---
 
-# Cold Storage
+# Cold storage
 
 ## General overview
 The Cold Storage, or *Shield*, is where the cold share lives. It provides two main services:
@@ -54,7 +54,7 @@ Shield also features mock entity repositories. This allows anyone to run shield'
 
 ## Prerequisites
 
-Shield relies on a MySQL-compatible database for it to run. **Shield has been developed using MariaDB**. This along with other specifics entails taking care of certain environment configurations
+Shield requires a MySQL-compatible database. **Shield uses MariaDB for development.** Configure the following environment variables
 
 ```
 # DB related fields, those do NOT have a default value
@@ -63,7 +63,7 @@ DB_PORT=
 DB_USER=
 DB_PASS=
 DB_NAME=
-# URL to the Hot Storage, will be used as base URL for API
+# URL to the hot storage, used as base URL for API
 OPENFORT_BASE_URL=
 # Shield's port, default is 8080
 PORT=
@@ -115,7 +115,7 @@ Shield doesn't implement any kind of HTTPS handling by itself: it needs to be do
 
 Secure communications are essential here: Shield communicates unencrypted shares to the iFrame. Any compromise in either endpoint or in the communication channel exposes the share to unauthorized parties.
 
-## Core Concepts
+## Core concepts
 
 ### Projects
 A project is a group of users. Each project also features an encryption key needed for automatic share recovery in case it's needed.
@@ -125,9 +125,9 @@ As mentioned in other sections, the user is the core concept of Keys. Users are 
 
 A user belongs to exactly one project.
 
-## Recovery Methods
+## Recovery methods
 
-### Password Recovery
+### Password recovery
 Shares can be encrypted/decrypted in `iFrame` based on user-originated entropy.
 
 **User-based encryption DOESN'T happen in Shield, it's fully client-side**. Shield only stores the encrypted share and blindly sends it back to the user along with its encryption parameters.
@@ -151,14 +151,14 @@ Following the most common recommendations, [`salt` should be at least 128 bits l
 `length` references the number of **bytes** of the resulting derived key, not bits.
 
 
-### Automatic Recovery
+### Automatic recovery
 Cold share recovery can be also done via project-wide entropy. In this case, **both encryption and decryption happen server-side** (understanding *server* as *shield*).
 
 When a project is created, an encryption key for this particular project is created and split between shield and the project. This key is reconstructed and used to encrypt/decrypt shares whenever the entropy source is the project.
 
 This type of share recovery can be enhanced with OTP (One-Time Password) verification. See [OTP for Automatic Recovery](/components/cold_storage/otp) for detailed documentation.
 
-### Passkey Recovery
+### Passkey recovery
 Cold shares can be encrypted using passkeys.
 
 Whenever a user wants to encrypt/decrypt their share the following happens:
@@ -167,7 +167,7 @@ Whenever a user wants to encrypt/decrypt their share the following happens:
 3. This encryption key is used to both encrypt and decrypt their cold share
 4. Shield then remembers the internal passkey ID and certain environment details for that share
 
-#### Authentication process
+#### Authentication process {#authentication-process}
 **OpenSigner does not rely on webauthn authentication ceremonies**.
 In other words, OpenSigner does not support issuing server-side challenges and validating them.
 As discussed in previous chapters, user authentication is done and managed by the external auth provider, and Shield uses it as its only source of truth regarding authentication.
@@ -178,7 +178,7 @@ This authentication, if successful, makes the authenticator return the following
 - A signed challenge (which we don't use)
 - A derived 256-bit encryption key
 
-#### The Encryption Key
+#### Encryption key
 Modern passkeys support the Pseudo Random Function (PRF) extension. This extension allows the user to produce pseudo-random noise in a deterministic way using their private key (which never leaves the passkey's authenticator) and some seed.
 OpenSigner relies on this extension to produce a 256-bit encryption key for symmetric encryption of the cold share.
 
@@ -188,13 +188,13 @@ The seed can remain public and having *access* to the private key requires the u
 
 Using PRF makes server-side challenges unnecessary: an attacker cannot benefit from an old signature since there's no verifier to do replication attacks against, and PRF outputs require being properly authenticated within the passkey's ecosystem.
 
-#### Encrypting and Decrypting
+#### Encrypting and decrypting
 The derived 256-bit key is then used to symmetrically encrypt and decrypt the cold share.
 OpenSigner uses `AES-CBC` in this case. `AES-CBC` is sufficient since shares are of fixed size, rendering potential oracle padding attacks useless.
 Both the encryption and decryption happen client-side: Shield only sees and interacts with the encrypted contents of the share.
 Non-authenticated encryption is acceptable here: decrypting garbage causes further checks (such as private key to address derivation) to fail.
 
-#### What Shield Stores
-Shield will store the encrypted contents of the cold share along with the internal passkey ID.
+#### What Shield stores
+Shield stores the encrypted contents of the cold share along with the internal passkey ID.
 By *internal passkey ID* we mean the identifier the passkey authenticator gave to that particular passkey.
 OpenSigner also stores the environment in which the passkey was created. This information is mainly extracted from the `User-Agent` token and is meant for both hinting and tracking purposes.
