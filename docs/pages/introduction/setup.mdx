@@ -27,7 +27,31 @@ To run them, use:
 make run
 ```
 
-The components can be configured through environment variables,
-check out the `env.example` and the `docker-compose.yml` files for a list of available variables.
+The components are configured through environment variables.
+The `docker-compose.yml` file at the repository root lists every variable with its default value.
+Service-specific defaults are in files such as `auth_service/.env.example`.
+
+## Required Environment Variables
+
+Two variables have no defaults and **must** be set before running `make run`:
+
+| Variable | Used by | Description |
+|---|---|---|
+| `JWT_SECRET` | Auth service | Secret used to sign and verify JWTs. Use a long, random string. |
+| `SHARE_ENCRYPTION_KEY` | Hot storage | AES-256 key for encrypting shares at rest. Must be exactly 64 hex characters (32 bytes). Generate with `openssl rand -hex 32`. |
+
+## Optional Environment Variables
+
+These variables have sensible defaults for local development but should be configured for production:
+
+| Variable | Default | Description |
+|---|---|---|
+| `ALLOWED_ORIGINS` | `http://localhost:7050,http://localhost:7051` | Comma-separated list of allowed CORS origins. Used by both the auth service and hot storage. |
+| `BETTER_AUTH_BASE_URL` | `http://localhost:7052` | Public base URL of the auth service. |
+| `POSTGRES_USER` | `postgres` | PostgreSQL superuser name. |
+| `POSTGRES_PASSWORD` | `postgres_password` | PostgreSQL superuser password. |
+
+Each service also accepts database connection variables (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `DB_SSLMODE`)
+with defaults suitable for the Docker Compose setup. See `docker-compose.yml` for the full list.
 
 Once you have everything running, head over to the [Getting Started](/introduction/getting-started) guide.

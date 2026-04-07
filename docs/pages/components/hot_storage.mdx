@@ -26,8 +26,29 @@ Users must specify the user ID, auth provider, and device ID when requesting sha
 through a [JWT](https://www.jwt.io/) token issued by the specified auth service.
 The auth service must match the one configured when creating the share.
 
-Hot shares are not encrypted with user entropy, so it is important to ensure that the database is secure and access is controlled.
-Follow [best practices for database security](https://www.cybertec-postgresql.com/en/postgresql-security-things-to-avoid-in-real-life/).
+Hot shares are not encrypted with user entropy. However, the sample implementation encrypts all shares at rest
+using AES-256-GCM before storing them in the database. This protects shares if the database is compromised.
+
+### At-Rest Encryption
+
+The sample hot storage encrypts every share with a server-side key before writing it to PostgreSQL
+and decrypts it on read. The encryption uses AES-256 in GCM (Galois/Counter Mode) with a random 96-bit nonce
+per share. The stored value is `base64(nonce || ciphertext || GCM tag)`.
+
+The encryption key is configured through the `SHARE_ENCRYPTION_KEY` environment variable, which must be
+exactly 64 hex characters (32 bytes). Generate one with:
+
+```shell
+openssl rand -hex 32
+```
+
+:::warning
+Keep `SHARE_ENCRYPTION_KEY` secret. If this key is lost, all stored shares become unrecoverable.
+If it is compromised, an attacker with database access can decrypt every share.
+:::
+
+Even with at-rest encryption, follow [best practices for database security](https://www.cybertec-postgresql.com/en/postgresql-security-things-to-avoid-in-real-life/)
+to ensure access is properly controlled.
 
 ## Specification
 

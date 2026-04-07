@@ -2,451 +2,303 @@ openapi: 3.0.0
 info:
   title: OpenSigner Auth Service API
   version: 1.0.0
+  description: |
+    The authentication service is built on [Better Auth](https://www.better-auth.com/)
+    and provides user registration, session management, JWT issuance, and origin validation.
 
-# Tag definitions for grouping
-# ===========================
+    All `/api/auth/*` endpoints are handled by Better Auth. The service also exposes
+    a JWKS endpoint, an origin-validation endpoint consumed by the iframe nginx proxy,
+    and a health check.
+
 tags:
-  - name: OAuth
-    description: Endpoints for OAuth authentication (Google, Twitter, Facebook, Discord, Epic Games, Line, Apple)
-  - name: Third-Party OAuth
-    description: Endpoints for third-party OAuth authentication (Accelbyte, Firebase, Lootlocker, Playfab, Supabase, Custom, OIDC)
-  - name: Basic Auth
-    description: Endpoints for basic authentication (email/password, wallet/SIWE)
+  - name: Authentication
+    description: Sign up, sign in, and sign out with email and password.
+  - name: Session
+    description: Session management and JWT token retrieval.
+  - name: JWKS
+    description: JSON Web Key Set endpoints for token verification.
+  - name: Origin Validation
+    description: Origin validation for the iframe nginx proxy.
+  - name: Health
+    description: Service health check.
 
-# =====================
-# OAuth Authentication
-# =====================
 paths:
-  /iam/v1/oauth/init:
+  # ==========================
+  # Authentication
+  # ==========================
+  /api/auth/sign-up/email:
     post:
-      summary: Initialize OAuth
-      tags: [OAuth]
+      summary: Sign up with email and password
+      tags: [Authentication]
+      description: |
+        Register a new user with email and password. With the username plugin enabled,
+        an optional `username` field is accepted (max 30 characters, `admin` is blocked).
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OAuthInitRequest"
+              $ref: "#/components/schemas/SignUpRequest"
       responses:
-        "201":
-          description: Success response
+        "200":
+          description: User created successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OAuthResponse"
-        "401":
-          description: Api key is not valid
+                $ref: "#/components/schemas/SessionResponse"
 
-  /iam/v1/oauth/pool:
+  /api/auth/sign-in/email:
     post:
-      summary: Poll OAuth (polling)
-      tags: [OAuth]
+      summary: Sign in with email and password
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignInRequest"
+      responses:
+        "200":
+          description: Sign-in successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "401":
+          description: Invalid credentials
+
+  /api/auth/sign-out:
+    post:
+      summary: Sign out and invalidate session
+      tags: [Authentication]
+      description: |
+        Invalidate the current session. Requires a session cookie or Bearer token.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Signed out successfully
+
+  # ==========================
+  # Session Management
+  # ==========================
+  /api/auth/get-session:
+    get:
+      summary: Get the current session
+      tags: [Session]
+      description: |
+        Return the current user and session. Requires a session cookie or Bearer token.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Current session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "401":
+          description: Not authenticated
+
+  /api/auth/token:
+    get:
+      summary: Get a JWT access token
+      tags: [Session]
+      description: |
+        Exchange the current session for a short-lived JWT access token.
+        Requires a session cookie or Bearer token.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: JWT token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT access token
+
+  # ==========================
+  # JWKS
+  # ==========================
+  /api/auth/jwks:
+    get:
+      summary: JSON Web Key Set
+      tags: [JWKS]
+      description: |
+        Return the public keys used to verify JWT tokens issued by the auth service.
+      responses:
+        "200":
+          description: JWKS response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JWKSResponse"
+
+  /.well-known/jwks.json:
+    get:
+      summary: JWKS (well-known alias)
+      tags: [JWKS]
+      description: |
+        Alias for `/api/auth/jwks`. Used by the hot storage service to validate JWT tokens.
+      responses:
+        "200":
+          description: JWKS response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JWKSResponse"
+
+  # ==========================
+  # Origin Validation
+  # ==========================
+  /v1/projects/validate-origin:
+    get:
+      summary: Validate a request origin
+      tags: [Origin Validation]
+      description: |
+        Used by the iframe nginx `auth_request` subrequest. Checks if the `X-Request-Origin`
+        header value is in the configured `ALLOWED_ORIGINS` list. Returns `X-Allowed-Origins`
+        response header on success for CSP `frame-ancestors`.
       parameters:
-        - in: query
-          name: key
+        - in: header
+          name: X-Request-Origin
           schema:
             type: string
-          required: true
+          required: false
+          description: The origin to validate. Defaults to `openfort.io` if not provided.
       responses:
         "200":
-          description: Success response
-          content:
-            application/json:
+          description: Origin is allowed
+          headers:
+            X-Allowed-Origins:
               schema:
-                $ref: "#/components/schemas/AuthResponse"
-        "401":
-          description: Api key is not valid
-
-  /iam/v1/oauth/login_id_token:
-    post:
-      summary: Login with ID Token (OAuth)
-      tags: [OAuth]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/LoginWithIdTokenRequest"
-      responses:
-        "200":
-          description: Success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuthResponse"
-        "401":
-          description: Unauthorized
-
-  /iam/v1/oauth/verify:
-    post:
-      summary: Verify OAuth/Third-Party OAuth Token
-      tags: [OAuth]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AuthenticateOAuthRequest"
-      responses:
-        "200":
-          description: Success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PlayerResponse"
-        "401":
-          description: Unauthorized
-
-  # ============================
-  # Third-Party OAuth
-  # ============================
-  /iam/v1/oauth/link:
-    post:
-      summary: Link Third-Party OAuth
-      tags: [Third-Party OAuth]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ThirdPartyLinkRequest"
-      responses:
-        "201":
-          description: Success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuthPlayerResponse"
-        "401":
-          description: Api key is not valid
-
-  /iam/v1/oauth/third_party:
-    post:
-      summary: Authenticate with Third-Party OAuth
-      tags: [Third-Party OAuth]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ThirdPartyOAuthRequest"
-      responses:
-        "200":
-          description: Success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuthPlayerResponse"
-        "401":
-          description: Unauthorized
-
-  # =====================
-  # Basic Authentication
-  # =====================
-  /iam/v1/password/signup:
-    post:
-      summary: Email/Password Signup
-      tags: [Basic Auth]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SignupRequest"
-      responses:
-        "201":
-          description: Success response
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: "#/components/schemas/AuthResponse"
-                  - $ref: "#/components/schemas/ActionRequiredResponse"
-        "401":
-          description: Api key is not valid
-        "409":
-          description: User already exists
-
-  /iam/v1/password/login:
-    post:
-      summary: Email/Password Login
-      tags: [Basic Auth]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/LoginRequest"
-      responses:
-        "200":
-          description: Success response
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: "#/components/schemas/AuthResponse"
-                  - $ref: "#/components/schemas/ActionRequiredResponse"
-        "401":
-          description: Unauthorized
-
-  /iam/v1/siwe/authenticate:
-    post:
-      summary: Wallet (SIWE) Authentication
-      tags: [Basic Auth]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SIWEAuthenticateRequest"
-      responses:
-        "200":
-          description: Success response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuthResponse"
-        "401":
-          description: Unauthorized
-
-# =====================
-# Shared Schemas
-# =====================
-components:
-  schemas:
-    OAuthInitRequest:
-      type: object
-      properties:
-        options:
-          type: object
-          properties:
-            redirectTo:
-              type: string
-            queryParams:
-              type: object
-              additionalProperties:
                 type: string
-            callbackTo:
-              type: string
-        usePooling:
-          type: boolean
-        provider:
-          type: string
-          enum: [google, twitter, facebook, discord, epic_games, line, apple]
-          example: google
-      required: [provider]
+              description: Space-separated list of allowed origins
+        "403":
+          description: Origin is not allowed
 
-    OAuthResponse:
-      type: object
-      properties:
-        key:
-          type: string
-          description: State key for OAuth session
-        url:
-          type: string
-          description: Authorization URL
+  # ==========================
+  # Health
+  # ==========================
+  /health:
+    get:
+      summary: Health check
+      tags: [Health]
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
 
-    LoginWithIdTokenRequest:
-      type: object
-      properties:
-        provider:
-          type: string
-          enum: [apple, google]
-          example: google
-        token:
-          type: string
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
-      required: [provider, token]
+# ==========================
+# Schemas
+# ==========================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Session token passed as a Bearer token (enabled by the bearer plugin).
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: better-auth.session_token
+      description: Session cookie set by Better Auth.
 
-    AuthenticateOAuthRequest:
-      type: object
-      properties:
-        provider:
-          type: string
-          enum:
-            [
-              google,
-              twitter,
-              facebook,
-              discord,
-              epic_games,
-              line,
-              apple,
-              accelbyte,
-              firebase,
-              lootlocker,
-              playfab,
-              supabase,
-              custom,
-              oidc,
-            ]
-          example: google
-        token:
-          type: string
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
-        tokenType:
-          type: string
-          example: idToken
-        expand:
-          type: array
-          items:
-            type: string
-      required: [provider, token, tokenType]
-
-    ThirdPartyLinkRequest:
-      type: object
-      properties:
-        provider:
-          type: string
-          enum:
-            [accelbyte, firebase, lootlocker, playfab, supabase, custom, oidc]
-          example: firebase
-        token:
-          type: string
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
-        tokenType:
-          type: string
-          example: idToken
-      required: [provider, token, tokenType]
-
-    ThirdPartyOAuthRequest:
-      type: object
-      properties:
-        provider:
-          type: string
-          enum:
-            [accelbyte, firebase, lootlocker, playfab, supabase, custom, oidc]
-          example: firebase
-        token:
-          type: string
-          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
-        tokenType:
-          type: string
-          example: idToken
-      required: [provider, token, tokenType]
-
-    SignupRequest:
+  schemas:
+    SignUpRequest:
       type: object
       properties:
         email:
           type: string
-          example: user@email.com
+          format: email
+          example: user@example.com
         password:
           type: string
-          example: password
+          example: s3cur3P@ss
         name:
           type: string
-          example: John Doe
-        description:
+          example: Jane Doe
+        username:
           type: string
-          example: I'm a developer.
-      required: [email, password]
+          description: Optional username (max 30 characters, `admin` is blocked).
+          example: janedoe
+      required: [email, password, name]
 
-    LoginRequest:
+    SignInRequest:
       type: object
       properties:
         email:
           type: string
-          example: user@email.com
+          format: email
+          example: user@example.com
         password:
           type: string
-          example: password
+          example: s3cur3P@ss
       required: [email, password]
 
-    SIWEAuthenticateRequest:
+    SessionResponse:
       type: object
       properties:
-        signature:
-          type: string
-          example: 0x1773ca2e6514a795bc9549ffbdf73909b2cd0ba8eafe52a1751c3ee8d644458701debd502ee5b5a8fca24606eee42a2cc756a04958c7c189913184d46c48783e1b
-        message:
-          type: string
-          example: demo.openfort.xyz wants you to sign in with your Ethereum account
-        walletClientType:
-          type: string
-          example: metamask
-        connectorType:
-          type: string
-          example: injected
-      required: [signature, message, walletClientType, connectorType]
-
-    AuthResponse:
-      type: object
-      properties:
-        player:
-          $ref: "#/components/schemas/AuthPlayerResponse"
+        user:
+          $ref: "#/components/schemas/User"
+        session:
+          $ref: "#/components/schemas/Session"
         token:
           type: string
-          description: JWT access token
-        refreshToken:
-          type: string
-          description: Refresh token
+          description: Session token (present on sign-up and sign-in responses).
 
-    ActionRequiredResponse:
-      type: object
-      properties:
-        action:
-          type: string
-          enum: [verify_email]
-
-    AuthPlayerResponse:
+    User:
       type: object
       properties:
         id:
           type: string
-        name:
-          type: string
-        description:
-          type: string
-        metadata:
-          type: object
-        linkedAccounts:
-          type: array
-          items:
-            $ref: "#/components/schemas/LinkedAccountResponse"
-        player:
-          $ref: "#/components/schemas/PlayerResponse"
-
-    LinkedAccountResponse:
-      type: object
-      properties:
-        provider:
-          type: string
         email:
           type: string
-        externalUserId:
+        name:
           type: string
-        connectorType:
+        username:
           type: string
-        walletClientType:
-          type: string
-        disabled:
+        emailVerified:
           type: boolean
-        verified:
-          type: boolean
+        createdAt:
+          type: string
+          format: date-time
         updatedAt:
-          type: integer
-        address:
           type: string
-        metadata:
-          type: object
+          format: date-time
 
-    PlayerResponse:
+    Session:
       type: object
       properties:
         id:
           type: string
-        name:
+        userId:
           type: string
-        description:
+        expiresAt:
           type: string
-        metadata:
-          type: object
-        transactionIntents:
+          format: date-time
+        token:
+          type: string
+
+    JWKSResponse:
+      type: object
+      properties:
+        keys:
           type: array
           items:
             type: object
-        accounts:
-          type: array
-          items:
-            type: object
+            description: A JSON Web Key (JWK).
