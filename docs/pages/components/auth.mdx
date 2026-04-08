@@ -20,12 +20,12 @@ The authentication service supports two types of authentication:
 In both cases, the hot and cold storages expect a JWT token to be passed in the `Authorization` header
 or in a cookie field specified on the request itself.
 
-## First-party authentication {#first-party-authentication}
+## First-party authentication 
 
 In this model, the implementer is fully responsible for user authentication.
 The current model uses email/password authentication.
 
-## Third-party authentication {#third-party-authentication}
+## Third-party authentication 
 
 Third-party authentication relies on OAuth 2.0 or OpenID Connect to verify user identities.
 Once the user authenticates, the third-party provider returns an access token.
