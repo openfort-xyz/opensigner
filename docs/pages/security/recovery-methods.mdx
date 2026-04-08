@@ -12,7 +12,7 @@ Each refers to how the recovery share is encrypted, and how the user can access 
 
 In password-based recovery, the recovery share is encrypted with a user-provided password.
 Recovery share encryption and decryption happen in the iFrame, making the user the sole owner of the entropy guarding the share.
-Check out the [**password-based signup**](/actions/signup#user-with-password-recovery) section for more details.
+Check out the [**password-based signup**](/actions/signup#password-recovery) section for more details.
 
 :::info[Encryption Details]
 When setting a recovery password, the iframe uses the open-source [@openfort-xyz/crypto-js](https://github.com/openfort-xyz/crypto-js)
@@ -58,7 +58,7 @@ over one of the other two shares, allows the entity to reconstruct the key.
 
 The raw encryption key travels over the network from the iFrame to the cold storage and can be intercepted.
 Mitigate this with proper network security measures.
-Check out the [**automatic recovery signup**](/actions/signup#user-with-automatic-recovery) section for more details.
+Check out the [**automatic recovery signup**](/actions/signup#automatic-recovery) section for more details.
 
 ### Three key shares vs two encryption parts
 
