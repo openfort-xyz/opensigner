@@ -5,10 +5,56 @@ description: Understand how OpenSigner handles transaction signing through ephem
 
 # Use the key
 
-This section covers the signing use case.
-After registering and logging into a device, the user can reconstruct their private
-key in the iFrame and use it to sign data.
+After [creating a key](/actions/signup) and [recovering it on a device](/actions/login), the user can sign transactions and messages. This page explains how the signing flow works.
 
-:::tip
-Coming soon
-:::
+## How signing works
+
+All signing operations happen inside the iFrame. The private key is never exposed to the host application or any external service.
+
+The flow consists of three steps:
+
+1. The iFrame retrieves the hot share from Hot Storage and the cold share from Cold Storage (Shield).
+2. The iFrame reconstructs the private key in memory using the two shares.
+3. The iFrame signs the requested data and immediately discards the private key.
+
+This ensures the private key exists in memory only for the duration of the signing operation.
+
+## Signing flow in detail
+
+### Share retrieval
+
+The iFrame fetches the user's shares from both storage components:
+
+- **Hot share**: retrieved from the Hot Storage service via the `POST /v2/devices/recover` endpoint, using the user's JWT for authentication.
+- **Cold share**: retrieved from Shield (Cold Storage), also authenticated via the user's JWT.
+
+Both shares must be available to reconstruct the private key. If either share is missing, the signing operation fails.
+
+### Key reconstruction
+
+Once both shares are available, the iFrame uses Shamir's Secret Sharing to reconstruct the full private key. This happens entirely in the browser — no server ever sees the complete key.
+
+### Signing and cleanup
+
+The reconstructed private key signs the requested payload (a transaction, a message, or typed data). After signing, the iFrame:
+
+1. Discards the private key from memory.
+2. Re-splits the key into new shares if the current device had no local share in browser storage.
+3. Stores the new hot share in Hot Storage and keeps the local share in browser storage.
+
+This re-splitting ensures that the shares change after each use, limiting the window of exposure if any single share is compromised.
+
+## Integration
+
+The host application communicates with the iFrame through the browser's [postMessage](https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage) API. The [iFrame sample](https://github.com/openfort-xyz/opensigner/tree/main/iframe/sample) demonstrates the complete flow, including:
+
+- Authenticating with the auth service to obtain an access token
+- Creating an iFrame instance
+- Requesting a signature for a message
+
+## Security considerations
+
+- The private key never leaves the iFrame's execution context.
+- Shares are encrypted at rest in both Hot Storage (AES-256-GCM) and Cold Storage.
+- The key exists in memory only during the signing operation and is discarded immediately after.
+- Re-splitting after each use means compromising a previously captured share does not help an attacker.

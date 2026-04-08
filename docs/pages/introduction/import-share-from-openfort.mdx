@@ -11,15 +11,6 @@ If you have an active project on Openfort and want to self-host OpenSigner, you 
 Only shares with custody type **User** can be exported from Openfort. Shares with custody type **Project** cannot leave cold storage.
 :::
 
-The migration process has six steps:
-
-1. Export the hot share from the Openfort API.
-2. Import the hot share into OpenSigner.
-3. Create a user in Shield (cold storage).
-4. Export the cold share from Openfort's Shield.
-5. Import the cold share into OpenSigner.
-6. Recover the key.
-
 ## Prerequisites
 
 - A running OpenSigner instance (see [Setup](/introduction/setup))
@@ -28,6 +19,9 @@ The migration process has six steps:
 
 To update a secret key's scope, go to **API keys** in the Openfort dashboard, click the **...** menu on the key, select **See key scopes**, and enable **Private key shares**.
 
+## Steps
+
+::::steps
 ## Export the hot share from Openfort
 
 Call the Openfort export endpoint with your scoped secret key:
@@ -169,6 +163,7 @@ For passkey recovery of migrated accounts, OpenSigner uses the original Openfort
 :::
 
 Once recovery completes, the key is reconstructed in the iFrame and ready to sign transactions.
+::::
 
 ## See also
 
