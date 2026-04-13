@@ -10,6 +10,23 @@
     "preview": "vocs preview",
     "install:d2": "curl -fsSL https://d2lang.com/install.sh | sh -s --"
   },
+  "pnpm": {
+    "overrides": {
+      "hono": ">=4.12.12",
+      "@hono/node-server": ">=1.19.13",
+      "dompurify": ">=3.3.2",
+      "lodash": ">=4.18.0",
+      "lodash-es": ">=4.18.0",
+      "immutable": ">=3.8.3",
+      "picomatch": ">=4.0.4",
+      "brace-expansion": ">=2.0.3",
+      "yaml": ">=2.8.3",
+      "defu": ">=6.1.5",
+      "path-to-regexp": ">=8.4.0",
+      "vite": ">=7.3.2",
+      "axios": ">=1.15.0"
+    }
+  },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
     "react": "^19.1.0",
@@ -18,6 +35,6 @@
     "swagger-ui-react": "^5.26.0",
     "tailwindcss": "^4.2.2",
     "typescript": "^5.8.3",
-    "vocs": "^1.0.12"
+    "vocs": "^1.4.1"
   }
 }
