@@ -10,7 +10,7 @@ The Cold Storage, or *Shield*, is where the cold share lives. It provides two ma
 1. Cold share storage
 2. Cold share recovery
 
-Shield relies on the same authentication system as the Hot Storage. That is, an OIDC-compatible authentication system needs to be set up and specified for Shield to be able to recognize and validate users.
+Shield relies on the same authentication system as the [Hot Storage](/components/hot_storage). That is, an OIDC-compatible [authentication system](/components/auth) needs to be set up and specified for Shield to be able to recognize and validate users.
 
 ## Architecture
 
@@ -156,7 +156,7 @@ Cold share recovery can be also done via project-wide entropy. In this case, **b
 
 When a project is created, an encryption key for this particular project is created and split between shield and the project. This key is reconstructed and used to encrypt/decrypt shares whenever the entropy source is the project.
 
-This type of share recovery can be enhanced with OTP (One-Time Password) verification. See [OTP for Automatic Recovery](/components/cold_storage/otp) for detailed documentation.
+This type of share recovery can be enhanced with OTP (One-Time Password) verification. See [OTP for Automatic Recovery](/components/cold_storage/otp) for detailed documentation, and the [Recovery methods](/security/recovery-methods) page for a comparison with password and passkey recovery. The full HTTP surface lives in the [Cold storage API](/apis/cold_storage) reference.
 
 ### Passkey recovery
 Cold shares can be encrypted using passkeys.

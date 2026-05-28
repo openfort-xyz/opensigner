@@ -6,6 +6,8 @@ description: OpenSigner is an open-source, self-hostable wallet key management s
 
 import { HomePage } from 'vocs/components'
 
+<h1 className="sr-only">OpenSigner: open-source, non-custodial wallet key management</h1>
+
 <HomePage.Root>
     <HomePage.Logo />
     <HomePage.Tagline>Open-Source Key Management</HomePage.Tagline>
@@ -17,3 +19,13 @@ import { HomePage } from 'vocs/components'
         <HomePage.Button href="https://github.com/openfort-xyz/opensigner">GitHub</HomePage.Button>
     </HomePage.Buttons>
 </HomePage.Root>
+
+## What you can do with OpenSigner
+
+OpenSigner is a self-hostable wallet signer that splits each user's private key into three shares using Shamir's Secret Sharing — one share lives on the user's device, one in [hot storage](/components/hot_storage), and one (encrypted) in [cold storage](/components/shield). The full key is only ever reconstructed in-memory inside the [iFrame](/components/iframe), then immediately discarded.
+
+- New here? Start with [What is OpenSigner?](/introduction/about) and then run through [Setup](/introduction/setup).
+- Ready to integrate? Follow [Create a key](/actions/signup), [Recover a key](/actions/login), and [Use a key](/actions/operation).
+- Choosing a recovery flow? Compare [password, passkey, and automatic recovery](/security/recovery-methods).
+- Self-hosting? Pick the right model in [Deployment scenarios](/security/deployment-scenarios) and review the [Security overview](/security/overview).
+- Looking for the API? Browse the [Postman collection](/apis/postman), [authentication service API](/apis/auth_service), [hot storage API](/apis/hot_storage), and [cold storage API](/apis/cold_storage).

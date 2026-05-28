@@ -5,10 +5,10 @@ description: One-Time Password (OTP) verification for automatic recovery adds an
 
 # OTP for automatic recovery
 
-Shield supports One-Time Password (OTP) verification to add an additional layer of security when creating encrypted sessions.
+[Shield](/components/shield) supports One-Time Password (OTP) verification to add an additional layer of security when creating encrypted sessions.
 
 :::info
-OTP is available only for shares with automatic recovery method.
+OTP is available only for shares with the [automatic recovery method](/security/recovery-methods#automatic-recovery).
 :::
 
 ## Enable OTP
@@ -142,6 +142,8 @@ The `session_id` can then be used with the `X-Encryption-Session` header when re
 3. POST /project/encryption-session with OTP code
 4. Use session_id to retrieve shares
 ```
+
+These workflows correspond to the [Create a key](/actions/signup#otp-with-automatic-recovery) and [Recover a key](/actions/login#otp-with-automatic-recovery) flows. The full endpoint reference lives in the [Cold storage API](/apis/cold_storage).
 
 ## OTP errors
 

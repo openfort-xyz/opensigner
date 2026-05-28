@@ -5,9 +5,9 @@ description: Step-by-step guide to creating keys in OpenSigner, including Shamir
 
 # Create a key
 
-To create a new key with OpenSigner, users call the `create()` method on the iFrame.
+To create a new key with OpenSigner, users call the `create()` method on the [iFrame](/components/iframe).
 The iFrame generates a new private key and splits it into three shares using threshold cryptography.
-Two shares are distributed to hot storage and cold storage respectively, while the third share is stored locally in the localStorage.
+Two shares are distributed to [hot storage](/components/hot_storage) and [cold storage](/components/shield) respectively, while the third share is stored locally in the localStorage.
 
 The signup process depends on the recovery method:
 
@@ -53,7 +53,7 @@ the system becomes custodial, as the entity can access the recovery share.
 
 ### OTP with automatic recovery
 
-You can enable OTP verification for your Shield project to enhance the security of automatic recovery shares.
+You can [enable OTP verification](/components/cold_storage/otp) for your Shield project to enhance the security of automatic recovery shares.
 The diagram above remains valid. The key difference is that during key reconstruction,
 Shield requires an OTP when creating a new encrypted session.
 The OTP is sent to the user via SMS or email.
@@ -68,3 +68,5 @@ The user needs only to follow their authenticator's flow for passkey creation an
 Both the passkey's private key and the cold share are safe in this scenario, too:
 - The passkey's private key cannot leave the authenticator device
 - The cold share is encrypted and decrypted on the client side
+
+After creation, the same key can be retrieved via [Recover a key](/actions/login) and used to sign messages via [Use a key](/actions/operation). For a full comparison of the three recovery options, see [Recovery methods](/security/recovery-methods).

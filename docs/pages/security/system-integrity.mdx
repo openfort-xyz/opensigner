@@ -6,6 +6,7 @@ description: Verify OpenSigner component integrity using Cosign attestation, Rek
 # System integrity
 
 This page covers how to verify that OpenSigner components are authentic and haven't been tampered with.
+For an overview of the threat model these checks defend against, see [Threat analysis](/security/threat-analysis); for the broader security architecture, see [Security overview](/security/overview).
 
 ## Attestation
 
@@ -24,6 +25,8 @@ gh attestation verify \
     --repo '<source code repository>' \
     --signer-workflow ' <source code repository>/<workflow file>'
 ```
+
+The Shield image powers the [cold storage component](/components/shield); the iframe assets covered below are loaded by the [iFrame component](/components/iframe).
 
 ### Example: verify Shield image
 

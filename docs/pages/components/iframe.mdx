@@ -11,8 +11,8 @@ The iFrame is the core client-side component that handles all cryptographic oper
 
 The iFrame is embedded into the user browser, or into a React Native app.
 It is the component in charge of generating the private key, splitting it into shares,
-and storing them in their respective storage components; as well as fetching the shares
-and reconstructing the private key when required.
+and storing them in their respective storage components ([hot storage](/components/hot_storage) and [cold storage](/components/shield)); as well as fetching the shares
+and reconstructing the private key when required. See [Recovery methods](/security/recovery-methods) for how the cold share is encrypted before storage.
 
 Operations that use the private key all take place inside the iFrame,
 so the private key is never exposed to the outside world.
@@ -42,3 +42,5 @@ The cold storage URL is configured when calling the methods that require it.
 After a successful reconstruction of the private key,
 if the current device had no local share in the [browser storage](https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API),
 the key is split once again into _different_ shares which are then stored in the local and hot storages.
+
+For end-to-end flows that exercise the iFrame, see [Create a key](/actions/signup), [Recover a key](/actions/login), and [Use a key](/actions/operation). The threat model around iframe compromise is covered in [Threat analysis](/security/threat-analysis).

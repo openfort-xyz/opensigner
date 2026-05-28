@@ -5,7 +5,7 @@ description: Understand how OpenSigner manages users, projects, and authenticati
 
 # Users
 
-The OpenSigner wallet key management components share one `user` concept, except for cold storage which expands on it.
+The OpenSigner wallet key management components share one `user` concept, except for [cold storage](/components/shield) which expands on it. The [hot storage](/components/hot_storage) and [authentication service](/components/auth) reference users by the same `uuid`.
 
 One user can have none, one, or many keys for a chain.
 One user can have keys for multiple chains.
@@ -13,7 +13,7 @@ Keys are not shared across chains.
 
 ## Projects
 
-When using automatic key recovery, cold storage users rely on projects.
+When using [automatic key recovery](/security/recovery-methods#automatic-recovery), cold storage users rely on projects.
 Projects manage the entropy for the users' recovery shares. More specifically,
 projects have access to half of the entropy, while the cold storage has the other half.
 

@@ -9,11 +9,11 @@ After [creating a key](/actions/signup) and [recovering it on a device](/actions
 
 ## How signing works
 
-All signing operations happen inside the iFrame. The private key is never exposed to the host application or any external service.
+All signing operations happen inside the [iFrame](/components/iframe). The private key is never exposed to the host application or any external service.
 
 The flow consists of three steps:
 
-1. The iFrame retrieves the hot share from Hot Storage and the cold share from Cold Storage (Shield).
+1. The iFrame retrieves the hot share from [Hot Storage](/components/hot_storage) and the cold share from [Cold Storage (Shield)](/components/shield).
 2. The iFrame reconstructs the private key in memory using the two shares.
 3. The iFrame signs the requested data and immediately discards the private key.
 
@@ -58,3 +58,5 @@ The host application communicates with the iFrame through the browser's [postMes
 - Shares are encrypted at rest in both Hot Storage (AES-256-GCM) and Cold Storage.
 - The key exists in memory only during the signing operation and is discarded immediately after.
 - Re-splitting after each use means compromising a previously captured share does not help an attacker.
+
+For the threat model around signing, see [Threat analysis](/security/threat-analysis); for how shares are encrypted before being stored, see [Recovery methods](/security/recovery-methods).

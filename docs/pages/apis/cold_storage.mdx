@@ -3,12 +3,14 @@ title: Cold storage API
 description: Complete API reference for the OpenSigner Cold Storage (Shield) with Swagger docs covering error codes for OTP, projects, shares, users, and authentication.
 ---
 
-import Warning from './ui_warning.mdx'
+import Warning from '../../lib/ui_warning.mdx'
 import SwaggerViewer from '../../lib/swaggerviewer.tsx'
 
 # Cold storage API
 
 <Warning />
+
+This is the HTTP API reference for the [cold storage (Shield) component](/components/shield). It pairs with the [hot storage API](/apis/hot_storage) and uses the same [authentication service](/components/auth). OTP-protected endpoints are explained in [OTP for automatic recovery](/components/cold_storage/otp).
 
 <SwaggerViewer url="/swagger/cold_storage.yaml" />
 

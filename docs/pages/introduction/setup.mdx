@@ -5,9 +5,9 @@ description: Set up OpenSigner locally by cloning the repo, building Docker cont
 
 # Setup
 
-The project Makefile builds and runs all components through docker-compose.
+The project Makefile builds and runs all components through docker-compose. For a primer on what OpenSigner is and the problem it solves, start with [What is OpenSigner?](/introduction/about).
 
-Building the images takes time, particularly the Better Auth component used for authentication service database migrations: [`@better-auth/cli`](https://www.npmjs.com/package/@better-auth/cli).
+Building the images takes time, particularly the Better Auth component used for [authentication service](/components/auth) database migrations: [`@better-auth/cli`](https://www.npmjs.com/package/@better-auth/cli).
 
 First, clone the project:
 
@@ -54,4 +54,4 @@ These variables have sensible defaults for local development but should be confi
 Each service also accepts database connection variables (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `DB_SSLMODE`)
 with defaults suitable for the Docker Compose setup. See `docker-compose.yml` for the full list.
 
-Once you have everything running, head over to the [Getting Started](/introduction/getting-started) guide.
+Once you have everything running, head over to the [Getting Started](/introduction/getting-started) guide. If you plan to self-host only some components, review the trade-offs in [Deployment scenarios](/security/deployment-scenarios).

@@ -14,7 +14,7 @@ these issues can arise:
 
 ### iFrame compromise
 
-The iframe is the only component with access to the full, reconstructed key.
+The [iframe](/components/iframe) is the only component with access to the full, reconstructed key.
 If the iframe is compromised, the attacker could use the key to impersonate the user
 and interact with the chain on their behalf.
 
@@ -25,7 +25,7 @@ and interact with the chain on their behalf.
 
 ### Auth service compromise
 
-Having a compromised auth service has, besides the usual implications,
+Having a compromised [auth service](/components/auth) has, besides the usual implications,
 some risks _if the storages are also compromised_. The auth service could forge an access
 token and have the hot or cold storage accept them. Users could then attempt to perform
 an operation unaware of the forgery, and provide their recovery share entropy to the attacker
@@ -38,7 +38,7 @@ when trying to log into a new device.
 
 ### Hot storage compromise
 
-If the hot storage is compromised or tampered with, attackers have access to one
+If the [hot storage](/components/hot_storage) is compromised or tampered with, attackers have access to one
 of the two shares required to reconstruct the key.
 
 **Mitigations:**
@@ -48,14 +48,14 @@ of the two shares required to reconstruct the key.
 
 ### Cold storage compromise
 
-The risk of a compromised cold storage is, in isolation, lesser than that of the hot storage
+The risk of a compromised [cold storage](/components/shield) is, in isolation, lesser than that of the hot storage
 because the cold storage share is encrypted with user entropy, and access to the cold storage
 alone is not enough to reconstruct the recovery share. When combined with other compromised components,
 the risk increases significantly.
 
 **Mitigations:**
-- Use password or passkey recovery (user-held secrets)
-- Enable OTP for automatic recovery
+- Use [password or passkey recovery](/security/recovery-methods) (user-held secrets)
+- [Enable OTP](/components/cold_storage/otp) for automatic recovery
 - Run cold storage in TEE with non-extractable KMS
 
 
