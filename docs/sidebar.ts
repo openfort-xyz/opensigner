@@ -1,4 +1,4 @@
-import type { Sidebar } from 'vocs';
+import type { Sidebar } from 'vocs/config';
 
 export const sidebar: Sidebar =
     [

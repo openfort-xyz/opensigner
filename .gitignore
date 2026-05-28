@@ -1,5 +1,7 @@
 # Generated files
 docs/public/diagrams
+docs/src/pages.gen.ts
+docs/.vocs
 
 # Temporary files
 hot_storage/sample/*.db

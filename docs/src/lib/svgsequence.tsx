@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useState } from 'react';
 
 export function SVGSequence({ imgSize = '100%', svgUrls, interval = 2000 }) {
