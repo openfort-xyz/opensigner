@@ -3,6 +3,8 @@ title: Security overview
 description: Security overview of the OpenSigner trust model covering key share distribution, authentication providers, transport encryption, and TLS requirements.
 ---
 
+import { JsonLd, techArticle } from '../../lib/jsonld';
+
 # Security overview
 
 The OpenSigner system is composed of multiple components that communicate over HTTP.
@@ -89,3 +91,7 @@ Make sure to validate TLS certificates to prevent Man In The Middle (MITM) attac
 - [Recovery Methods](/security/recovery-methods) - Password, passkey, and automatic recovery options
 - [Deployment Scenarios](/security/deployment-scenarios) - Hosting configurations and their security implications
 - [Threat Analysis](/security/threat-analysis) - Potential attack vectors and mitigations
+
+Transport security relies on [TLS 1.3](https://datatracker.ietf.org/doc/html/rfc8446).
+
+<JsonLd data={techArticle({ headline: 'Security overview', description: 'Security overview of the OpenSigner trust model covering key share distribution, authentication providers, transport encryption, and TLS requirements.', path: '/security/overview' })} />

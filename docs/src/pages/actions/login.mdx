@@ -3,6 +3,8 @@ title: Recover a key
 description: Learn how OpenSigner recovers private keys on new devices using password, passkey, or automatic recovery with OTP through the iFrame and cold storage workflow.
 ---
 
+import { JsonLd, techArticle } from '../../lib/jsonld';
+
 # Recover a key
 
 Before recovering a key, the user must call hot storage to retrieve their list of accounts and select the one to recover.
@@ -73,3 +75,12 @@ If a user wants to retrieve their cold share, they are prompted to authenticate 
 Most passkey authentication providers still show some kind of prompt even if they don't find the passkey within the local authenticator, such as a picture with a QR code if the passkey was created using a phone.
 
 Once properly authenticated, no further interaction is required from the user: both the PRF generation and the key derivation/share encryption happen under the hood, leaving the unencrypted cold share available for full key recovery.
+
+## Related
+
+- Start with [Create a key](/actions/signup), then [Sign an operation](/actions/operation).
+- Compare the trade-offs in [Recovery methods](/security/recovery-methods).
+
+Passkey recovery is built on [WebAuthn](https://www.w3.org/TR/webauthn-2/); automatic recovery can use a time-based one-time password ([RFC 6238](https://datatracker.ietf.org/doc/html/rfc6238)).
+
+<JsonLd data={techArticle({ headline: 'Recover a key', description: 'Learn how OpenSigner recovers private keys on new devices using password, passkey, or automatic recovery with OTP through the iFrame and cold storage workflow.', path: '/actions/login' })} />

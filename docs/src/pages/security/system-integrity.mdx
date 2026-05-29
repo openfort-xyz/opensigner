@@ -3,6 +3,8 @@ title: System integrity
 description: Verify OpenSigner component integrity using Cosign attestation, Rekor transparency logs, and SHA-256 checksums for client-side iframe asset verification.
 ---
 
+import { JsonLd, techArticle } from '../../lib/jsonld';
+
 # System integrity
 
 This page covers how to verify that OpenSigner components are authentic and haven't been tampered with.
@@ -102,3 +104,10 @@ async function verifyAssetChecksum(url, expectedHash) {
   return hashHex === expectedHash;
 }
 ```
+
+## Related
+
+- Read the [security overview](/security/overview) and [threat analysis](/security/threat-analysis).
+- Pick a configuration in [deployment scenarios](/security/deployment-scenarios).
+
+<JsonLd data={techArticle({ headline: 'System integrity', description: 'Verify OpenSigner component integrity using Cosign attestation, Rekor transparency logs, and SHA-256 checksums for client-side iframe asset verification.', path: '/security/system-integrity' })} />

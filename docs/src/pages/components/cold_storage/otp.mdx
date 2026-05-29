@@ -3,6 +3,8 @@ title: OTP for automatic recovery
 description: One-Time Password (OTP) verification for automatic recovery adds an additional layer of security when creating encrypted sessions.
 ---
 
+import { JsonLd, techArticle } from '../../../lib/jsonld';
+
 # OTP for automatic recovery
 
 Shield supports One-Time Password (OTP) verification to add an additional layer of security when creating encrypted sessions.
@@ -157,3 +159,12 @@ The `session_id` can then be used with the `X-Encryption-Session` header when re
 | 400 | `OTP_USER_INFO_MISSING` | Missing user information like email or phone number |
 | 400 | `OTP_NOT_SUPPORTED` | Project doesn't support OTP |
 | 409 | `OTP_ALREADY_ENABLED` | Project already has OTP enabled |
+
+OTP verification follows the standard one-time password schemes, [HOTP (RFC 4226)](https://datatracker.ietf.org/doc/html/rfc4226) and [TOTP (RFC 6238)](https://datatracker.ietf.org/doc/html/rfc6238).
+
+## Related
+
+- OTP is part of [automatic recovery](/security/recovery-methods).
+- It runs against [cold storage (Shield)](/components/shield) when [creating a key](/actions/signup).
+
+<JsonLd data={techArticle({ headline: 'OTP for automatic recovery', description: 'One-Time Password (OTP) verification for automatic recovery adds an additional layer of security when creating encrypted sessions.', path: '/components/cold_storage/otp' })} />

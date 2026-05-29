@@ -3,7 +3,9 @@ title: Authentication service API
 description: Complete API reference for the OpenSigner Authentication Service with Swagger documentation for user identity validation, token issuance, and access control.
 ---
 
-import Warning from './ui_warning.mdx'
+import { JsonLd, techArticle } from '../../lib/jsonld';
+
+import Warning from './_components/ui-warning.mdx'
 import SwaggerViewer from '../../lib/swaggerviewer.tsx'
 
 # Authentication service API
@@ -11,3 +13,13 @@ import SwaggerViewer from '../../lib/swaggerviewer.tsx'
 <Warning />
 
 <SwaggerViewer url="/swagger/auth_service.yaml" />
+
+## Related
+
+- Learn how the [authentication component](/components/auth) issues tokens for [users and projects](/introduction/users).
+
+This reference is generated from an [OpenAPI](https://www.openapis.org/) definition.
+
+See the [security overview](/security/overview) for how tokens are used. API docs render with [Swagger UI](https://swagger.io/tools/swagger-ui/).
+
+<JsonLd data={techArticle({ headline: 'Authentication service API', description: 'Complete API reference for the OpenSigner Authentication Service with Swagger documentation for user identity validation, token issuance, and access control.', path: '/apis/auth_service' })} />

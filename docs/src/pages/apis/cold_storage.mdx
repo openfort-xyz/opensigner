@@ -3,7 +3,9 @@ title: Cold storage API
 description: Complete API reference for the OpenSigner Cold Storage (Shield) with Swagger docs covering error codes for OTP, projects, shares, users, and authentication.
 ---
 
-import Warning from './ui_warning.mdx'
+import { JsonLd, techArticle } from '../../lib/jsonld';
+
+import Warning from './_components/ui-warning.mdx'
 import SwaggerViewer from '../../lib/swaggerviewer.tsx'
 
 # Cold storage API
@@ -100,3 +102,13 @@ Shield API returns various error codes depending on the type of failure encounte
 | 500 | `INTERNAL` | Internal error |
 | 500 | `MISSING_NOTIFICATION_SERV` | Missing notification service |
 | 400 | `BAD_REQUEST` | Various messages |
+
+## Related
+
+- See [cold storage (Shield)](/components/shield) and [OTP for automatic recovery](/components/cold_storage/otp).
+
+This reference is generated from an [OpenAPI](https://www.openapis.org/) definition.
+
+See [recovery methods](/security/recovery-methods) for how cold shares are recovered. API docs render with [Swagger UI](https://swagger.io/tools/swagger-ui/).
+
+<JsonLd data={techArticle({ headline: 'Cold storage API', description: 'Complete API reference for the OpenSigner Cold Storage (Shield) with Swagger docs covering error codes for OTP, projects, shares, users, and authentication.', path: '/apis/cold_storage' })} />

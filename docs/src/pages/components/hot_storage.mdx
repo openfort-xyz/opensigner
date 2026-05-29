@@ -3,6 +3,8 @@ title: Hot storage component
 description: Technical guide to the OpenSigner hot storage component for storing frequently accessed key shares, with device linking, JWT auth, and Go implementation.
 ---
 
+import { JsonLd, techArticle } from '../../lib/jsonld';
+
 # Hot storage
 
 The Hot Storage component is used to store "hot shares": shares that are required each time an operation is performed with the private key
@@ -54,3 +56,5 @@ to ensure access is properly controlled.
 
 The full specification for the request is available in the [API documentation](/apis/hot_storage),
 and a Postman collection with pre-configured calls is available at the [Postman Collection](/apis/postman).
+
+<JsonLd data={techArticle({ headline: 'Hot storage component', description: 'Technical guide to the OpenSigner hot storage component for storing frequently accessed key shares, with device linking, JWT auth, and Go implementation.', path: '/components/hot_storage' })} />

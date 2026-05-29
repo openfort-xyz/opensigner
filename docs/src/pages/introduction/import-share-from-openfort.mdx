@@ -3,6 +3,8 @@ title: Import shares from Openfort
 description: Migrate user key shares from an Openfort project to a self-hosted OpenSigner instance. Export hot and cold shares, import them, and recover the key.
 ---
 
+import { JsonLd, techArticle } from '../../lib/jsonld';
+
 # Import shares from Openfort
 
 If you have an active project on Openfort and want to self-host OpenSigner, you need to migrate the existing key shares. OpenSigner requires both the hot share and the cold share to reconstruct a user's private key.
@@ -165,7 +167,12 @@ For passkey recovery of migrated accounts, OpenSigner uses the original Openfort
 Once recovery completes, the key is reconstructed in the iFrame and ready to sign transactions.
 ::::
 
+Key shares are exported from your existing [Openfort](https://www.openfort.io) project and migrated into your self-hosted instance. OpenSigner reconstructs the private key from any two of the three [Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_secret_sharing) shares.
+
 ## See also
 
 - [Recovery Methods](/security/recovery-methods)
 - [Getting Started](/introduction/getting-started)
+- [Security overview](/security/overview)
+
+<JsonLd data={techArticle({ headline: 'Import shares from Openfort', description: 'Migrate user key shares from an Openfort project to a self-hosted OpenSigner instance.', path: '/introduction/import-share-from-openfort' })} />

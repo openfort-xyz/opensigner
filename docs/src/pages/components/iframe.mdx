@@ -3,6 +3,8 @@ title: iFrame component
 description: Deep dive into the OpenSigner iFrame, the browser-based component that handles private key generation, Shamir share splitting, and ephemeral reconstruction.
 ---
 
+import { JsonLd, techArticle } from '../../lib/jsonld';
+
 # iFrame
 
 The iFrame is the core client-side component that handles all cryptographic operations securely within the user's browser.
@@ -42,3 +44,10 @@ The cold storage URL is configured when calling the methods that require it.
 After a successful reconstruction of the private key,
 if the current device had no local share in the [browser storage](https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API),
 the key is split once again into _different_ shares which are then stored in the local and hot storages.
+
+## Related
+
+- Walk through [Create a key](/actions/signup), [Recover a key](/actions/login), and [Sign an operation](/actions/operation).
+- The iframe coordinates with [hot storage](/components/hot_storage) and [cold storage](/components/shield).
+
+<JsonLd data={techArticle({ headline: 'iFrame component', description: 'Deep dive into the OpenSigner iFrame, the browser-based component that handles private key generation, Shamir share splitting, and ephemeral reconstruction.', path: '/components/iframe' })} />

@@ -3,6 +3,8 @@ title: Deployment scenarios
 description: Explore six OpenSigner deployment scenarios from fully self-hosted to fully managed, with security trade-offs and custody implications for each configuration.
 ---
 
+import { JsonLd, techArticle } from '../../lib/jsonld';
+
 # Deployment scenarios
 
 Due to the modular nature of the system, users can run or implement their own components.
@@ -210,3 +212,5 @@ The open-source OpenSigner configuration, when using automatic recovery without 
 
 **For non-custodial regulatory classification:** Implement one of the protection mechanisms listed above to ensure the platform cannot unilaterally reconstruct user keys.
 :::
+
+<JsonLd data={techArticle({ headline: 'Deployment scenarios', description: 'Explore six OpenSigner deployment scenarios from fully self-hosted to fully managed, with security trade-offs and custody implications for each configuration.', path: '/security/deployment-scenarios' })} />

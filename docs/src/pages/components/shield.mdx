@@ -3,6 +3,8 @@ title: Shield component
 description: Explore the OpenSigner Shield cold storage component built in Go with MySQL, supporting password, passkey, and automatic recovery with OTP for key shares.
 ---
 
+import { JsonLd, techArticle } from '../../lib/jsonld';
+
 # Cold storage
 
 ## General overview
@@ -198,3 +200,10 @@ Non-authenticated encryption is acceptable here: decrypting garbage causes furth
 Shield stores the encrypted contents of the cold share along with the internal passkey ID.
 By *internal passkey ID* we mean the identifier the passkey authenticator gave to that particular passkey.
 OpenSigner also stores the environment in which the passkey was created. This information is mainly extracted from the `User-Agent` token and is meant for both hinting and tracking purposes.
+
+## Related
+
+- See how [users and projects](/introduction/users) authenticate against Shield.
+- Automatic recovery can require [OTP](/components/cold_storage/otp); compare options in [Recovery methods](/security/recovery-methods).
+
+<JsonLd data={techArticle({ headline: 'Shield component', description: 'Explore the OpenSigner Shield cold storage component built in Go with MySQL, supporting password, passkey, and automatic recovery with OTP for key shares.', path: '/components/shield' })} />

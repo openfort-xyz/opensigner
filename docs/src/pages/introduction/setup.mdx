@@ -3,6 +3,8 @@ title: Setup
 description: Set up OpenSigner locally by cloning the repo, building Docker containers with Make, and configuring environment variables for all key management components.
 ---
 
+import { JsonLd, techArticle } from '../../lib/jsonld';
+
 # Setup
 
 The project Makefile builds and runs all components through docker-compose.
@@ -55,3 +57,13 @@ Each service also accepts database connection variables (`DB_HOST`, `DB_PORT`, `
 with defaults suitable for the Docker Compose setup. See `docker-compose.yml` for the full list.
 
 Once you have everything running, head over to the [Getting Started](/introduction/getting-started) guide.
+
+OpenSigner runs as a set of [Docker Compose](https://docs.docker.com/compose/) services. Generate the required `SHARE_ENCRYPTION_KEY` with [OpenSSL](https://www.openssl.org/) (`openssl rand -hex 32`).
+
+## Related
+
+- [What is OpenSigner?](/introduction/about) — the architecture and trust model.
+- [Deployment scenarios](/security/deployment-scenarios) — self-hosted vs managed setups.
+- [Migrate existing keys](/introduction/import-share-from-openfort) from an Openfort project.
+
+<JsonLd data={techArticle({ headline: 'Set up OpenSigner locally', description: 'Set up OpenSigner locally by cloning the repo, building Docker containers with Make, and configuring environment variables.', path: '/introduction/setup' })} />

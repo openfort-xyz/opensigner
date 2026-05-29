@@ -4,6 +4,7 @@ description: Learn how OpenSigner solves private key management by splitting key
 ---
 
 import { SVGSequence } from '../../lib/svgsequence.tsx';
+import { JsonLd, techArticle } from '../../lib/jsonld';
 
 # Introduction
 
@@ -64,5 +65,16 @@ The original key can be reconstructed using any two of the three shares. The iFr
         '/diagrams/sss_reconstruction_animation/pair3.svg',
     ]}
 />
+
+## Next steps
+
+- Run OpenSigner locally with the [Setup](/introduction/setup) and [Getting Started](/introduction/getting-started) guides.
+- See how keys are created, recovered, and used in [Create a key](/actions/signup), [Recover a key](/actions/login), and [Sign an operation](/actions/operation).
+- Review the [security overview](/security/overview) and [deployment scenarios](/security/deployment-scenarios).
+
+For the cryptographic background, see Adi Shamir's 1979 paper [*How to Share a Secret*](https://dl.acm.org/doi/10.1145/359168.359176).
+
+<JsonLd data={techArticle({ headline: 'What is OpenSigner?', description: "How OpenSigner solves private key management by splitting keys into shares with Shamir's Secret Sharing for secure, non-custodial wallet recovery.", path: '/introduction/about' })} />
+
 
 

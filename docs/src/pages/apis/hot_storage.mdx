@@ -3,7 +3,9 @@ title: Hot storage API
 description: API reference for the OpenSigner Hot Storage, used for storing frequently accessed key shares.
 ---
 
-import Warning from './ui_warning.mdx'
+import { JsonLd, techArticle } from '../../lib/jsonld';
+
+import Warning from './_components/ui-warning.mdx'
 import SwaggerViewer from '../../lib/swaggerviewer.tsx'
 
 # Hot storage API
@@ -11,3 +13,13 @@ import SwaggerViewer from '../../lib/swaggerviewer.tsx'
 <Warning />
 
 <SwaggerViewer url="/swagger/hot_storage.yaml" />
+
+## Related
+
+- See the [hot storage component](/components/hot_storage) and the [authentication service API](/apis/auth_service).
+
+This reference is generated from an [OpenAPI](https://www.openapis.org/) definition.
+
+See the [security overview](/security/overview) for the share-storage model. API docs render with [Swagger UI](https://swagger.io/tools/swagger-ui/).
+
+<JsonLd data={techArticle({ headline: 'Hot storage API', description: 'API reference for the OpenSigner Hot Storage, used for storing frequently accessed key shares.', path: '/apis/hot_storage' })} />

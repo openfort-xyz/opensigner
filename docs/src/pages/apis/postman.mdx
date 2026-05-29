@@ -3,9 +3,21 @@ title: Postman collection
 description: A Postman collection is available to test the OpenSigner components.
 ---
 
+import { JsonLd, techArticle } from '../../lib/jsonld';
+
 # Postman collection
 
 A Postman collection is available for testing the components. It runs
 against the service created with the `make clean build run` command.
 
 Download the [Postman collection](https://github.com/openfort-xyz/opensigner/blob/main/docs/public/postman/keys.json).
+
+## Related
+
+- Start with [Getting started](/introduction/getting-started) and the [authentication service API](/apis/auth_service).
+
+Import the collection with [Postman](https://www.postman.com/).
+
+See the [cold storage API](/apis/cold_storage) and [hot storage API](/apis/hot_storage) references, generated from [OpenAPI](https://www.openapis.org/) definitions.
+
+<JsonLd data={techArticle({ headline: 'Postman collection', description: 'A Postman collection is available to test the OpenSigner components.', path: '/apis/postman' })} />

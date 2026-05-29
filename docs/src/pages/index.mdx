@@ -5,8 +5,8 @@ layout: minimal
 showLogo: false
 ---
 
-
 import { HomePage } from 'vocs'
+import { JsonLd } from '../lib/jsonld'
 
 <HomePage.Root>
     <HomePage.Logo />
@@ -17,3 +17,81 @@ import { HomePage } from 'vocs'
         <HomePage.Button href="https://github.com/openfort-xyz/opensigner">GitHub</HomePage.Button>
     </HomePage.Buttons>
 </HomePage.Root>
+
+# OpenSigner: open-source, non-custodial wallet key management
+
+OpenSigner is an open-source, self-hostable key management system that issues non-custodial
+cryptographic keys to your users. Instead of storing a private key in one place, OpenSigner splits
+each key into three shares using [Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_secret_sharing):
+one share stays on the user's device, one lives in hot storage, and one (encrypted) lives in cold
+storage. The full key is only ever reconstructed in memory inside a sandboxed iframe and is discarded
+immediately after each signing operation, so neither you nor any single component can act on a user's
+behalf.
+
+This model gives developers a way to offer self-custody without asking users to manage seed phrases.
+Because every component is open source and can be self-hosted, you control the trust boundaries: you can
+run the entire stack yourself, or split responsibility across parties so that no operator ever holds
+enough shares to recover a key alone. OpenSigner is built by [Openfort](https://www.openfort.io), and
+the full source is available on [GitHub](https://github.com/openfort-xyz/opensigner).
+
+## What you can do with OpenSigner
+
+- **Understand the model** — start with [What is OpenSigner?](/introduction/about) and how it manages
+  [users and projects](/introduction/users).
+- **Run it yourself** — follow the [setup guide](/introduction/setup) to build the components locally
+  with Docker.
+- **Integrate key flows** — implement [creating a key](/actions/signup),
+  [recovering a key](/actions/login), and [signing an operation](/actions/operation).
+- **Review the security model** — read the [security overview](/security/overview),
+  [recovery methods](/security/recovery-methods), and [deployment scenarios](/security/deployment-scenarios).
+
+## How it works
+
+OpenSigner is made up of an [iframe component](/components/iframe) that performs key generation,
+splitting, and ephemeral reconstruction; [hot](/components/hot_storage) and cold storage for the
+remaining shares; and an [authentication service](/components/auth) that issues access tokens. Together
+they implement a non-custodial signer where the private key never persists outside the user's session.
+For the cryptographic background, see the original Shamir paper, ["How to Share a Secret"](https://dl.acm.org/doi/10.1145/359168.359176)
+(Communications of the ACM, 1979).
+
+## Explore the APIs
+
+Browse the [authentication service API](/apis/auth_service), the [hot storage API](/apis/hot_storage),
+and the [cold storage API](/apis/cold_storage), or import the [Postman collection](/apis/postman) to try
+the endpoints directly.
+
+<JsonLd data={[
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'OpenSigner',
+    url: 'https://opensigner.dev',
+    logo: 'https://opensigner.dev/icons/open-signer-logo.svg',
+    description:
+      "OpenSigner is an open-source, self-hostable wallet key management system that issues non-custodial cryptographic keys using Shamir's Secret Sharing scheme.",
+    sameAs: [
+      'https://github.com/openfort-xyz/opensigner',
+      'https://x.com/openfort_hq',
+      'https://t.me/openfort',
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'OpenSigner',
+    url: 'https://opensigner.dev',
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'OpenSigner',
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: 'Linux, macOS, Windows',
+    url: 'https://opensigner.dev',
+    description:
+      "Open-source, non-custodial, self-hostable wallet key management using Shamir's Secret Sharing.",
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    license: 'https://github.com/openfort-xyz/opensigner/blob/main/LICENSE',
+    codeRepository: 'https://github.com/openfort-xyz/opensigner',
+  },
+]} />

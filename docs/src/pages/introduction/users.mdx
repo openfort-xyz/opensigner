@@ -3,6 +3,8 @@ title: Users
 description: Understand how OpenSigner manages users, projects, and authentication providers across hot and cold storage for non-custodial key management operations.
 ---
 
+import { JsonLd, techArticle } from '../../lib/jsonld';
+
 # Users
 
 The OpenSigner wallet key management components share one `user` concept, except for cold storage which expands on it.
@@ -52,3 +54,13 @@ Custom providers consist of the following fields:
 - `key_type` The type of the key pair used to sign and validate tokens. Supported types are `RSA`, `ECDSA`, and `Ed25519`
 
 Both `jwk_url` and `pem_cert` can be specified. At least one is required.
+
+Custom providers authenticate users with externally signed [JWT](https://datatracker.ietf.org/doc/html/rfc7519) tokens, validated against a [JWK](https://datatracker.ietf.org/doc/html/rfc7517) keyset.
+
+## Related
+
+- Authentication is handled by the [Cold Storage (Shield)](/components/shield) and the [Authentication component](/components/auth).
+- See [recovery methods](/security/recovery-methods) for how automatic recovery uses project entropy.
+- Review the overall [security model](/security/overview).
+
+<JsonLd data={techArticle({ headline: 'Users and projects', description: 'How OpenSigner manages users, projects, and authentication providers across hot and cold storage for non-custodial key management.', path: '/introduction/users' })} />
