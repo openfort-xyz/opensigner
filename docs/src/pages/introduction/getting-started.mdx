@@ -3,8 +3,41 @@ title: Getting started
 description: Get started with OpenSigner after setup. Launch the iFrame component in your browser, explore the Postman API collection, and begin managing wallet keys.
 ---
 
+import { JsonLd, techArticle } from '../../lib/jsonld';
+
 # Getting started
 
-After starting the components (for example, with `make run`), you can start using the OpenSigner service.
+After starting the components (for example, with `make run`), you can begin using the OpenSigner service.
+This guide assumes you have already completed the [Setup](/introduction/setup) steps and have all
+components running locally.
 
-Open the iFrame in your browser (running on port 7050 by default) or explore the [Postman collection](/apis/postman).
+## Open the iFrame
+
+The [iFrame component](/components/iframe) is the entry point for end users. It runs on port `7050` by
+default. Open it in your browser to generate keys, reconstruct them for signing, and run recovery flows.
+The iFrame is the only place a full private key is ever assembled, and it discards the key immediately
+after each operation.
+
+## Explore the APIs
+
+Each backend component exposes an HTTP API:
+
+- [Authentication service API](/apis/auth_service) — issues and validates access tokens.
+- [Hot storage API](/apis/hot_storage) — stores frequently accessed key shares.
+- [Cold storage API](/apis/cold_storage) — stores recovery shares.
+
+The fastest way to try the endpoints is the [Postman collection](/apis/postman), which is published with
+[Postman](https://www.postman.com/) and mirrors the live API definitions.
+
+## Try the key flows
+
+Once the iFrame is open, walk through the core flows:
+
+- [Create a key](/actions/signup) — split a new private key into shares.
+- [Recover a key](/actions/login) — reconstruct a key on a new device.
+- [Sign an operation](/actions/operation) — sign using an ephemeral key.
+
+For a refresher on how the pieces fit together, see [What is OpenSigner?](/introduction/about). The key
+splitting is based on [Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_secret_sharing).
+
+<JsonLd data={techArticle({ headline: 'Getting started with OpenSigner', description: 'Launch the iFrame component, explore the Postman API collection, and begin managing wallet keys.', path: '/introduction/getting-started' })} />

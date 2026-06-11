@@ -3,6 +3,8 @@ title: Create a key
 description: Step-by-step guide to creating keys in OpenSigner, including Shamir secret splitting across hot and cold storage with password, passkey, or automatic recovery.
 ---
 
+import { JsonLd, techArticle } from '../../lib/jsonld';
+
 # Create a key
 
 To create a new key with OpenSigner, users call the `create()` method on the iFrame.
@@ -68,3 +70,12 @@ The user needs only to follow their authenticator's flow for passkey creation an
 Both the passkey's private key and the cold share are safe in this scenario, too:
 - The passkey's private key cannot leave the authenticator device
 - The cold share is encrypted and decrypted on the client side
+
+## Related
+
+- Next, [recover a key](/actions/login) on a new device and [sign an operation](/actions/operation).
+- Compare the options in [Recovery methods](/security/recovery-methods).
+
+Passkey recovery uses the [WebAuthn](https://www.w3.org/TR/webauthn-2/) PRF extension; see [passkeys.dev](https://passkeys.dev/) for an overview.
+
+<JsonLd data={techArticle({ headline: 'Create a key', description: 'Step-by-step guide to creating keys in OpenSigner, including Shamir secret splitting across hot and cold storage with password, passkey, or automatic recovery.', path: '/actions/signup' })} />

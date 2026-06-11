@@ -1,19 +1,103 @@
 ---
-title: OpenSigner
+title: Non-Custodial Wallet Key Management
 description: OpenSigner is an open-source, self-hostable wallet key management system that issues non-custodial cryptographic keys using Shamir's Secret Sharing scheme.
 layout: minimal
 showLogo: false
 ---
 
-
 import { HomePage } from 'vocs'
+import { JsonLd } from '../lib/jsonld'
 
-<HomePage.Root>
-    <HomePage.Logo />
-    <HomePage.Tagline>Open-Source Key Management</HomePage.Tagline>
-    <HomePage.Description>An open-source, self-hostable wallet key management system that issues non-custodial keys to your users.</HomePage.Description>
-    <HomePage.Buttons>
-        <HomePage.Button href="/introduction/about" variant="accent">Get started</HomePage.Button>
+<div className="home">
+  <div className="home-hero">
+    <div className="home-hero__intro">
+      <HomePage.Logo />
+      <p className="home-hero__tagline">
+        An <span>open-source</span>, <span>self-hostable</span> key management system that
+        issues <span>non-custodial</span> keys to your users
+      </p>
+      <div className="home-hero__buttons">
+        <HomePage.Button href="/introduction/setup" variant="accent">Get started</HomePage.Button>
+        <HomePage.Button href="/introduction/about">Why OpenSigner?</HomePage.Button>
         <HomePage.Button href="https://github.com/openfort-xyz/opensigner">GitHub</HomePage.Button>
-    </HomePage.Buttons>
-</HomePage.Root>
+      </div>
+    </div>
+    <div className="home-hero__panel">
+
+```bash [Terminal]
+git clone https://github.com/openfort-xyz/opensigner.git
+make build
+make run
+```
+
+      <div className="home-hero__stats">
+        <div className="home-stat">
+          <span>shares</span>
+          <strong>2-of-3</strong>
+        </div>
+        <div className="home-stat">
+          <span>custody</span>
+          <strong>user</strong>
+        </div>
+        <div className="home-stat">
+          <span>license</span>
+          <strong>MIT</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div className="home-cards">
+    <a className="home-card" href="/security/overview">
+      <div className="home-card__title">Non-custodial by design</div>
+      <div className="home-card__body">Keys are split 2-of-3 with Shamir's Secret Sharing — no single party can ever sign alone</div>
+    </a>
+    <a className="home-card" href="/actions/operation">
+      <div className="home-card__title">Ephemeral signing</div>
+      <div className="home-card__body">The full key only exists in memory inside a sandboxed iframe, discarded after every operation</div>
+    </a>
+    <a className="home-card" href="/security/deployment-scenarios">
+      <div className="home-card__title">Self-hostable</div>
+      <div className="home-card__body">Run every component yourself with Docker, or split trust across independent operators</div>
+    </a>
+    <a className="home-card" href="/security/recovery-methods">
+      <div className="home-card__title">No seed phrases</div>
+      <div className="home-card__body">Users recover keys with a password, passkey, or automatic recovery with OTP</div>
+    </a>
+  </div>
+</div>
+
+<JsonLd data={[
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'OpenSigner',
+    url: 'https://www.opensigner.dev',
+    logo: 'https://www.opensigner.dev/icons/open-signer-logo.svg',
+    description:
+      "OpenSigner is an open-source, self-hostable wallet key management system that issues non-custodial cryptographic keys using Shamir's Secret Sharing scheme.",
+    sameAs: [
+      'https://github.com/openfort-xyz/opensigner',
+      'https://x.com/openfort_hq',
+      'https://t.me/openfort',
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'OpenSigner',
+    url: 'https://www.opensigner.dev',
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'OpenSigner',
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: 'Linux, macOS, Windows',
+    url: 'https://www.opensigner.dev',
+    description:
+      "Open-source, non-custodial, self-hostable wallet key management using Shamir's Secret Sharing.",
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    license: 'https://github.com/openfort-xyz/opensigner/blob/main/LICENSE',
+    codeRepository: 'https://github.com/openfort-xyz/opensigner',
+  },
+]} />

@@ -3,6 +3,8 @@ title: Threat analysis
 description: Threat analysis of OpenSigner covering iframe compromise, auth service attacks, token forgery, and storage tampering with detailed mitigations and best practices.
 ---
 
+import { JsonLd, techArticle } from '../../lib/jsonld';
+
 # Threat analysis
 
 This section covers potential attack vectors against OpenSigner components and recommended mitigations.
@@ -107,3 +109,12 @@ the risk increases significantly.
 - **Separate project ownership** from infrastructure hosting.
 - **Monitor audit logs** for unusual access patterns.
 - **Regularly rotate** service credentials and API keys.
+
+This analysis follows established practices such as [OWASP threat modeling](https://owasp.org/www-community/Threat_Modeling) and [STRIDE](https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool-threats).
+
+## Related
+
+- Read the [security overview](/security/overview) for the trust model.
+- Choose a configuration in [deployment scenarios](/security/deployment-scenarios).
+
+<JsonLd data={techArticle({ headline: 'Threat analysis', description: 'Threat analysis of OpenSigner covering iframe compromise, auth service attacks, token forgery, and storage tampering with detailed mitigations and best practices.', path: '/security/threat-analysis' })} />
