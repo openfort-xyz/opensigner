@@ -66,31 +66,6 @@ make run
   </div>
 </div>
 
-<article className="home-article">
-
-# Open-source, non-custodial wallet key management
-
-OpenSigner splits each user's private key into three shares with
-[Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_secret_sharing): one stays on
-the device, one lives in [hot storage](/components/hot_storage), and one (encrypted) lives in
-[cold storage](/components/shield). The full key is only ever reconstructed in memory inside a
-sandboxed [iframe](/components/iframe) and is discarded after each signing operation, so neither
-you nor any single component can act on a user's behalf. OpenSigner is built by
-[Openfort](https://www.openfort.io) and the full source is on
-[GitHub](https://github.com/openfort-xyz/opensigner).
-
-## Start here
-
-- **Run it yourself** — follow the [setup guide](/introduction/setup), then
-  [getting started](/introduction/getting-started).
-- **Integrate key flows** — implement [creating a key](/actions/signup),
-  [recovering a key](/actions/login), and [signing an operation](/actions/operation).
-- **Go deeper** — read the [security overview](/security/overview),
-  [deployment scenarios](/security/deployment-scenarios), or browse the
-  [APIs](/apis/auth_service).
-
-</article>
-
 <JsonLd data={[
   {
     '@context': 'https://schema.org',

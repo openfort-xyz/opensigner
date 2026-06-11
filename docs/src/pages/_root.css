@@ -208,12 +208,6 @@
   color: var(--home-muted);
 }
 
-.home-article {
-  max-width: 70ch;
-  margin: 64px auto 0;
-  padding: 0 24px;
-}
-
 @media (max-width: 920px) {
   .home-hero {
     flex-direction: column;
