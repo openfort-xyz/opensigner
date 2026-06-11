@@ -5,7 +5,7 @@
   gap: 0.5rem;
   padding: 0.5rem;
   font-size: 0.75rem;
-  color: var(--vocs-color-text);
+  color: var(--home-text);
   opacity: 0.7;
 }
 
@@ -27,4 +27,216 @@
 :root[style*='color-scheme:dark'] .opensigner-footer__logo--dark,
 :root[style*='color-scheme: dark'] .opensigner-footer__logo--dark {
   display: inline-block;
+}
+
+/* ---- Homepage (viem.sh-style landing) ---- */
+
+/* Vocs 2 exposes no runtime CSS variables, and Lightning CSS compiles
+   light-dark() down to a prefers-color-scheme polyfill that ignores the
+   manual theme toggle. Match the toggle the same way Vocs's own dark
+   variants do: the inline color-scheme style on <html>. */
+:root {
+  --home-text: #1b1b1f;
+  --home-muted: #6f6f76;
+  --home-border: rgba(0, 0, 0, 0.1);
+  --home-border-hover: rgba(0, 0, 0, 0.25);
+  --home-bg: rgba(0, 0, 0, 0.025);
+  --home-bg-strong: rgba(0, 0, 0, 0.06);
+}
+
+/* The site has no manual theme toggle: a Vocs script mirrors the OS
+   preference into the inline color-scheme style. Cover both the media
+   query (pre-hydration paint) and the inline style (post-hydration). */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --home-text: #f3f3f5;
+    --home-muted: #919193;
+    --home-border: rgba(255, 255, 255, 0.12);
+    --home-border-hover: rgba(255, 255, 255, 0.28);
+    --home-bg: rgba(255, 255, 255, 0.04);
+    --home-bg-strong: rgba(255, 255, 255, 0.08);
+  }
+}
+
+:root[style*='color-scheme:dark'],
+:root[style*='color-scheme: dark'] {
+  --home-text: #f3f3f5;
+  --home-muted: #919193;
+  --home-border: rgba(255, 255, 255, 0.12);
+  --home-border-hover: rgba(255, 255, 255, 0.28);
+  --home-bg: rgba(255, 255, 255, 0.04);
+  --home-bg-strong: rgba(255, 255, 255, 0.08);
+}
+
+/* Break out of the minimal layout's ~70ch content column, then re-center. */
+.home {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  padding: 48px max(24px, calc(50vw - 560px)) 8px;
+}
+
+.home-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 48px;
+}
+
+.home-hero__intro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 28px;
+  max-width: 420px;
+}
+
+.home-hero__intro img {
+  height: 56px;
+  width: auto;
+}
+
+.home-hero__tagline {
+  font-size: 21px;
+  line-height: 1.5;
+  color: var(--home-muted);
+}
+
+.home-hero__tagline span {
+  color: var(--home-text);
+  font-weight: 500;
+}
+
+.home-hero__buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.home-hero__panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  width: 460px;
+  flex-shrink: 0;
+}
+
+.home-hero__panel pre,
+.home-hero__panel figure,
+.home-hero__panel > div {
+  margin: 0;
+}
+
+.home-hero__panel pre,
+.home-hero__panel code {
+  font-size: 13px;
+}
+
+.home-hero__stats {
+  display: flex;
+  gap: 8px;
+}
+
+.home-stat {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 6px;
+  border: 1px solid var(--home-border);
+  border-radius: 8px;
+  background: var(--home-bg);
+}
+
+.home-stat span {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--home-muted);
+  background: var(--home-bg-strong);
+  border-radius: 6px;
+  padding: 0 10px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.home-stat strong {
+  flex: 1;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--home-text);
+}
+
+.home-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 56px;
+}
+
+.home-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 160px;
+  padding: 22px 20px;
+  border: 1px solid var(--home-border);
+  border-radius: 10px;
+  background: var(--home-bg);
+  text-decoration: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.home-card:hover {
+  border-color: var(--home-border-hover);
+  background: var(--home-bg-strong);
+}
+
+.home-card__title {
+  font-size: 19px;
+  font-weight: 500;
+  color: var(--home-text);
+}
+
+.home-card__body {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--home-muted);
+}
+
+.home-article {
+  max-width: 70ch;
+  margin: 64px auto 0;
+  padding: 0 24px;
+}
+
+@media (max-width: 920px) {
+  .home-hero {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .home-hero__intro {
+    align-items: center;
+    text-align: center;
+  }
+
+  .home-hero__panel {
+    width: 100%;
+    max-width: 460px;
+  }
+
+  .home-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .home-cards {
+    grid-template-columns: 1fr;
+  }
 }
