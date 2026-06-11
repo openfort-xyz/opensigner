@@ -5,13 +5,15 @@ import { defineConfig } from 'vocs/config'
 
 import { sidebar } from './sidebar'
 
-const SITE_URL = 'https://opensigner.dev'
+const SITE_URL = 'https://www.opensigner.dev'
 
 // Generate sitemap.xml + robots.txt at build time. We intentionally do NOT set
 // the `baseUrl` config option: it injects <base href={SITE_URL}>, which makes
 // every relative asset (including the client bundle) resolve against the prod
 // domain and breaks hydration on any other origin (local preview, Vercel preview
 // deploys). Emitting these files directly keeps absolute SEO URLs without the tag.
+// Canonical + og:url tags (which Vocs also gates behind `baseUrl`) are injected
+// post-build by scripts/inject-seo-head.mjs.
 function collectRoutes(dir: string, prefix = ''): string[] {
   const routes: string[] = []
   for (const entry of NodeFS.readdirSync(dir, { withFileTypes: true })) {
@@ -57,14 +59,15 @@ generateSeoFiles()
 
 export default defineConfig({
   title: 'OpenSigner | Non-Custodial Wallet Key Management',
-  description: 'Open-source and non-custodial and self-hostable private key management.',
+  titleTemplate: '%s – OpenSigner',
+  description: 'Open-source, non-custodial, self-hostable private key management.',
   logoUrl: {
     light: '/icons/open-signer-logo.svg',
     dark: '/icons/open-signer-logo.svg',
   },
   iconUrl: '/icons/icon.svg',
   banner: 'If you like OpenSigner, give it a [star on GitHub ⭐](https://github.com/openfort-xyz/opensigner)!',
-  ogImageUrl: 'https://opensigner.dev/og-image.png',
+  ogImageUrl: 'https://www.opensigner.dev/og-image.png',
   accentColor: '#004AAD',
   renderStrategy: 'full-static',
   sidebar,

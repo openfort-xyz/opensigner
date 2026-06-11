@@ -1,6 +1,6 @@
 type JsonLdData = Record<string, unknown>
 
-const SITE_URL = 'https://opensigner.dev'
+const SITE_URL = 'https://www.opensigner.dev'
 
 export function techArticle(args: { headline: string; description: string; path: string }): JsonLdData {
   return {

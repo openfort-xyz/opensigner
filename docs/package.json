@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "build": "pnpm run diagrams && vocs build",
+    "build": "pnpm run diagrams && vocs build && node ./scripts/inject-seo-head.mjs",
     "dev": "vocs dev",
     "diagrams": "./diagrams/gen.sh",
     "preview": "vocs preview",
