@@ -11,7 +11,7 @@
     "start": "node dist/server.js"
   },
   "dependencies": {
-    "better-auth": "^1.4.5",
+    "better-auth": "^1.6.16",
     "body-parser": "^2.2.1",
     "cors": "^2.8.5",
     "express": "^5.2.0",
@@ -25,5 +25,11 @@
     "@types/pg": "^8.15.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "path-to-regexp": ">=8.4.2",
+      "qs": ">=6.15.2"
+    }
   }
 }
