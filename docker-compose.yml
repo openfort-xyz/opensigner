@@ -102,6 +102,8 @@ services:
       DB_SSLMODE: ${AUTH_SERVICE_DB_SSLMODE:-require}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:7050,http://localhost:7051}
+      # pnpm aborts its modules-dir check without a TTY (compose has none).
+      CI: "true"
     networks:
       - db_network
     expose:
