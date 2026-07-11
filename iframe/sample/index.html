@@ -208,6 +208,68 @@
 		</div>
 	</div>
 
+	<!-- MFA (Hot Storage) -->
+	<div class="section">
+		<h2>Multi-Factor Authentication (Hot Storage)</h2>
+		<p style="font-size: 13px; color: #555;">
+			Once a method is enrolled, hot share retrieval requires MFA verification on
+			every device (15-minute session cache). Requires an initialized client.
+		</p>
+		<button onclick="refreshMfaMethods()">Refresh MFA Status</button>
+		<div id="mfaMethodsList" style="margin: 10px 0;"></div>
+
+		<h3>Enroll TOTP (Authenticator App)</h3>
+		<button onclick="enrollTotpMfa()">Enroll TOTP</button>
+		<div id="totpEnrollArea" style="display: none; margin: 10px 0;">
+			<div id="totpQr" style="margin: 10px 0;"></div>
+			<div style="font-size: 13px;">Secret (manual entry): <code id="totpSecret"></code></div>
+			<div style="margin-top: 10px;">
+				<input type="text" id="totpEnrollCode" placeholder="6-digit code" style="width: 150px;" />
+				<button onclick="confirmTotpEnroll()">Confirm TOTP</button>
+			</div>
+		</div>
+
+		<h3>Enroll SMS</h3>
+		<input type="text" id="smsPhoneNumber" placeholder="+15551234567" style="width: 200px;" />
+		<button onclick="enrollSmsMfa()">Send Code</button>
+		<div id="smsEnrollArea" style="display: none; margin: 10px 0;">
+			<input type="text" id="smsEnrollCode" placeholder="6-digit code" style="width: 150px;" />
+			<button onclick="confirmSmsEnroll()">Confirm SMS</button>
+		</div>
+
+		<h3>Enroll Passkey (MFA)</h3>
+		<p style="font-size: 13px; color: #555;">
+			A dedicated WebAuthn credential for MFA, separate from the PRF recovery
+			passkey above. The ceremony runs in this (parent) app, not the iframe.
+		</p>
+		<button onclick="enrollPasskeyMfa()">Enroll MFA Passkey</button>
+
+		<div id="mfaStatus"></div>
+	</div>
+
+	<!-- Modal for MFA Verification -->
+	<div id="mfaVerifyModal"
+		style="display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4);">
+		<div
+			style="background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 400px; border-radius: 5px;">
+			<h3>MFA Verification Required</h3>
+			<p style="font-size: 13px; color: #555;">
+				This operation needs multi-factor verification. Choose a method:
+			</p>
+			<div id="mfaMethodButtons"></div>
+			<div id="mfaCodeArea" style="display: none; margin: 10px 0;">
+				<label id="mfaCodeLabel" style="font-weight: bold; display: block; margin-bottom: 5px;"></label>
+				<input type="text" id="mfaVerifyCode" placeholder="6-digit code"
+					style="width: 100%; padding: 8px; box-sizing: border-box;" />
+				<button onclick="submitMfaVerifyCode()" style="margin-top: 10px;">Verify</button>
+			</div>
+			<div id="mfaModalStatus" style="display: none; padding: 8px; margin: 8px 0; border-radius: 3px; font-size: 13px;"></div>
+			<div style="text-align: right; margin-top: 15px;">
+				<button onclick="cancelMfaVerify()">Cancel</button>
+			</div>
+		</div>
+	</div>
+
 	<!-- Modal for Account Recovery -->
 	<div id="accountIdModal"
 		style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4);">
@@ -262,6 +324,8 @@
 
 	<!-- Include Penpal for iframe communication -->
 	<script src="https://unpkg.com/penpal@^7/dist/penpal.js"></script>
+	<!-- QR codes for TOTP provisioning -->
+	<script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>
 	<!-- Include the Openfort client -->
 	<script src="keys-client.js"></script>
 
@@ -821,6 +885,9 @@
 					undefined,
 					HOT_STORAGE_SERVER,
 				);
+				// When hot storage answers 403 mfa_required, run the verification
+				// modal and retry the original request on success.
+				openfortClient.onMfaRequired = (methods) => showMfaVerifyModal(methods);
 				log("Openfort client initialized successfully");
 				log(
 					`Using publishable key: ${publishableKey.substring(0, 10)}...`,
@@ -1341,6 +1408,309 @@
 
 		function generateUUID() {
 			return crypto.randomUUID();
+		}
+
+		// --- MFA (Hot Storage) ---
+
+		function showMfaSectionStatus(message, type = "success") {
+			showStatus(message, type, "mfaStatus");
+		}
+
+		function requireClient(statusFn) {
+			if (!openfortClient) {
+				statusFn("Please initialize the Openfort client first", "error");
+				return false;
+			}
+			return true;
+		}
+
+		// WebAuthn options arrive with base64url-encoded buffers; convert for
+		// navigator.credentials, and encode responses back for the server.
+		function decodeCreationOptions(publicKey) {
+			const options = { ...publicKey };
+			options.challenge = base64URLToArrayBuffer(publicKey.challenge);
+			options.user = { ...publicKey.user, id: base64URLToArrayBuffer(publicKey.user.id) };
+			if (publicKey.excludeCredentials) {
+				options.excludeCredentials = publicKey.excludeCredentials.map(
+					(c) => ({ ...c, id: base64URLToArrayBuffer(c.id) })
+				);
+			}
+			return options;
+		}
+
+		function decodeRequestOptions(publicKey) {
+			const options = { ...publicKey };
+			options.challenge = base64URLToArrayBuffer(publicKey.challenge);
+			if (publicKey.allowCredentials) {
+				options.allowCredentials = publicKey.allowCredentials.map(
+					(c) => ({ ...c, id: base64URLToArrayBuffer(c.id) })
+				);
+			}
+			return options;
+		}
+
+		function encodeAttestationCredential(credential) {
+			return {
+				id: credential.id,
+				rawId: arrayBufferToBase64URL(credential.rawId),
+				type: credential.type,
+				response: {
+					attestationObject: arrayBufferToBase64URL(credential.response.attestationObject),
+					clientDataJSON: arrayBufferToBase64URL(credential.response.clientDataJSON),
+				},
+			};
+		}
+
+		function encodeAssertionCredential(credential) {
+			return {
+				id: credential.id,
+				rawId: arrayBufferToBase64URL(credential.rawId),
+				type: credential.type,
+				response: {
+					authenticatorData: arrayBufferToBase64URL(credential.response.authenticatorData),
+					clientDataJSON: arrayBufferToBase64URL(credential.response.clientDataJSON),
+					signature: arrayBufferToBase64URL(credential.response.signature),
+					userHandle: credential.response.userHandle
+						? arrayBufferToBase64URL(credential.response.userHandle)
+						: null,
+				},
+			};
+		}
+
+		async function refreshMfaMethods() {
+			if (!requireClient(showMfaSectionStatus)) return;
+			const listDiv = document.getElementById("mfaMethodsList");
+			try {
+				const list = await openfortClient.listMfaMethods();
+				while (listDiv.firstChild) listDiv.removeChild(listDiv.firstChild);
+				if (!list.data.length) {
+					listDiv.textContent = "MFA disabled — no methods enrolled.";
+					return;
+				}
+				for (const method of list.data) {
+					const row = document.createElement("div");
+					row.style.margin = "5px 0";
+					const label = document.createElement("span");
+					label.textContent = `${method.type}${method.phoneHint ? " (" + method.phoneHint + ")" : ""} — ${method.id}`;
+					const removeBtn = document.createElement("button");
+					removeBtn.textContent = "Unenroll";
+					removeBtn.style.marginLeft = "10px";
+					removeBtn.onclick = () => unenrollMfaMethod(method.id);
+					row.appendChild(label);
+					row.appendChild(removeBtn);
+					listDiv.appendChild(row);
+				}
+			} catch (error) {
+				showMfaSectionStatus(`Failed to list MFA methods: ${error.message}`, "error");
+			}
+		}
+
+		async function unenrollMfaMethod(methodId) {
+			try {
+				// Unenrolling is itself MFA-gated: expect the verification modal
+				// if this device has no active MFA session.
+				await openfortClient.unenrollMfa(methodId);
+				showMfaSectionStatus("MFA method unenrolled");
+				log(`MFA method unenrolled: ${methodId}`);
+				refreshMfaMethods();
+			} catch (error) {
+				showMfaSectionStatus(`Failed to unenroll: ${error.message}`, "error");
+			}
+		}
+
+		let totpEnrollMethodId = null;
+
+		async function enrollTotpMfa() {
+			if (!requireClient(showMfaSectionStatus)) return;
+			try {
+				const resp = await openfortClient.enrollMfa("totp");
+				totpEnrollMethodId = resp.methodId;
+				const qr = qrcode(0, "M");
+				qr.addData(resp.otpauthUrl);
+				qr.make();
+				document.getElementById("totpQr").innerHTML = qr.createImgTag(4, 8);
+				document.getElementById("totpSecret").textContent = resp.secret;
+				document.getElementById("totpEnrollArea").style.display = "block";
+				showMfaSectionStatus("Scan the QR with your authenticator app, then confirm with a code");
+			} catch (error) {
+				showMfaSectionStatus(`TOTP enrollment failed: ${error.message}`, "error");
+			}
+		}
+
+		async function confirmTotpEnroll() {
+			const code = document.getElementById("totpEnrollCode").value.trim();
+			if (!code) {
+				showMfaSectionStatus("Please enter the 6-digit code", "error");
+				return;
+			}
+			try {
+				await openfortClient.verifyMfaEnrollment({ methodId: totpEnrollMethodId, code });
+				document.getElementById("totpEnrollArea").style.display = "none";
+				document.getElementById("totpEnrollCode").value = "";
+				showMfaSectionStatus("TOTP enrolled! MFA is now required for hot share retrieval.");
+				log("MFA TOTP method enrolled");
+				refreshMfaMethods();
+			} catch (error) {
+				showMfaSectionStatus(`TOTP confirmation failed: ${error.message}`, "error");
+			}
+		}
+
+		let smsEnrollState = null; // { methodId, challengeId }
+
+		async function enrollSmsMfa() {
+			if (!requireClient(showMfaSectionStatus)) return;
+			const phoneNumber = document.getElementById("smsPhoneNumber").value.trim();
+			if (!phoneNumber) {
+				showMfaSectionStatus("Please enter a phone number in E.164 format", "error");
+				return;
+			}
+			try {
+				const resp = await openfortClient.enrollMfa("sms", phoneNumber);
+				smsEnrollState = { methodId: resp.methodId, challengeId: resp.challengeId };
+				document.getElementById("smsEnrollArea").style.display = "block";
+				showMfaSectionStatus("Code sent! Enter it to confirm (with the log SMS provider, check the hot storage logs).");
+			} catch (error) {
+				showMfaSectionStatus(`SMS enrollment failed: ${error.message}`, "error");
+			}
+		}
+
+		async function confirmSmsEnroll() {
+			const code = document.getElementById("smsEnrollCode").value.trim();
+			if (!code || !smsEnrollState) {
+				showMfaSectionStatus("Please enter the 6-digit code", "error");
+				return;
+			}
+			try {
+				await openfortClient.verifyMfaEnrollment({ ...smsEnrollState, code });
+				smsEnrollState = null;
+				document.getElementById("smsEnrollArea").style.display = "none";
+				document.getElementById("smsEnrollCode").value = "";
+				showMfaSectionStatus("SMS enrolled! MFA is now required for hot share retrieval.");
+				log("MFA SMS method enrolled");
+				refreshMfaMethods();
+			} catch (error) {
+				showMfaSectionStatus(`SMS confirmation failed: ${error.message}`, "error");
+			}
+		}
+
+		async function enrollPasskeyMfa() {
+			if (!requireClient(showMfaSectionStatus)) return;
+			try {
+				const resp = await openfortClient.enrollMfa("passkey");
+				const credential = await navigator.credentials.create({
+					publicKey: decodeCreationOptions(resp.publicKey),
+				});
+				if (!credential) throw new Error("Passkey creation cancelled");
+				await openfortClient.verifyMfaEnrollment({
+					methodId: resp.methodId,
+					challengeId: resp.challengeId,
+					credential: encodeAttestationCredential(credential),
+				});
+				showMfaSectionStatus("MFA passkey enrolled! MFA is now required for hot share retrieval.");
+				log("MFA passkey method enrolled");
+				refreshMfaMethods();
+			} catch (error) {
+				showMfaSectionStatus(`Passkey enrollment failed: ${error.message}`, "error");
+			}
+		}
+
+		// --- MFA verification modal (driven by the client's onMfaRequired hook) ---
+
+		let mfaModalResolve = null;
+		let mfaActiveChallenge = null;
+
+		function showMfaModalStatus(message, isError) {
+			const statusEl = document.getElementById("mfaModalStatus");
+			statusEl.style.display = "block";
+			statusEl.style.backgroundColor = isError ? "#f8d7da" : "#fff3cd";
+			statusEl.style.color = isError ? "#721c24" : "#856404";
+			statusEl.textContent = message;
+		}
+
+		function showMfaVerifyModal(methods) {
+			return new Promise((resolve) => {
+				mfaModalResolve = resolve;
+				mfaActiveChallenge = null;
+				const buttonsDiv = document.getElementById("mfaMethodButtons");
+				while (buttonsDiv.firstChild) buttonsDiv.removeChild(buttonsDiv.firstChild);
+				for (const method of methods) {
+					const btn = document.createElement("button");
+					btn.textContent = method.type + (method.phoneHint ? ` (${method.phoneHint})` : "");
+					btn.style.margin = "0 5px 5px 0";
+					btn.onclick = () => chooseMfaMethod(method);
+					buttonsDiv.appendChild(btn);
+				}
+				document.getElementById("mfaCodeArea").style.display = "none";
+				document.getElementById("mfaVerifyCode").value = "";
+				document.getElementById("mfaModalStatus").style.display = "none";
+				document.getElementById("mfaVerifyModal").style.display = "block";
+			});
+		}
+
+		async function chooseMfaMethod(method) {
+			try {
+				const challenge = await openfortClient.createMfaChallenge(method.id);
+				mfaActiveChallenge = challenge;
+				if (method.type === "passkey") {
+					showMfaModalStatus("Waiting for passkey...", false);
+					const credential = await navigator.credentials.get({
+						publicKey: decodeRequestOptions(challenge.publicKey),
+					});
+					if (!credential) throw new Error("Passkey authentication cancelled");
+					await openfortClient.verifyMfa({
+						challengeId: challenge.challengeId,
+						credential: encodeAssertionCredential(credential),
+					});
+					finishMfaModal(true);
+					return;
+				}
+				const label = method.type === "totp"
+					? "Enter the code from your authenticator app"
+					: "Enter the code sent to your phone";
+				document.getElementById("mfaCodeLabel").textContent = label;
+				document.getElementById("mfaCodeArea").style.display = "block";
+				document.getElementById("mfaModalStatus").style.display = "none";
+			} catch (error) {
+				showMfaModalStatus(error.message, true);
+			}
+		}
+
+		async function submitMfaVerifyCode() {
+			const code = document.getElementById("mfaVerifyCode").value.trim();
+			if (!code || !mfaActiveChallenge) {
+				showMfaModalStatus("Please enter the 6-digit code", true);
+				return;
+			}
+			try {
+				await openfortClient.verifyMfa({
+					challengeId: mfaActiveChallenge.challengeId,
+					code,
+				});
+				finishMfaModal(true);
+			} catch (error) {
+				showMfaModalStatus(error.message, true);
+			}
+		}
+
+		// Cancelling rejects the pending operation as if the user declined.
+		async function cancelMfaVerify() {
+			if (mfaActiveChallenge) {
+				try {
+					await openfortClient.cancelMfaChallenge(mfaActiveChallenge.challengeId);
+				} catch (error) {
+					log(`Failed to cancel MFA challenge: ${error.message}`);
+				}
+			}
+			finishMfaModal(false);
+		}
+
+		function finishMfaModal(verified) {
+			document.getElementById("mfaVerifyModal").style.display = "none";
+			mfaActiveChallenge = null;
+			const resolve = mfaModalResolve;
+			mfaModalResolve = null;
+			if (resolve) resolve(verified);
+			log(verified ? "MFA verification completed" : "MFA verification cancelled");
 		}
 	</script>
 </body>

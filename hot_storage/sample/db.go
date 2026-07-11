@@ -36,20 +36,24 @@ func initDB() error {
 	if err != nil {
 		return err
 	}
-	if err := newDB.AutoMigrate(&Device{}); err != nil {
-		return err
-	}
-	if err := newDB.AutoMigrate(&Signer{}); err != nil {
-		return err
-	}
-	if err := newDB.AutoMigrate(&Account{}); err != nil {
-		return err
-	}
-	if err := newDB.AutoMigrate(&MigratedAccountData{}); err != nil {
+	if err := migrateModels(newDB); err != nil {
 		return err
 	}
 
 	db = newDB
 	slog.Info("DB initialized")
+	return nil
+}
+
+func migrateModels(newDB *gorm.DB) error {
+	models := []any{
+		&Device{}, &Signer{}, &Account{}, &MigratedAccountData{},
+		&MfaMethod{}, &MfaChallenge{}, &MfaSession{},
+	}
+	for _, model := range models {
+		if err := newDB.AutoMigrate(model); err != nil {
+			return err
+		}
+	}
 	return nil
 }

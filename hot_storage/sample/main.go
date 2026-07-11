@@ -18,6 +18,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := initSmsProvider(); err != nil {
+		slog.Error(fmt.Sprintf("Failed to initialize SMS provider: %v", err))
+		os.Exit(1)
+	}
+
+	if err := initWebauthn(); err != nil {
+		slog.Error(fmt.Sprintf("Failed to initialize WebAuthn: %v", err))
+		os.Exit(1)
+	}
+
 	err := initDB()
 	if err != nil {
 		slog.Error(fmt.Sprintf("Failed to initialize DB: %v", err))

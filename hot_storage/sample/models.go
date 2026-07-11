@@ -1,6 +1,9 @@
 package main
 
 import (
+	"encoding/json"
+	"time"
+
 	"gorm.io/gorm"
 )
 
@@ -186,4 +189,115 @@ type ImportShareResponse struct {
 	Wallet   string `json:"wallet"`
 	Address  string `json:"address"`
 	SignerId string `json:"signerId"`
+}
+
+// MfaMethod is an enrolled MFA factor. Enrollment is scoped to the user
+// (username + auth provider), not to a signer: once any method is verified,
+// hot share retrieval for every signer of that user requires an MFA session.
+type MfaMethod struct {
+	gorm.Model
+	ID           string `gorm:"primaryKey" json:"id"`
+	Username     string `gorm:"index:idx_mfa_method_user" json:"username"`
+	AuthProvider string `gorm:"index:idx_mfa_method_user" json:"authProvider"`
+	Type         string `json:"type"` // totp | sms | passkey
+	Verified     bool   `json:"verified"`
+	Secret       string `json:"-"` // totp: encrypted TOTP secret; sms: encrypted phone number
+	PhoneHint    string `json:"phoneHint"`
+	LastUsedStep int64  `json:"-"` // totp: last accepted 30s timestep (replay guard)
+	Credential   string `json:"-"` // passkey: webauthn.Credential JSON (public key material)
+}
+
+// MfaChallenge is a single in-progress verification attempt against an
+// enrolled (or enrolling) method. Challenges expire and carry an attempt
+// counter; exhausted or cancelled challenges can never verify.
+type MfaChallenge struct {
+	gorm.Model
+	ID           string    `gorm:"primaryKey" json:"id"`
+	Username     string    `gorm:"index:idx_mfa_challenge_user" json:"-"`
+	AuthProvider string    `gorm:"index:idx_mfa_challenge_user" json:"-"`
+	MethodID     string    `json:"methodId"`
+	Type         string    `json:"type"`
+	Purpose      string    `json:"-"` // enroll | verify
+	Status       string    `json:"status"`
+	Attempts     int       `json:"-"`
+	CodeHash     string    `json:"-"` // sms: HMAC-SHA256 of the delivered code
+	WebauthnData string    `json:"-"` // passkey: webauthn.SessionData JSON
+	ExpiresAt    time.Time `json:"expiresAt"`
+}
+
+// MfaSession is a completed verification, cached so the same device is not
+// re-challenged on every request. Scoped to a device fingerprint
+// (User-Agent + IP hash) and expires after mfaSessionTTL.
+type MfaSession struct {
+	gorm.Model
+	ID           string    `gorm:"primaryKey" json:"id"`
+	Username     string    `gorm:"index:idx_mfa_session_user" json:"-"`
+	AuthProvider string    `gorm:"index:idx_mfa_session_user" json:"-"`
+	Fingerprint  string    `json:"-"`
+	ExpiresAt    time.Time `json:"expiresAt"`
+}
+
+type MfaEnrollRequest struct {
+	Type        string `json:"type"`
+	PhoneNumber string `json:"phoneNumber,omitempty"`
+}
+
+type MfaEnrollResponse struct {
+	MethodID    string          `json:"methodId"`
+	Type        string          `json:"type"`
+	ChallengeID string          `json:"challengeId,omitempty"`
+	Secret      string          `json:"secret,omitempty"`     // totp: base32 secret for manual entry
+	OtpauthURL  string          `json:"otpauthUrl,omitempty"` // totp: otpauth:// provisioning URI
+	PublicKey   json.RawMessage `json:"publicKey,omitempty"`  // passkey: WebAuthn creation options
+}
+
+type MfaEnrollVerifyRequest struct {
+	MethodID    string          `json:"methodId"`
+	ChallengeID string          `json:"challengeId,omitempty"`
+	Code        string          `json:"code,omitempty"`
+	Credential  json.RawMessage `json:"credential,omitempty"`
+}
+
+type MfaChallengeRequest struct {
+	MethodID string `json:"methodId"`
+}
+
+type MfaChallengeResponse struct {
+	ChallengeID string          `json:"challengeId"`
+	Type        string          `json:"type"`
+	Status      string          `json:"status"`
+	ExpiresAt   int64           `json:"expiresAt"`
+	PublicKey   json.RawMessage `json:"publicKey,omitempty"` // passkey: WebAuthn request options
+}
+
+type MfaVerifyRequest struct {
+	ChallengeID string          `json:"challengeId"`
+	Code        string          `json:"code,omitempty"`
+	Credential  json.RawMessage `json:"credential,omitempty"`
+}
+
+type MfaVerifyResponse struct {
+	Verified  bool  `json:"verified"`
+	ExpiresAt int64 `json:"expiresAt"` // MFA session expiry, unix seconds
+}
+
+type MfaMethodInfo struct {
+	ID        string `json:"id"`
+	Type      string `json:"type"`
+	PhoneHint string `json:"phoneHint,omitempty"`
+	CreatedAt int64  `json:"createdAt"`
+}
+
+type MfaMethodListResponse struct {
+	Object string          `json:"object"`
+	URL    string          `json:"url"`
+	Data   []MfaMethodInfo `json:"data"`
+	Total  int             `json:"total"`
+}
+
+// MfaRequiredResponse is the 403 body returned by requireMfa so clients can
+// render a method picker without an extra round trip.
+type MfaRequiredResponse struct {
+	Error   string          `json:"error"`
+	Methods []MfaMethodInfo `json:"methods"`
 }
