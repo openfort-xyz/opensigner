@@ -12,6 +12,9 @@ class Openfort {
     this.thirdPartyProvider = thirdPartyProvider;
     this.thirdPartyTokenType = thirdPartyTokenType;
     this._hotStorageURL = hotStorageURL;
+    // Opaque MFA session token, set after a successful verification and sent
+    // on subsequent gated requests via the X-MFA-Session header.
+    this._mfaSessionToken = null;
   }
 
   setAccessToken(token) {
@@ -33,6 +36,10 @@ class Openfort {
     if (this.thirdPartyProvider && this.thirdPartyTokenType) {
       headers["X-Auth-Provider"] = this.thirdPartyProvider;
       headers["X-Token-Type"] = this.thirdPartyTokenType;
+    }
+
+    if (this._mfaSessionToken) {
+      headers["X-MFA-Session"] = this._mfaSessionToken;
     }
 
     if (requestId) {
@@ -258,7 +265,9 @@ class Openfort {
 
   // payload: { methodId, challengeId?, code? | credential? }
   async verifyMfaEnrollment(payload, requestId = null) {
-    return await this._makeRequest("POST", "/v1/mfa/enroll/verify", payload, requestId);
+    const result = await this._makeRequest("POST", "/v1/mfa/enroll/verify", payload, requestId);
+    this._captureSessionToken(result);
+    return result;
   }
 
   async createMfaChallenge(methodId, requestId = null) {
@@ -267,7 +276,15 @@ class Openfort {
 
   // payload: { challengeId, code? | credential? }
   async verifyMfa(payload, requestId = null) {
-    return await this._makeRequest("POST", "/v1/mfa/verify", payload, requestId);
+    const result = await this._makeRequest("POST", "/v1/mfa/verify", payload, requestId);
+    this._captureSessionToken(result);
+    return result;
+  }
+
+  _captureSessionToken(result) {
+    if (result && result.sessionToken) {
+      this._mfaSessionToken = result.sessionToken;
+    }
   }
 
   async cancelMfaChallenge(challengeId, requestId = null) {

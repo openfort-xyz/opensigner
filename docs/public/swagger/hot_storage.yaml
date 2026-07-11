@@ -92,6 +92,8 @@ paths:
       summary: Recover an embedded device
       description: Recovers an embedded device for an existing account. This endpoint retrieves the device information including the share and signer details for a previously registered account.
       operationId: recoverDevice
+      parameters:
+        - $ref: '#/components/parameters/MfaSessionHeader'
       requestBody:
         required: true
         content:
@@ -349,6 +351,8 @@ paths:
       description: |
         Determines whether a user needs to register a new device or recover an existing one for a given chain.
         Returns `REGISTER` if no account exists for the user on the specified chain, or `RECOVER` with the primary device share if an account already exists.
+      parameters:
+        - $ref: '#/components/parameters/MfaSessionHeader'
       requestBody:
         required: true
         content:
@@ -429,6 +433,7 @@ paths:
         Returns details for a specific device, including its decrypted share.
         Use the special value `primary` as the device ID to retrieve the primary device for the authenticated user.
       parameters:
+        - $ref: '#/components/parameters/MfaSessionHeader'
         - name: deviceId
           in: path
           description: The device ID, or `primary` to get the primary device.
@@ -752,6 +757,15 @@ paths:
           description: Error response - Unauthorized
 
 components:
+  parameters:
+    MfaSessionHeader:
+      name: X-MFA-Session
+      in: header
+      required: false
+      description: Opaque MFA session token from a prior verification. Required for this endpoint once the user has an enrolled MFA method; without a valid token the endpoint answers 403 mfa_required.
+      schema:
+        type: string
+
   schemas:
     EmbeddedV2Response:
       type: object
@@ -1296,11 +1310,15 @@ components:
       type: object
       required:
         - verified
+        - sessionToken
         - expiresAt
       properties:
         verified:
           type: boolean
           description: Whether verification succeeded.
+        sessionToken:
+          type: string
+          description: Opaque MFA session token. Send it in the `X-MFA-Session` header on gated requests until `expiresAt`. Only its hash is stored server-side.
         expiresAt:
           type: integer
           format: int64

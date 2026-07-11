@@ -5,8 +5,10 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"math/big"
 	"net"
 	"net/http"
@@ -32,12 +34,19 @@ const (
 
 	totpIssuer = "OpenSigner"
 	totpPeriod = 30 // seconds, RFC 6238 default
+
+	mfaSessionHeader = "X-MFA-Session"
 )
 
 var (
 	mfaSessionTTL   = envMinutes("MFA_SESSION_TTL_MINUTES", 15)
 	mfaChallengeTTL = envMinutes("MFA_CHALLENGE_TTL_MINUTES", 5)
 	mfaMaxAttempts  = envInt("MFA_MAX_ATTEMPTS", 4)
+
+	// trustProxyHeaders must only be enabled when a trusted reverse proxy
+	// sets X-Forwarded-For; honoring it from direct clients would let a
+	// stolen-JWT attacker forge another device's fingerprint.
+	trustProxyHeaders = os.Getenv("TRUST_PROXY_HEADERS") == "true"
 )
 
 func envInt(name string, fallback int) int {
@@ -65,14 +74,33 @@ func deviceFingerprint(r *http.Request) string {
 }
 
 func clientIP(r *http.Request) string {
-	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
-		return strings.TrimSpace(strings.Split(fwd, ",")[0])
+	if trustProxyHeaders {
+		if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
+			// Take the right-most entry: the address the trusted proxy itself
+			// appended. The left-most is client-supplied and spoofable. This
+			// assumes exactly one trusted proxy hop.
+			parts := strings.Split(fwd, ",")
+			return strings.TrimSpace(parts[len(parts)-1])
+		}
 	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		return r.RemoteAddr
 	}
 	return host
+}
+
+func generateSessionToken() (string, error) {
+	buf := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, buf); err != nil {
+		return "", fmt.Errorf("failed to generate session token: %w", err)
+	}
+	return base64.RawURLEncoding.EncodeToString(buf), nil
+}
+
+func hashSessionToken(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }
 
 func generateSmsCode() (string, error) {
@@ -115,35 +143,46 @@ func mfaMethodInfos(methods []MfaMethod) []MfaMethodInfo {
 	return infos
 }
 
+// hasValidMfaSession authenticates the request by the opaque token in the
+// X-MFA-Session header, not by anything the caller can forge from headers
+// alone. Absent or unknown token → no session.
 func hasValidMfaSession(r *http.Request, username, authProvider string) bool {
+	token := r.Header.Get(mfaSessionHeader)
+	if token == "" {
+		return false
+	}
 	var count int64
 	db.Model(&MfaSession{}).
-		Where("username = ? AND auth_provider = ? AND fingerprint = ? AND expires_at > ?",
-			username, authProvider, deviceFingerprint(r), time.Now()).
+		Where("username = ? AND auth_provider = ? AND token_hash = ? AND expires_at > ?",
+			username, authProvider, hashSessionToken(token), time.Now()).
 		Count(&count)
 	return count > 0
 }
 
-// createMfaSession grants the calling device an MFA session, replacing any
-// previous session for the same fingerprint. Expired sessions for the user
-// are cleaned up opportunistically.
-func createMfaSession(r *http.Request, username, authProvider string) (*MfaSession, error) {
-	fingerprint := deviceFingerprint(r)
-	db.Where("username = ? AND auth_provider = ? AND (fingerprint = ? OR expires_at <= ?)",
-		username, authProvider, fingerprint, time.Now()).
-		Delete(&MfaSession{})
+// createMfaSession issues a new MFA session and returns the opaque token the
+// client must present on gated requests. Only the token's hash is stored, so
+// a database leak cannot reconstruct a usable session. Expired sessions for
+// the user are cleaned up opportunistically.
+func createMfaSession(r *http.Request, username, authProvider string) (string, *MfaSession, error) {
+	db.Where("username = ? AND auth_provider = ? AND expires_at <= ?",
+		username, authProvider, time.Now()).Delete(&MfaSession{})
 
+	token, err := generateSessionToken()
+	if err != nil {
+		return "", nil, err
+	}
 	session := MfaSession{
 		ID:           uuid.NewString(),
 		Username:     username,
 		AuthProvider: authProvider,
-		Fingerprint:  fingerprint,
+		TokenHash:    hashSessionToken(token),
+		Fingerprint:  deviceFingerprint(r),
 		ExpiresAt:    time.Now().Add(mfaSessionTTL),
 	}
 	if err := db.Create(&session).Error; err != nil {
-		return nil, err
+		return "", nil, err
 	}
-	return &session, nil
+	return token, &session, nil
 }
 
 // revokeAllMfaSessions drops every cached MFA session for the user. Called
@@ -155,12 +194,12 @@ func revokeAllMfaSessions(username, authProvider string) error {
 }
 
 // activateMfaSession is the common tail of a successful verification:
-// revoke on enrollment (so other devices are challenged), then cache a
-// session for the device that just proved possession.
-func activateMfaSession(r *http.Request, username, authProvider string, enrollment bool) (*MfaSession, error) {
+// revoke on enrollment (so other devices are challenged), then issue a
+// session token for the client that just proved possession.
+func activateMfaSession(r *http.Request, username, authProvider string, enrollment bool) (string, *MfaSession, error) {
 	if enrollment {
 		if err := revokeAllMfaSessions(username, authProvider); err != nil {
-			return nil, err
+			return "", nil, err
 		}
 	}
 	return createMfaSession(r, username, authProvider)

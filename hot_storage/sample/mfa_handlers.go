@@ -105,7 +105,15 @@ func handleMfaEnroll(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, resp)
 }
 
+// discardPendingEnrollments removes abandoned unverified methods of the same
+// type before starting a new enrollment, so retries do not accumulate rows.
+func discardPendingEnrollments(username, authProvider, mfaType string) {
+	db.Where("username = ? AND auth_provider = ? AND type = ? AND verified = ?",
+		username, authProvider, mfaType, false).Delete(&MfaMethod{})
+}
+
 func enrollTotp(username, authProvider string) (*MfaEnrollResponse, *apiError) {
+	discardPendingEnrollments(username, authProvider, mfaTypeTotp)
 	key, err := totp.Generate(totp.GenerateOpts{Issuer: totpIssuer, AccountName: username})
 	if err != nil {
 		return nil, internalError("failed to generate totp secret")
@@ -136,6 +144,7 @@ func enrollSms(username, authProvider, phoneNumber string) (*MfaEnrollResponse, 
 	if !validPhoneNumber(phoneNumber) {
 		return nil, badRequest("phoneNumber must be in E.164 format (e.g. +15551234567)")
 	}
+	discardPendingEnrollments(username, authProvider, mfaTypeSms)
 	encrypted, err := encryptShare(phoneNumber)
 	if err != nil {
 		return nil, internalError("failed to encrypt phone number")
@@ -180,6 +189,7 @@ func enrollSms(username, authProvider, phoneNumber string) (*MfaEnrollResponse, 
 }
 
 func enrollPasskey(username, authProvider string) (*MfaEnrollResponse, *apiError) {
+	discardPendingEnrollments(username, authProvider, mfaTypePasskey)
 	methods, err := verifiedMfaMethods(username, authProvider)
 	if err != nil {
 		return nil, internalError("database error")
@@ -290,12 +300,12 @@ func handleMfaEnrollVerify(w http.ResponseWriter, r *http.Request) {
 	}
 	// Enrollment revokes every cached MFA session for the user so all other
 	// active sessions are challenged again (cross-session enforcement).
-	session, err := activateMfaSession(r, username, authProvider, true)
+	token, session, err := activateMfaSession(r, username, authProvider, true)
 	if err != nil {
 		http.Error(w, "failed to create mfa session", http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, http.StatusOK, MfaVerifyResponse{Verified: true, ExpiresAt: session.ExpiresAt.Unix()})
+	writeJSON(w, http.StatusOK, MfaVerifyResponse{Verified: true, SessionToken: token, ExpiresAt: session.ExpiresAt.Unix()})
 }
 
 func confirmSmsEnrollment(method *MfaMethod, req MfaEnrollVerifyRequest) *apiError {
@@ -448,7 +458,8 @@ func attachPasskeyAssertion(challenge *MfaChallenge, username, authProvider stri
 		return nil, badRequest("no passkey credentials enrolled")
 	}
 	assertion, sessionData, err := webauthnRP.BeginLogin(user,
-		webauthn.WithAllowedCredentials(credentialDescriptors(user.credentials)))
+		webauthn.WithAllowedCredentials(credentialDescriptors(user.credentials)),
+		webauthn.WithUserVerification(protocol.VerificationRequired))
 	if err != nil {
 		return nil, internalError("failed to begin passkey login")
 	}
@@ -510,12 +521,12 @@ func handleMfaVerify(w http.ResponseWriter, r *http.Request) {
 		writeApiError(w, apiErr)
 		return
 	}
-	session, err := activateMfaSession(r, username, authProvider, false)
+	token, session, err := activateMfaSession(r, username, authProvider, false)
 	if err != nil {
 		http.Error(w, "failed to create mfa session", http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, http.StatusOK, MfaVerifyResponse{Verified: true, ExpiresAt: session.ExpiresAt.Unix()})
+	writeJSON(w, http.StatusOK, MfaVerifyResponse{Verified: true, SessionToken: token, ExpiresAt: session.ExpiresAt.Unix()})
 }
 
 func handleMfaCancelChallenge(w http.ResponseWriter, r *http.Request) {
@@ -633,13 +644,18 @@ func loadChallengeForAttempt(challengeID, username, authProvider, purpose string
 	case time.Now().After(challenge.ExpiresAt):
 		return nil, badRequest("challenge expired, request a new one")
 	}
-	challenge.Attempts++
-	if err := db.Save(&challenge).Error; err != nil {
+	// Atomic increment guarded by the cap so concurrent verifications
+	// cannot exceed the attempt limit.
+	res := db.Model(&MfaChallenge{}).
+		Where("id = ? AND attempts < ?", challenge.ID, mfaMaxAttempts).
+		Update("attempts", gorm.Expr("attempts + 1"))
+	if res.Error != nil {
 		return nil, internalError("database error")
 	}
-	if challenge.Attempts > mfaMaxAttempts {
+	if res.RowsAffected == 0 {
 		return nil, badRequest("too many attempts, request a new challenge")
 	}
+	challenge.Attempts++
 	return &challenge, nil
 }
 
@@ -652,7 +668,9 @@ func markChallengeVerified(challenge *MfaChallenge) *apiError {
 }
 
 // verifyTotpCode validates an RFC 6238 code and guards against replay: a
-// code is only accepted once per 30-second timestep.
+// code is only accepted once per 30-second timestep. The step advance is a
+// single guarded UPDATE so concurrent verifies with the same code cannot
+// both pass.
 func verifyTotpCode(method *MfaMethod, code string) *apiError {
 	if code == "" {
 		return badRequest("code is required")
@@ -661,16 +679,18 @@ func verifyTotpCode(method *MfaMethod, code string) *apiError {
 	if err != nil {
 		return internalError("failed to decrypt totp secret")
 	}
-	step := time.Now().Unix() / totpPeriod
-	if method.LastUsedStep >= step {
-		return badRequest("code already used, wait for the next one")
-	}
 	if !totp.Validate(code, secret) {
 		return badRequest("invalid code")
 	}
-	method.LastUsedStep = step
-	if err := db.Save(method).Error; err != nil {
+	step := time.Now().Unix() / totpPeriod
+	res := db.Model(&MfaMethod{}).
+		Where("id = ? AND last_used_step < ?", method.ID, step).
+		Update("last_used_step", step)
+	if res.Error != nil {
 		return internalError("failed to update mfa method")
+	}
+	if res.RowsAffected == 0 {
+		return badRequest("code already used, wait for the next one")
 	}
 	return nil
 }
@@ -708,6 +728,9 @@ func verifyPasskeyAssertion(challenge *MfaChallenge, username, authProvider stri
 	credential, err := webauthnRP.ValidateLogin(user, sessionData, parsed)
 	if err != nil {
 		return badRequest("invalid credential")
+	}
+	if credential.Authenticator.CloneWarning {
+		return badRequest("credential sign count regressed (possible cloned authenticator)")
 	}
 	return updateStoredCredential(methods, credential)
 }

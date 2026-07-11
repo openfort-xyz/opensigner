@@ -24,14 +24,31 @@ Behavior:
 
 - Enrollment is user-scoped: it gates share retrieval for **all** of the
   user's signers, and stays active until the user explicitly unenrolls.
-- Verifying a challenge grants a session (default 15 min) scoped to a device
-  fingerprint (User-Agent + IP hash).
+- Verifying a challenge returns an opaque **session token** (default 15 min).
+  The client sends it in the `X-MFA-Session` header on gated requests; only
+  the token's hash is stored, and the token — not the device fingerprint — is
+  the credential. The fingerprint is recorded for auditing only.
 - Activating a method revokes every other cached session, so all other
-  active sessions must verify again.
+  sessions must verify again.
 - Challenges expire (default 5 min), allow limited attempts (default 4), and
   can be cancelled — which rejects the pending operation.
 - Enroll/unenroll endpoints are themselves MFA-gated once a method exists, so
   a stolen JWT cannot add or remove methods.
+
+### Known limitations (sample scope)
+
+This is a reference implementation. Before production, add (tracked with the
+existing rate-limiting TODO in `middleware.go`):
+
+- **Rate limiting** on challenge creation and SMS delivery — otherwise TOTP
+  codes are brute-forceable over many challenges and SMS endpoints enable
+  toll fraud / bombing.
+- **First-factor enrollment step-up**: while a user has no method, enrollment
+  is gated only by the JWT, so a stolen JWT can enroll an attacker's factor
+  and lock the user out. Require an out-of-band confirmation for the first
+  method, and notify the user on enrollment.
+- `TRUST_PROXY_HEADERS=true` assumes exactly one trusted proxy hop (it reads
+  the right-most `X-Forwarded-For` entry). Adjust if your topology differs.
 
 The passkey relying party is the **parent application's domain**, not the
 iframe's: `navigator.credentials` is unavailable in React Native webviews and
@@ -55,6 +72,7 @@ run in the embedding app.
 | `MFA_SESSION_TTL_MINUTES` | `15` | MFA session validity |
 | `MFA_CHALLENGE_TTL_MINUTES` | `5` | Challenge code expiry |
 | `MFA_MAX_ATTEMPTS` | `4` | Attempts per challenge |
+| `TRUST_PROXY_HEADERS` | `false` | Honor `X-Forwarded-For` for device fingerprints. Enable only behind a trusted reverse proxy — from direct clients the header is attacker-controlled |
 
 ## Development
 

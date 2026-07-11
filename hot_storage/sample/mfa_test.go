@@ -105,6 +105,22 @@ func decodeBody[T any](t *testing.T, rec *httptest.ResponseRecorder) T {
 	return v
 }
 
+func withSession(token string) reqOpt {
+	return func(r *http.Request) { r.Header.Set("X-MFA-Session", token) }
+}
+
+func sessionToken(t *testing.T, rec *httptest.ResponseRecorder) string {
+	t.Helper()
+	if rec.Code != http.StatusOK {
+		t.Fatalf("verify failed: %d %s", rec.Code, rec.Body.String())
+	}
+	token := decodeBody[MfaVerifyResponse](t, rec).SessionToken
+	if token == "" {
+		t.Fatalf("expected a session token in %s", rec.Body.String())
+	}
+	return token
+}
+
 // seedTotpMethod inserts an already-verified TOTP method, bypassing the
 // enrollment flow (which would consume the current TOTP timestep).
 func seedTotpMethod(t *testing.T, username string) (methodID, secret string) {
@@ -177,25 +193,32 @@ func TestGateClosesAfterEnrollmentAndOpensAfterVerify(t *testing.T) {
 		t.Fatalf("unexpected mfa_required body: %+v", required)
 	}
 
-	if rec := totpVerify(t, h, methodID, secret); rec.Code != http.StatusOK {
-		t.Fatalf("verify failed: %d %s", rec.Code, rec.Body.String())
-	}
-	if rec := doReq(t, h, http.MethodPost, "/v1/devices/init", `{"chainId":1}`); rec.Code != http.StatusOK {
+	token := sessionToken(t, totpVerify(t, h, methodID, secret))
+	if rec := doReq(t, h, http.MethodPost, "/v1/devices/init", `{"chainId":1}`, withSession(token)); rec.Code != http.StatusOK {
 		t.Fatalf("expected 200 after verify, got %d: %s", rec.Code, rec.Body.String())
 	}
 }
 
-func TestSessionScopedToDeviceFingerprint(t *testing.T) {
+func TestGatedEndpointRequiresSessionToken(t *testing.T) {
 	setupTest(t)
 	h := testServer(testUser)
 	methodID, secret := seedTotpMethod(t, testUser)
 
-	if rec := totpVerify(t, h, methodID, secret); rec.Code != http.StatusOK {
-		t.Fatalf("verify failed: %d %s", rec.Code, rec.Body.String())
+	token := sessionToken(t, totpVerify(t, h, methodID, secret))
+
+	// Same fingerprint but no token → gate stays closed (the token is the
+	// credential, not the fingerprint).
+	if rec := doReq(t, h, http.MethodPost, "/v1/devices/init", `{"chainId":1}`); rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 without session token, got %d", rec.Code)
 	}
-	rec := doReq(t, h, http.MethodPost, "/v1/devices/init", `{"chainId":1}`, fromDevice("device-b", "10.0.0.2"))
-	if rec.Code != http.StatusForbidden {
-		t.Fatalf("expected 403 from another device, got %d", rec.Code)
+	// A forged token → rejected.
+	if rec := doReq(t, h, http.MethodPost, "/v1/devices/init", `{"chainId":1}`, withSession("forged")); rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 with forged token, got %d", rec.Code)
+	}
+	// Valid token, even from a different device fingerprint → gate opens.
+	if rec := doReq(t, h, http.MethodPost, "/v1/devices/init", `{"chainId":1}`,
+		fromDevice("device-x", "9.9.9.9"), withSession(token)); rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 with valid token, got %d: %s", rec.Code, rec.Body.String())
 	}
 }
 
@@ -218,13 +241,13 @@ func TestTotpEnrollmentFlow(t *testing.T) {
 		t.Fatalf("enroll verify failed: %d %s", rec.Code, rec.Body.String())
 	}
 	verify := decodeBody[MfaVerifyResponse](t, rec)
-	if !verify.Verified || verify.ExpiresAt <= time.Now().Unix() {
+	if !verify.Verified || verify.SessionToken == "" || verify.ExpiresAt <= time.Now().Unix() {
 		t.Fatalf("expected active session, got %+v", verify)
 	}
 
-	// The enrolling device holds a session, so the gate stays open for it.
-	if rec := doReq(t, h, http.MethodPost, "/v1/devices/init", `{"chainId":1}`); rec.Code != http.StatusOK {
-		t.Fatalf("expected 200 for enrolling device, got %d", rec.Code)
+	// The enrolling client holds the session token, so the gate stays open.
+	if rec := doReq(t, h, http.MethodPost, "/v1/devices/init", `{"chainId":1}`, withSession(verify.SessionToken)); rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for enrolling client, got %d", rec.Code)
 	}
 }
 
@@ -338,31 +361,29 @@ func TestEnrollmentRevokesOtherSessions(t *testing.T) {
 	methodID, secret := seedTotpMethod(t, testUser)
 
 	deviceB := fromDevice("device-b", "10.0.0.2")
-	if rec := totpVerify(t, h, methodID, secret, deviceB); rec.Code != http.StatusOK {
-		t.Fatalf("device B verify failed: %d %s", rec.Code, rec.Body.String())
-	}
-	if rec := doReq(t, h, http.MethodPost, "/v1/devices/init", `{"chainId":1}`, deviceB); rec.Code != http.StatusOK {
-		t.Fatalf("expected device B gate open, got %d", rec.Code)
+	token1 := sessionToken(t, totpVerify(t, h, methodID, secret, deviceB))
+	if rec := doReq(t, h, http.MethodPost, "/v1/devices/init", `{"chainId":1}`, withSession(token1)); rec.Code != http.StatusOK {
+		t.Fatalf("expected token1 gate open, got %d", rec.Code)
 	}
 
-	// Device B (holding a session) enrolls an SMS method; every other
-	// session must be revoked when it activates.
-	rec := doReq(t, h, http.MethodPost, "/v1/mfa/enroll", `{"type":"sms","phoneNumber":"+15551234567"}`, deviceB)
+	// The client holding token1 enrolls an SMS method; every other session
+	// (including token1) must be revoked and a fresh token issued.
+	rec := doReq(t, h, http.MethodPost, "/v1/mfa/enroll", `{"type":"sms","phoneNumber":"+15551234567"}`, deviceB, withSession(token1))
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("enroll failed: %d %s", rec.Code, rec.Body.String())
 	}
 	enrolled := decodeBody[MfaEnrollResponse](t, rec)
 	fake := smsProvider.(*fakeSmsProvider)
 	rec = doReq(t, h, http.MethodPost, "/v1/mfa/enroll/verify",
-		fmt.Sprintf(`{"methodId":%q,"challengeId":%q,"code":%q}`, enrolled.MethodID, enrolled.ChallengeID, fake.lastCode), deviceB)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("enroll verify failed: %d %s", rec.Code, rec.Body.String())
-	}
+		fmt.Sprintf(`{"methodId":%q,"challengeId":%q,"code":%q}`, enrolled.MethodID, enrolled.ChallengeID, fake.lastCode), deviceB, withSession(token1))
+	token2 := sessionToken(t, rec)
 
-	// Device B just re-verified, so it keeps access; a session device A had
-	// obtained before enrollment would now be revoked.
-	if rec := doReq(t, h, http.MethodPost, "/v1/devices/init", `{"chainId":1}`, deviceB); rec.Code != http.StatusOK {
-		t.Fatalf("expected device B to keep access, got %d", rec.Code)
+	// token1 was revoked by the enrollment; token2 is live.
+	if rec := doReq(t, h, http.MethodPost, "/v1/devices/init", `{"chainId":1}`, withSession(token1)); rec.Code != http.StatusForbidden {
+		t.Fatalf("expected token1 to be revoked, got %d", rec.Code)
+	}
+	if rec := doReq(t, h, http.MethodPost, "/v1/devices/init", `{"chainId":1}`, withSession(token2)); rec.Code != http.StatusOK {
+		t.Fatalf("expected token2 to keep access, got %d", rec.Code)
 	}
 	var sessions int64
 	db.Model(&MfaSession{}).Where("username = ?", testUser).Count(&sessions)
@@ -381,10 +402,8 @@ func TestUnenrollRequiresSessionAndDisablesMfa(t *testing.T) {
 		t.Fatalf("expected unenroll to require MFA, got %d", rec.Code)
 	}
 
-	if rec := totpVerify(t, h, methodID, secret); rec.Code != http.StatusOK {
-		t.Fatalf("verify failed: %d %s", rec.Code, rec.Body.String())
-	}
-	rec = doReq(t, h, http.MethodDelete, "/v1/mfa/methods/"+methodID, "")
+	token := sessionToken(t, totpVerify(t, h, methodID, secret))
+	rec = doReq(t, h, http.MethodDelete, "/v1/mfa/methods/"+methodID, "", withSession(token))
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("unenroll failed: %d %s", rec.Code, rec.Body.String())
 	}
@@ -405,6 +424,29 @@ func TestEnrollGatedOnceEnrolled(t *testing.T) {
 	rec := doReq(t, h, http.MethodPost, "/v1/mfa/enroll", `{"type":"totp"}`, fromDevice("attacker", "6.6.6.6"))
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("expected enroll to be gated, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestReenrollmentDiscardsAbandonedMethod(t *testing.T) {
+	setupTest(t)
+	h := testServer(testUser)
+
+	first := decodeBody[MfaEnrollResponse](t, doReq(t, h, http.MethodPost, "/v1/mfa/enroll", `{"type":"totp"}`))
+	second := decodeBody[MfaEnrollResponse](t, doReq(t, h, http.MethodPost, "/v1/mfa/enroll", `{"type":"totp"}`))
+	if first.MethodID == second.MethodID {
+		t.Fatalf("expected a fresh method on re-enrollment")
+	}
+
+	var count int64
+	db.Model(&MfaMethod{}).Where("username = ? AND type = ?", testUser, mfaTypeTotp).Count(&count)
+	if count != 1 {
+		t.Fatalf("expected abandoned enrollment to be discarded, found %d rows", count)
+	}
+	// The abandoned method can no longer be activated.
+	rec := doReq(t, h, http.MethodPost, "/v1/mfa/enroll/verify",
+		fmt.Sprintf(`{"methodId":%q,"code":%q}`, first.MethodID, currentTotpCode(t, first.Secret)))
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected stale method rejection, got %d", rec.Code)
 	}
 }
 

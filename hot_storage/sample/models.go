@@ -225,14 +225,17 @@ type MfaChallenge struct {
 	ExpiresAt    time.Time `json:"expiresAt"`
 }
 
-// MfaSession is a completed verification, cached so the same device is not
-// re-challenged on every request. Scoped to a device fingerprint
-// (User-Agent + IP hash) and expires after mfaSessionTTL.
+// MfaSession is a completed verification, cached so the client is not
+// re-challenged on every request. Authenticated by an opaque high-entropy
+// token (only its hash is stored) that the client presents in the
+// X-MFA-Session header; the device fingerprint is recorded for auditing but
+// is never the credential. Expires after mfaSessionTTL.
 type MfaSession struct {
 	gorm.Model
 	ID           string    `gorm:"primaryKey" json:"id"`
 	Username     string    `gorm:"index:idx_mfa_session_user" json:"-"`
 	AuthProvider string    `gorm:"index:idx_mfa_session_user" json:"-"`
+	TokenHash    string    `gorm:"index:idx_mfa_session_token" json:"-"`
 	Fingerprint  string    `json:"-"`
 	ExpiresAt    time.Time `json:"expiresAt"`
 }
@@ -277,8 +280,9 @@ type MfaVerifyRequest struct {
 }
 
 type MfaVerifyResponse struct {
-	Verified  bool  `json:"verified"`
-	ExpiresAt int64 `json:"expiresAt"` // MFA session expiry, unix seconds
+	Verified     bool   `json:"verified"`
+	SessionToken string `json:"sessionToken"` // present to X-MFA-Session on gated requests
+	ExpiresAt    int64  `json:"expiresAt"`    // MFA session expiry, unix seconds
 }
 
 type MfaMethodInfo struct {
