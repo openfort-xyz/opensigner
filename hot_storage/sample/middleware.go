@@ -16,7 +16,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, x-auth-provider, x-request-id, x-player-token, x-cookie-field")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, x-auth-provider, x-request-id, x-player-token, x-cookie-field, x-mfa-session")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Vary", "Origin")
 		if r.Method == "OPTIONS" {
@@ -64,4 +64,32 @@ func authMiddleware(next http.Handler) http.Handler {
 		authenticatedRequest := r.WithContext(ctx)
 		next.ServeHTTP(w, authenticatedRequest)
 	})
+}
+
+// requireMfa gates a handler behind MFA. Users without an enrolled method
+// pass through untouched; once any method is verified, requests must carry
+// a valid MFA session for the calling device or they receive a 403
+// mfa_required response listing the methods that can satisfy it. Runs after
+// authMiddleware (needs the user in the request context).
+func requireMfa(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		username, authProvider, ok := userFromContext(r)
+		if !ok {
+			unauthorized(w)
+			return
+		}
+		methods, err := verifiedMfaMethods(username, authProvider)
+		if err != nil {
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		if len(methods) == 0 || hasValidMfaSession(r, username, authProvider) {
+			next(w, r)
+			return
+		}
+		writeJSON(w, http.StatusForbidden, MfaRequiredResponse{
+			Error:   "mfa_required",
+			Methods: mfaMethodInfos(methods),
+		})
+	}
 }

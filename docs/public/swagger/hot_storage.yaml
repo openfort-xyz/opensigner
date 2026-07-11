@@ -92,6 +92,8 @@ paths:
       summary: Recover an embedded device
       description: Recovers an embedded device for an existing account. This endpoint retrieves the device information including the share and signer details for a previously registered account.
       operationId: recoverDevice
+      parameters:
+        - $ref: '#/components/parameters/MfaSessionHeader'
       requestBody:
         required: true
         content:
@@ -114,6 +116,12 @@ paths:
                 $ref: '#/components/schemas/RecoverV2Response'
         '401':
           description: Error response - Unauthorized
+        '403':
+          description: MFA verification required (user has an enrolled MFA method and no active MFA session for this device).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRequiredResponse'
 
   /v2/devices/register:
     post:
@@ -343,6 +351,8 @@ paths:
       description: |
         Determines whether a user needs to register a new device or recover an existing one for a given chain.
         Returns `REGISTER` if no account exists for the user on the specified chain, or `RECOVER` with the primary device share if an account already exists.
+      parameters:
+        - $ref: '#/components/parameters/MfaSessionHeader'
       requestBody:
         required: true
         content:
@@ -366,6 +376,12 @@ paths:
                 $ref: '#/components/schemas/NextActionResponse'
         '401':
           description: Error response - Unauthorized
+        '403':
+          description: MFA verification required (user has an enrolled MFA method and no active MFA session for this device).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRequiredResponse'
 
   /v1/devices/register:
     post:
@@ -417,6 +433,7 @@ paths:
         Returns details for a specific device, including its decrypted share.
         Use the special value `primary` as the device ID to retrieve the primary device for the authenticated user.
       parameters:
+        - $ref: '#/components/parameters/MfaSessionHeader'
         - name: deviceId
           in: path
           description: The device ID, or `primary` to get the primary device.
@@ -433,6 +450,12 @@ paths:
                 $ref: '#/components/schemas/DeviceResponse'
         '401':
           description: Error response - Unauthorized
+        '403':
+          description: MFA verification required (user has an enrolled MFA method and no active MFA session for this device).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRequiredResponse'
         '404':
           description: Device not found.
 
@@ -505,7 +528,244 @@ paths:
         '401':
           description: Error response - Unauthorized
 
+  /v1/mfa/methods:
+    get:
+      operationId: listMfaMethods
+      summary: List enrolled MFA methods
+      description: Returns the authenticated user's verified MFA methods. MFA enrollment is user-scoped and applies to hot share retrieval for all of the user's signers.
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaMethodListResponse'
+        '401':
+          description: Error response - Unauthorized
+
+  /v1/mfa/methods/{methodId}:
+    delete:
+      operationId: unenrollMfaMethod
+      summary: Unenroll an MFA method
+      description: |
+        Removes an MFA method. Requires an active MFA session (this endpoint is itself MFA-gated), so a stolen JWT alone cannot disable MFA.
+        When the last verified method is removed, MFA is disabled and all cached MFA sessions are revoked.
+      parameters:
+        - name: methodId
+          in: path
+          description: The MFA method ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Method removed.
+        '401':
+          description: Error response - Unauthorized
+        '403':
+          description: MFA verification required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRequiredResponse'
+        '404':
+          description: Method not found.
+
+  /v1/mfa/enroll:
+    post:
+      operationId: enrollMfa
+      summary: Start MFA enrollment
+      description: |
+        Begins enrollment of a new MFA method. The response depends on the type:
+        - `totp` returns the base32 secret and an `otpauth://` provisioning URI (RFC 6238, 30-second codes).
+        - `sms` sends a 6-digit code to the given phone number and returns a challenge ID.
+        - `passkey` returns WebAuthn credential creation options and a challenge ID. The WebAuthn ceremony must run in the application embedding the iframe (its domain is the relying party), not in the iframe itself.
+
+        Once a user has a verified method, this endpoint is MFA-gated: adding another method requires an active MFA session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - totp
+                    - sms
+                    - passkey
+                  description: The MFA method type to enroll.
+                phoneNumber:
+                  type: string
+                  description: E.164 phone number (required for sms).
+                  example: "+15551234567"
+      responses:
+        '201':
+          description: Enrollment started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaEnrollResponse'
+        '400':
+          description: Unsupported type or invalid phone number.
+        '401':
+          description: Error response - Unauthorized
+        '403':
+          description: MFA verification required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRequiredResponse'
+
+  /v1/mfa/enroll/verify:
+    post:
+      operationId: verifyMfaEnrollment
+      summary: Confirm MFA enrollment
+      description: |
+        Activates a pending MFA method by proving possession: a TOTP code, the SMS code (with its challenge ID), or a WebAuthn attestation (with its challenge ID).
+        On success the method becomes active, every cached MFA session for the user is revoked so all other active sessions must verify again (cross-session enforcement), and the calling device receives a fresh MFA session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - methodId
+              properties:
+                methodId:
+                  type: string
+                  description: The MFA method ID returned by enroll.
+                challengeId:
+                  type: string
+                  description: The challenge ID (sms and passkey enrollment).
+                code:
+                  type: string
+                  description: 6-digit code (totp and sms).
+                  example: "123456"
+                credential:
+                  type: object
+                  description: WebAuthn attestation response (passkey).
+      responses:
+        '200':
+          description: Method activated; MFA session granted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaVerifyResponse'
+        '400':
+          description: Invalid code, invalid credential, expired or cancelled challenge, or too many attempts.
+        '401':
+          description: Error response - Unauthorized
+        '409':
+          description: Method already verified.
+
+  /v1/mfa/challenges:
+    post:
+      operationId: createMfaChallenge
+      summary: Create an MFA verification challenge
+      description: |
+        Starts a verification against an enrolled method. For `sms`, a 6-digit code is delivered to the enrolled phone number. For `passkey`, WebAuthn request options are returned. Challenges expire after 5 minutes (configurable) and allow 4 attempts (configurable).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - methodId
+              properties:
+                methodId:
+                  type: string
+                  description: The enrolled MFA method to verify against.
+      responses:
+        '201':
+          description: Challenge created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaChallengeResponse'
+        '400':
+          description: Method not found.
+        '401':
+          description: Error response - Unauthorized
+
+  /v1/mfa/challenges/{challengeId}/cancel:
+    post:
+      operationId: cancelMfaChallenge
+      summary: Cancel an in-progress MFA challenge
+      description: Cancels a pending challenge. A cancelled challenge can never verify, so the pending operation is rejected as if the user declined.
+      parameters:
+        - name: challengeId
+          in: path
+          description: The challenge ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Challenge cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaChallengeResponse'
+        '400':
+          description: Challenge is not pending.
+        '401':
+          description: Error response - Unauthorized
+        '404':
+          description: Challenge not found.
+
+  /v1/mfa/verify:
+    post:
+      operationId: verifyMfa
+      summary: Complete an MFA challenge
+      description: |
+        Verifies a pending challenge with a TOTP code, SMS code, or WebAuthn assertion. On success the calling device receives an MFA session valid for 15 minutes (configurable), scoped to a device fingerprint (User-Agent + IP hash). Subsequent hot share retrievals from the same device pass without re-verification until the session expires.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - challengeId
+              properties:
+                challengeId:
+                  type: string
+                  description: The challenge ID.
+                code:
+                  type: string
+                  description: 6-digit code (totp and sms).
+                  example: "123456"
+                credential:
+                  type: object
+                  description: WebAuthn assertion response (passkey).
+      responses:
+        '200':
+          description: Verification succeeded; MFA session granted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaVerifyResponse'
+        '400':
+          description: Invalid code, invalid credential, expired or cancelled challenge, or too many attempts.
+        '401':
+          description: Error response - Unauthorized
+
 components:
+  parameters:
+    MfaSessionHeader:
+      name: X-MFA-Session
+      in: header
+      required: false
+      description: Opaque MFA session token from a prior verification. Required for this endpoint once the user has an enrolled MFA method; without a valid token the endpoint answers 403 mfa_required.
+      schema:
+        type: string
+
   schemas:
     EmbeddedV2Response:
       type: object
@@ -939,6 +1199,147 @@ components:
           type: integer
           format: int32
           description: Total number of records available.
+
+    MfaMethodInfo:
+      type: object
+      required:
+        - id
+        - type
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: MFA method identifier.
+        type:
+          type: string
+          enum:
+            - totp
+            - sms
+            - passkey
+          description: MFA method type.
+        phoneHint:
+          type: string
+          description: Masked phone number (sms only).
+          example: "***4567"
+        createdAt:
+          type: integer
+          format: int64
+          description: Enrollment timestamp (Unix seconds).
+
+    MfaMethodListResponse:
+      type: object
+      required:
+        - object
+        - url
+        - data
+        - total
+      properties:
+        object:
+          type: string
+          enum:
+            - list
+          description: Response type indicator.
+        url:
+          type: string
+          description: URL of the list endpoint.
+        data:
+          type: array
+          description: Array of enrolled MFA methods.
+          items:
+            $ref: '#/components/schemas/MfaMethodInfo'
+        total:
+          type: integer
+          format: int32
+          description: Total number of enrolled methods.
+
+    MfaEnrollResponse:
+      type: object
+      required:
+        - methodId
+        - type
+      properties:
+        methodId:
+          type: string
+          description: The new (unverified) MFA method ID.
+        type:
+          type: string
+          description: MFA method type.
+        challengeId:
+          type: string
+          description: Enrollment challenge ID (sms and passkey).
+        secret:
+          type: string
+          description: Base32 TOTP secret for manual entry (totp only).
+        otpauthUrl:
+          type: string
+          description: otpauth:// provisioning URI for authenticator apps (totp only).
+        publicKey:
+          type: object
+          description: WebAuthn credential creation options (passkey only).
+
+    MfaChallengeResponse:
+      type: object
+      required:
+        - challengeId
+        - type
+        - status
+        - expiresAt
+      properties:
+        challengeId:
+          type: string
+          description: The challenge ID.
+        type:
+          type: string
+          description: MFA method type.
+        status:
+          type: string
+          enum:
+            - pending
+            - verified
+            - cancelled
+          description: Challenge status.
+        expiresAt:
+          type: integer
+          format: int64
+          description: Challenge expiry (Unix seconds).
+        publicKey:
+          type: object
+          description: WebAuthn credential request options (passkey only).
+
+    MfaVerifyResponse:
+      type: object
+      required:
+        - verified
+        - sessionToken
+        - expiresAt
+      properties:
+        verified:
+          type: boolean
+          description: Whether verification succeeded.
+        sessionToken:
+          type: string
+          description: Opaque MFA session token. Send it in the `X-MFA-Session` header on gated requests until `expiresAt`. Only its hash is stored server-side.
+        expiresAt:
+          type: integer
+          format: int64
+          description: MFA session expiry (Unix seconds).
+
+    MfaRequiredResponse:
+      type: object
+      required:
+        - error
+        - methods
+      properties:
+        error:
+          type: string
+          enum:
+            - mfa_required
+          description: Error discriminator for MFA gating.
+        methods:
+          type: array
+          description: The user's enrolled methods that can satisfy the verification.
+          items:
+            $ref: '#/components/schemas/MfaMethodInfo'
 
     SortOrder:
       type: string

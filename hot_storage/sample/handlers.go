@@ -41,22 +41,39 @@ func contentTypeMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func listenAndServe(addr string) {
+func newMux() *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/v1/devices/init", handleInitDevice)
+	// Share-retrieval endpoints are gated behind MFA once a user enrolls a
+	// method (see requireMfa); write-only endpoints are not.
+	mux.HandleFunc("/v1/devices/init", requireMfa(handleInitDevice))
 	mux.HandleFunc("/v1/devices/register", handleRegisterDevice)
-	mux.HandleFunc("/v1/devices/{deviceId}", handleGetDevice)
+	mux.HandleFunc("/v1/devices/{deviceId}", requireMfa(handleGetDevice))
 	mux.HandleFunc("/v1/devices", handleGetDevices)
 
 	mux.HandleFunc("/v2/devices/create", handleCreateDeviceV2)
 	mux.HandleFunc("/v2/accounts", handleListAccountsV2)
 	mux.HandleFunc("/v2/accounts/signer", handleGetSignerV2)
-	mux.HandleFunc("/v2/devices/recover", handleRecoverDeviceV2)
+	mux.HandleFunc("/v2/devices/recover", requireMfa(handleRecoverDeviceV2))
 	mux.HandleFunc("/v2/devices/register", handleRegisterDeviceV2)
 	mux.HandleFunc("/v2/accounts/import-share", handleImportShare)
 	mux.HandleFunc("/v2/accounts/migrated-data", handleGetMigratedAccountData)
 
-	handler := contentTypeMiddleware(authMiddleware(mux))
+	// MFA enrollment, verification, and management. Enrollment endpoints are
+	// themselves MFA-gated so a stolen JWT cannot add or remove methods once
+	// the user is enrolled.
+	mux.HandleFunc("/v1/mfa/methods", handleMfaListMethods)
+	mux.HandleFunc("/v1/mfa/methods/{methodId}", requireMfa(handleMfaDeleteMethod))
+	mux.HandleFunc("/v1/mfa/enroll", requireMfa(handleMfaEnroll))
+	mux.HandleFunc("/v1/mfa/enroll/verify", requireMfa(handleMfaEnrollVerify))
+	mux.HandleFunc("/v1/mfa/challenges", handleMfaCreateChallenge)
+	mux.HandleFunc("/v1/mfa/challenges/{challengeId}/cancel", handleMfaCancelChallenge)
+	mux.HandleFunc("/v1/mfa/verify", handleMfaVerify)
+
+	return mux
+}
+
+func listenAndServe(addr string) {
+	handler := contentTypeMiddleware(authMiddleware(newMux()))
 	handler = corsMiddleware(handler)
 
 	// Health endpoint outside auth middleware
