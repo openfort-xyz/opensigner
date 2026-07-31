@@ -28,7 +28,7 @@
     "@types/node": "26.1.1",
     "@types/pg": "8.20.0",
     "ts-node": "10.9.2",
-    "typescript": "5.8.3",
+    "typescript": "7.0.2",
     "vitest": "4.1.10"
   },
   "pnpm": {
