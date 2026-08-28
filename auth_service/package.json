@@ -15,21 +15,21 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "better-auth": "1.6.25",
+    "better-auth": "1.7.1",
     "cors": "2.8.6",
     "express": "5.2.1",
     "jsonwebtoken": "9.0.3",
     "pg": "8.22.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.6",
+    "@biomejs/biome": "2.5.9",
     "@types/cors": "2.8.19",
     "@types/express": "5.0.6",
-    "@types/node": "26.1.1",
+    "@types/node": "26.2.0",
     "@types/pg": "8.20.0",
     "ts-node": "10.9.2",
     "typescript": "5.8.3",
-    "vitest": "4.1.10"
+    "vitest": "4.1.11"
   },
   "pnpm": {
     "overrides": {
