@@ -121,7 +121,7 @@ func TestImportShareConflicts(t *testing.T) {
 	account, _ := seedAccount(t, "bob", "default", "0xheld")
 
 	importReq := func() *http.Request {
-		body := `{"address":"0xheld","share":"some-share","chainId":80002}`
+		body := `{"address":"0xheld","share":"some-share","chainId":80002,"userId":"former-alice"}`
 		r := httptest.NewRequest(http.MethodPost, "/v2/accounts/import-share", strings.NewReader(body))
 		return asUser(r, "alice", "default")
 	}
@@ -141,6 +141,37 @@ func TestImportShareConflicts(t *testing.T) {
 	apiMux().ServeHTTP(w, importReq())
 	if w.Code != http.StatusConflict {
 		t.Fatalf("import to a soft-deleted address got %d, want 409", w.Code)
+	}
+}
+
+func TestImportShareRequiresUserId(t *testing.T) {
+	setupHandlerTest(t)
+	body := `{"address":"0xnew","share":"some-share","chainId":80002}`
+	r := httptest.NewRequest(http.MethodPost, "/v2/accounts/import-share", strings.NewReader(body))
+	w := httptest.NewRecorder()
+	apiMux().ServeHTTP(w, asUser(r, "alice", "default"))
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("import without userId got %d, want 400", w.Code)
+	}
+	var n int64
+	db.Unscoped().Model(&Account{}).Where("address = ?", "0xnew").Count(&n)
+	if n != 0 {
+		t.Fatalf("import without userId persisted %d account row(s), want 0", n)
+	}
+}
+
+// The unique index on address is global, so the pre-check must be too: a
+// holder under another provider is a 409, not an index violation reported as 500.
+func TestCreateDeviceV2ConflictsAcrossProviders(t *testing.T) {
+	setupHandlerTest(t)
+	seedAccount(t, "bob", "google", "0xheld")
+
+	body := `{"address":"0xheld","share":"some-share","chainId":80002}`
+	r := httptest.NewRequest(http.MethodPost, "/v2/devices/create", strings.NewReader(body))
+	w := httptest.NewRecorder()
+	apiMux().ServeHTTP(w, asUser(r, "alice", "default"))
+	if w.Code != http.StatusConflict {
+		t.Fatalf("create on an address held under another provider got %d, want 409", w.Code)
 	}
 }
 

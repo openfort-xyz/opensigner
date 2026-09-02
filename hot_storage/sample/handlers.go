@@ -357,9 +357,10 @@ func handleCreateDeviceV2(w http.ResponseWriter, r *http.Request) {
 	txErr := db.Transaction(func(tx *gorm.DB) error {
 		// Unscoped: the unique index on address is not soft-delete-aware, so a
 		// soft-deleted holder must surface as a 409 here rather than as an
-		// index violation at Create.
+		// index violation at Create. Global, not per provider, to match the
+		// index: a holder under another provider is the same conflict.
 		var account Account
-		if err := tx.Unscoped().First(&account, "address = ? AND auth_provider = ?", req.Address, authProvider).Error; err != nil {
+		if err := tx.Unscoped().First(&account, "address = ?", req.Address).Error; err != nil {
 			if !errors.Is(err, gorm.ErrRecordNotFound) {
 				return fmt.Errorf("database error")
 			}
@@ -766,8 +767,11 @@ func handleImportShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Address == "" || req.Share == "" {
-		http.Error(w, "address and share are required", http.StatusBadRequest)
+	// userId is the former Openfort user id, stored as the passkey PRF seed.
+	// Accepting it empty commits a row that recovery cannot use, and the
+	// address is then held so a corrected import gets 409.
+	if req.Address == "" || req.Share == "" || req.UserId == "" {
+		http.Error(w, "address, share and userId are required", http.StatusBadRequest)
 		return
 	}
 

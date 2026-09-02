@@ -44,7 +44,9 @@ function sourceMatchesRoute(source, route) {
 function deletedPageFiles() {
   const output = execFileSync(
     'git',
-    ['diff', '--diff-filter=D', '--name-only', `${base}...HEAD`, '--', pagesPrefix],
+    // --no-renames: a moved page must show as a deletion of its old route, not
+    // as an `R` entry the D filter would skip.
+    ['diff', '--no-renames', '--diff-filter=D', '--name-only', `${base}...HEAD`, '--', pagesPrefix],
     { encoding: 'utf8' },
   )
   return output
