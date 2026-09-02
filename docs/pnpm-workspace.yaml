@@ -1,0 +1,34 @@
+packages: []
+
+# pnpm 10 reads overrides from here. Every entry below is a transitive
+# dependency of vocs with a published advisory; each is pinned to the first
+# patched release within the major the parent expects. rollup and
+# react-server-dom-webpack are auto-installed peers, which overrides do not
+# reach, so they are direct devDependencies in package.json instead.
+overrides:
+  # vocs 2.8.5 builds with plugin-rsc 0.5.26; 0.5.33+ adds a customClientEntry
+  # guard that vocs's config trips, so hold every consumer (waku included) here.
+  "@vitejs/plugin-rsc": "0.5.26"
+  "@babel/core": ">=7.29.6"
+  "@hono/node-server@1": ">=1.19.15"
+  "@hono/node-server@2": ">=2.0.10"
+  axios: ">=1.18.0"
+  body-parser: ">=2.3.0"
+  dompurify: ">=3.4.13"
+  esbuild: ">=0.28.1"
+  fast-uri: ">=3.1.5"
+  hono: ">=4.12.34"
+  ip-address: ">=10.3.1"
+  js-yaml: ">=4.3.1"
+  lodash-es: ">=4.18.0"
+  mermaid: ">=11.16.1"
+  nanoid: ">=3.3.18 <4"
+  react-router: ">=7.18.2"
+
+auditConfig:
+  # image-size (via vocs): infinite loops on crafted ICNS/JXL/HEIF input. No
+  # patched release exists. The docs build only measures images committed to
+  # this repository, so an attacker-supplied image never reaches it.
+  ignoreGhsas:
+    - GHSA-w3rx-r6r6-pgpr
+    - GHSA-5p2g-fcmc-qvqq
