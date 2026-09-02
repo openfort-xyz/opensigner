@@ -135,12 +135,8 @@ jobs:
         # govulncheck has no native allowlist, so known-unfixable findings are
         # filtered by ID here. Each entry must state why it cannot be fixed yet,
         # and anything not listed fails the job.
-        #
-        #   GO-2026-5856  crypto/tls Encrypted Client Hello privacy leak.
-        #                 Fixed in go1.25.12; no golang:1.25.12-alpine image is
-        #                 published yet. Remove this entry once one exists.
         env:
-          ALLOWLIST: GO-2026-5856
+          ALLOWLIST: ""
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@v1.6.0
 
