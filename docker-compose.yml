@@ -132,7 +132,7 @@ services:
   cold_storage:
     container_name: coldstorage
     platform: linux/amd64
-    image: ghcr.io/openfort-xyz/shield:v0.3.2
+    image: ghcr.io/openfort-xyz/shield:v0.3.4
     command: server
     depends_on:
       postgres:
