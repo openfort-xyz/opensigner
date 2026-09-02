@@ -1,0 +1,8 @@
+packages: []
+
+# pnpm 10 reads overrides from here; the `pnpm` block in package.json is ignored.
+overrides:
+  path-to-regexp: ">=8.4.0"
+  drizzle-orm: ">=0.45.2"
+  # GHSA-2v37-7h3g-55p8, reached via vitest > vite > postcss.
+  nanoid: ">=3.3.18 <4"

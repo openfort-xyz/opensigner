@@ -1,0 +1,15 @@
+packages: []
+
+# pnpm 10 reads overrides from here. newman (the Postman runner used by the
+# API end-to-end CI job) is at its latest release but pulls transitive
+# dependencies with published advisories; each is pinned to the first patched
+# release within the major newman's dependencies expect.
+overrides:
+  flatted: ">=3.4.2"
+  handlebars: ">=4.7.9"
+  "jose@4": ">=4.15.5"
+  lodash: ">=4.18.0"
+  node-forge: ">=1.4.0"
+  qs: ">=6.15.2"
+  underscore: ">=1.13.8"
+  "uuid@<11": ">=11.1.1"

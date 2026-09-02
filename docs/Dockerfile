@@ -15,7 +15,7 @@ RUN corepack enable && corepack prepare pnpm@10.28.2 --activate
 # Manifests first, so the dependency layer stays cached across content edits.
 # .npmrc must be present or the install will not honour the supply-chain settings
 # it carries.
-COPY package.json pnpm-lock.yaml .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 
 # The registry token is mounted as a BuildKit secret rather than passed as a build
 # arg. Build args are recorded in image metadata and readable with `docker

@@ -8,7 +8,7 @@ RUN corepack enable && corepack prepare pnpm@10.28.2 --activate
 # Manifests only, so the dependency layer stays cached across source edits.
 # .npmrc must be present or the install will not honour the supply-chain
 # settings it carries.
-COPY package.json pnpm-lock.yaml .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile
 
 # ---------------------------------------------------------------------------
@@ -40,7 +40,7 @@ WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@10.28.2 --activate
 
-COPY package.json pnpm-lock.yaml .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile --prod
 
 COPY --from=builder /app/dist ./dist
