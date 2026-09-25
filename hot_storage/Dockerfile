@@ -22,7 +22,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
 
 # ---------------------------------------------------------------------------
 
-FROM alpine:3.22@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce
+FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
 
 # ca-certificates is needed to verify TLS when fetching the JWKS; curl serves the
 # container healthcheck. Nothing else from the build stage reaches this image --
