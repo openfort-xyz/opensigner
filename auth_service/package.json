@@ -29,6 +29,6 @@
     "@types/pg": "8.20.0",
     "ts-node": "10.9.2",
     "typescript": "5.8.3",
-    "vitest": "4.1.10"
+    "vitest": "5.0.2"
   }
 }
