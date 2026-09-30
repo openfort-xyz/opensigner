@@ -82,6 +82,13 @@ type MigratedAccountData struct {
 	FormerOwnerUser string `json:"former_user"` // used as a PRF seed for passkeys at Openfort
 }
 
+// MigratedAccountDataResponse leaves out the GORM columns of the stored row.
+type MigratedAccountDataResponse struct {
+	ID              string `json:"id"`
+	Wallet          string `json:"wallet"`
+	FormerOwnerUser string `json:"former_user"`
+}
+
 type DeviceResponse struct {
 	ID        string `json:"id"`
 	Object    string `json:"object"`
@@ -176,9 +183,9 @@ type ImportShareRequest struct {
 	Share    string `json:"share"`
 	SignerId string `json:"signerId,omitempty"`
 	UserId   string `json:"userId"`
-	// Added by the sample UI
-	Username     string `json:"username"`
-	AuthProvider string `json:"authProvider"`
+	// Part of Openfort's export payload. Accepted so a pasted export decodes,
+	// otherwise unused.
+	Custody string `json:"custody,omitempty"`
 }
 
 type ImportShareResponse struct {

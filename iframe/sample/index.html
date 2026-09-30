@@ -1261,8 +1261,6 @@
 			let importData;
 			try {
 				importData = JSON.parse(importText);
-				importData.username = userId;
-				importData.authProvider = "default"; // Just a hardcoded value
 			} catch (e) {
 				showStatus("Invalid JSON data", "error", "importShareStatus");
 				return;

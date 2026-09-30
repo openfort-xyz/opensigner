@@ -7,6 +7,9 @@ info:
 
     ## Authentication
 
+    Requests and responses carry only the properties listed here. A request
+    body with a field the operation does not declare is rejected with 400.
+
     Every endpoint in this document requires a bearer token. The whole API mux is
     wrapped in `authMiddleware`, which rejects any request it cannot resolve to a
     user with 401 before the handler runs. There are no anonymous endpoints here;
@@ -142,6 +145,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required:
                 - account
               properties:
@@ -177,6 +181,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required:
                 - account
                 - share
@@ -195,7 +200,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EmbeddedV2Response'
+                $ref: '#/components/schemas/EmbeddedResponse'
         '401':
           description: Error response - Unauthorized
         '415':
@@ -217,6 +222,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required:
                 - accountType
                 - chainType
@@ -250,13 +256,17 @@ paths:
                   type: string
                   description: The encrypted share repository data (optional, for embedded signers)
                   example: "7d526b7e99fbf52850a183..."
+                signerUuid:
+                  type: string
+                  description: Signer UUID to assign. Generated if omitted.
+                  example: "a1b2c3d4-5678-90ab-cdef-1234567890ab"
       responses:
         '200':
           description: Successful response.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EmbeddedV2Response'
+                $ref: '#/components/schemas/EmbeddedResponse'
         '401':
           description: Error response - Unauthorized
         '415':
@@ -307,6 +317,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required:
                 - address
                 - share
@@ -340,8 +351,13 @@ paths:
                   type: integer
                   description: Chain ID
                   example: 80002
+                custody:
+                  type: string
+                  description: Custody type as exported by Openfort. Accepted and ignored.
+                  example: "User"
                 smartAccount:
                   type: object
+                  additionalProperties: false
                   description: Smart account data (only for Smart Accounts)
                   properties:
                     implementationType:
@@ -429,6 +445,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required:
                 - chainId
               properties:
@@ -465,6 +482,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required:
                 - chainId
                 - address
@@ -485,14 +503,14 @@ paths:
                   example: "7d526b7e99fbf52850a183..."
                 signerUuid:
                   type: string
-                  description: Signer UUID to assign (optional, generated if omitted).
+                  description: Signer UUID to assign. Generated if omitted..
       responses:
         '200':
           description: Successful response.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EmbeddedV1Response'
+                $ref: '#/components/schemas/EmbeddedResponse'
         '401':
           description: Error response - Unauthorized
         '415':
@@ -572,6 +590,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required:
                 - accountId
                 - address
@@ -637,71 +656,64 @@ components:
         example: google
 
   schemas:
-    EmbeddedV2Response:
+    EmbeddedResponse:
       type: object
+      additionalProperties: false
+      description: |
+        Returned by the device create and register operations. Every property is
+        always present. A field the operation has no value for is an empty string.
       required:
-        - accountType
+        - share
         - address
-        - ownerAddress
-        - chainType
+        - chainId
+        - deviceId
+        - device
         - account
+        - ownerAddress
+        - accountType
         - signer
       properties:
         share:
           type: string
-          description: The encrypted share repository data used for key management
+          description: The encrypted share data. Empty when the operation does not return one.
           example: "7d526b7e99fbf52850a183..."
-        accountType:
-          type: string
-          description: Type of account (Smart Account or Externally Owned Account)
-          example: "Smart Account"
-        implementationType:
-          type: string
-          description: Smart account implementation type (only for Smart Accounts)
-          example: "v0.6"
-        implementationAddress:
-          type: string
-          description: Implementation contract address (only for Smart Accounts)
-          example: "0x123abc..."
-        factoryAddress:
-          type: string
-          description: Factory contract address (only for Smart Accounts)
-          example: "0x456def..."
-        salt:
-          type: string
-          description: Salt used for smart account deployment (only for Smart Accounts)
-          example: "0x789..."
         address:
           type: string
-          description: Account blockchain address
+          description: Account blockchain address.
           example: "0xf7b4c54cca21cccf42796502bf94e2838fbd44c4"
-        ownerAddress:
-          type: string
-          description: Owner address of the account
-          example: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
-        chainType:
-          type: string
-          description: Chain type (EVM or SVM)
-          example: "EVM"
         chainId:
-          type: number
-          description: Chain ID
+          type: integer
+          format: int64
+          description: Chain ID.
           example: 80002
+        deviceId:
+          type: string
+          description: Device identifier.
+          example: "dev_7a8b9c0d-1234-5678-90ab-cdef12345678"
         device:
           type: string
-          description: Device identifier
+          description: Same value as deviceId.
           example: "dev_7a8b9c0d-1234-5678-90ab-cdef12345678"
         account:
           type: string
-          description: Account ID (starts with acc_)
+          description: Account ID.
           example: "acc_6f6c9067-89fa-4fc8-ac72-c242a268c584"
+        ownerAddress:
+          type: string
+          description: Owner address of the account. Empty for v1 registration.
+          example: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+        accountType:
+          type: string
+          description: Type of account. Empty for v1 registration.
+          example: "Externally Owned Account"
         signer:
           type: string
-          description: Signer identifier
+          description: Signer identifier.
           example: "sig_a1b2c3d4-5678-90ab-cdef-1234567890ab"
 
     RecoverV2Response:
       type: object
+      additionalProperties: false
       required:
         - id
         - account
@@ -709,7 +721,6 @@ components:
         - signer
         - share
         - isPrimary
-        - createdAt
         - user
       properties:
         id:
@@ -736,11 +747,6 @@ components:
           type: boolean
           description: Indicates if this is the primary device for the account
           example: true
-        createdAt:
-          type: string
-          format: date-time
-          description: Device creation timestamp in ISO 8601 format
-          example: "2024-01-15T10:30:00.000Z"
         user:
           type: string
           description: User ID associated with the device (starts with pla_)
@@ -748,6 +754,7 @@ components:
 
     AccountListV2Response:
       type: object
+      additionalProperties: false
       required:
         - object
         - url
@@ -769,103 +776,30 @@ components:
           description: Array of account records
           items:
             type: object
+            additionalProperties: false
             required:
               - id
-              - user
-              - accountType
               - address
-              - chainType
-              - createdAt
-              - updatedAt
+              - username
+              - chainId
+              - signerId
             properties:
               id:
                 type: string
                 description: Unique account identifier
-              user:
-                type: string
-                description: User ID (starts with pla_)
-              accountType:
-                type: string
-                description: Type of account (Smart Account or Externally Owned Account)
               address:
                 type: string
                 description: Account address
-              ownerAddress:
+              username:
                 type: string
-                description: Owner address of the account
-              chainType:
-                type: string
-                description: Chain type (EVM or SVM)
+                description: Authenticated user ID that owns the account
               chainId:
-                type: number
-                format: double
+                type: integer
+                format: int64
                 description: Chain ID
-              createdAt:
-                type: number
-                format: double
-                description: Account creation timestamp
-              updatedAt:
-                type: number
-                format: double
-                description: Account last update timestamp
-              smartAccount:
-                type: object
-                description: Smart account specific data (only for Smart Accounts)
-                required:
-                  - implementationType
-                  - factoryAddress
-                  - implementationAddress
-                  - salt
-                  - active
-                properties:
-                  implementationType:
-                    type: string
-                    description: Smart account implementation type
-                  factoryAddress:
-                    type: string
-                    description: Factory contract address
-                  implementationAddress:
-                    type: string
-                    description: Implementation contract address
-                  salt:
-                    type: string
-                    description: Salt used for deployment
-                  deployedTx:
-                    type: string
-                    description: Deployment transaction hash
-                  deployedAt:
-                    type: number
-                    format: double
-                    description: Deployment timestamp
-                  active:
-                    type: boolean
-                    description: Whether the smart account is active
-              recoveryMethod:
+              signerId:
                 type: string
-                description: Recovery method type
-              recoveryMethodDetails:
-                type: object
-                description: Details about the recovery method
-                properties:
-                  passkeyId:
-                    type: string
-                    description: Passkey identifier
-                  passkeyEnv:
-                    type: object
-                    description: Passkey environment information
-                    properties:
-                      name:
-                        type: string
-                        description: Environment name
-                      os:
-                        type: string
-                        description: Operating system
-                      osVersion:
-                        type: string
-                        description: Operating system version
-                      device:
-                        type: string
-                        description: Device type
+                description: Signer identifier
         start:
           type: integer
           format: int32
@@ -881,6 +815,7 @@ components:
 
     GetSignerResponse:
       type: object
+      additionalProperties: false
       required:
         - id
       properties:
@@ -891,6 +826,7 @@ components:
 
     ImportShareResponse:
       type: object
+      additionalProperties: false
       required:
         - id
         - wallet
@@ -916,6 +852,7 @@ components:
 
     MigratedAccountDataResponse:
       type: object
+      additionalProperties: false
       required:
         - id
         - wallet
@@ -936,6 +873,7 @@ components:
 
     NextActionResponse:
       type: object
+      additionalProperties: false
       required:
         - nextAction
         - player
@@ -951,6 +889,7 @@ components:
           description: The authenticated user ID.
         embedded:
           type: object
+          additionalProperties: false
           description: Device and share data (present when nextAction is RECOVER).
           properties:
             share:
@@ -970,40 +909,9 @@ components:
               type: string
               description: Device identifier.
 
-    EmbeddedV1Response:
-      type: object
-      properties:
-        share:
-          type: string
-          description: The encrypted share data.
-        address:
-          type: string
-          description: Account blockchain address.
-        chainId:
-          type: integer
-          format: int64
-          description: Chain ID.
-        deviceId:
-          type: string
-          description: Device identifier.
-        device:
-          type: string
-          description: Device ID.
-        account:
-          type: string
-          description: Account ID (starts with acc_).
-        ownerAddress:
-          type: string
-          description: Owner address of the account.
-        accountType:
-          type: string
-          description: Type of account.
-        signer:
-          type: string
-          description: Signer identifier (starts with sig_).
-
     DeviceResponse:
       type: object
+      additionalProperties: false
       required:
         - id
         - object
@@ -1036,6 +944,7 @@ components:
 
     DeviceListResponse:
       type: object
+      additionalProperties: false
       required:
         - object
         - url
