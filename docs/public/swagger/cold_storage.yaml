@@ -5,6 +5,9 @@ info:
     Shield by Openfort is a secure service dedicated to the protection of sensitive data. 
     It ensures the confidentiality and security of data management by offering a robust 
     framework for storing secrets and encryption parameters.
+
+    Requests and responses carry only the properties listed here. Shield
+    ignores a request field it does not declare instead of rejecting it.
   version: 0.0.1
   contact:
     name: Openfort
@@ -52,7 +55,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RegisterShareRequest'
+              $ref: '#/components/schemas/Share'
       responses:
         '201':
           description: Share registered successfully
@@ -82,14 +85,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateShareRequest'
+              $ref: '#/components/schemas/Share'
       responses:
         '200':
           description: Share updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UpdateShareResponse'
+                $ref: '#/components/schemas/Share'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -117,7 +120,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetShareResponse'
+                $ref: '#/components/schemas/Share'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -420,6 +423,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required:
                 - user_id
               properties:
@@ -530,8 +534,12 @@ components:
         type: string
 
   schemas:
-    RegisterShareRequest:
+    Share:
       type: object
+      additionalProperties: false
+      description: |
+        A stored share and its encryption parameters, exchanged by the register,
+        update and get operations.
       required:
         - secret
         - entropy
@@ -542,7 +550,7 @@ components:
           example: "some_secret_value"
         entropy:
           type: string
-          enum: [none, user, project]
+          enum: [none, user, project, passkey]
           description: Encryption type for the share
           example: "user"
         salt:
@@ -551,11 +559,11 @@ components:
           example: "some_salt_value"
         iterations:
           type: integer
-          description: Number of iterations for encryption algorithm
+          description: Number of iterations for the key derivation
           example: 1000
         length:
           type: integer
-          description: Length of the encrypted data
+          description: Length of the derived key
           example: 256
         digest:
           type: string
@@ -569,105 +577,48 @@ components:
           type: string
           description: Session ID for encryption operations
           example: "session_value"
-
-    UpdateShareRequest:
-      type: object
-      required:
-        - secret
-        - entropy
-      properties:
-        secret:
+        reference:
           type: string
-          description: The updated secret value
-          example: "updated_secret_value"
-        entropy:
-          type: string
-          enum: [none, user, project]
-          description: Encryption type for the share
-          example: "project"
-        salt:
-          type: string
-          description: Updated salt for encryption
-          example: "updated_salt_value"
-        iterations:
+          description: External reference the share was stored under
+          example: "sig_019d0ab2-94e1-78eb-b311-ee4781bb97a5"
+        storage_method_id:
           type: integer
-          description: Updated number of iterations
-          example: 2000
-        length:
-          type: integer
-          description: Updated length of encrypted data
-          example: 512
-        digest:
+          enum: [0, 1, 2]
+          description: Where the share is held. 0 shield, 1 Google Drive, 2 iCloud.
+          example: 0
+        passkey_reference:
+          type: object
+          additionalProperties: false
+          description: Passkey that protects the share. Set for passkey entropy only.
+          properties:
+            passkey_id:
+              type: string
+              example: "-XEAtwEmwyg-p4Ors9sLOmZgp2Y"
+            PasskeyEnv:
+              type: object
+              additionalProperties: false
+              description: Environment the passkey was created in
+              properties:
+                name:
+                  type: string
+                  example: "Chrome"
+                os:
+                  type: string
+                  example: "macOS"
+                osVersion:
+                  type: string
+                  example: "10.15.7"
+                device:
+                  type: string
+                  example: "Desktop"
+        keychain_id:
           type: string
-          description: Updated hashing algorithm
-          example: "sha512"
-        encryption_part:
-          type: string
-          description: Updated encryption part
-          example: "updated_part_value"
-        encryption_session:
-          type: string
-          description: Updated session ID
-          example: "updated_session_value"
-
-    UpdateShareResponse:
-      type: object
-      properties:
-        secret:
-          type: string
-          example: "updated_secret_value"
-        entropy:
-          type: string
-          example: "project"
-        salt:
-          type: string
-          example: "updated_salt_value"
-        iterations:
-          type: integer
-          example: 2000
-        length:
-          type: integer
-          example: 512
-        digest:
-          type: string
-          example: "sha512"
-        encryption_part:
-          type: string
-          example: "updated_part_value"
-        encryption_session:
-          type: string
-          example: "updated_session_value"
-
-    GetShareResponse:
-      type: object
-      properties:
-        secret:
-          type: string
-          example: "some_secret_value"
-        entropy:
-          type: string
-          example: "user"
-        salt:
-          type: string
-          example: "some_salt_value"
-        iterations:
-          type: integer
-          example: 1000
-        length:
-          type: integer
-          example: 256
-        digest:
-          type: string
-          example: "sha256"
-        encryption_part:
-          type: string
-          example: "part_value"
-        encryption_session:
-          type: string
-          example: "session_value"
+          description: Keychain the share belongs to
+          example: "kc_1"
 
     CreateProjectRequest:
       type: object
+      additionalProperties: false
       required:
         - name
       properties:
@@ -679,9 +630,14 @@ components:
           type: boolean
           description: Whether to generate an encryption key during creation
           example: true
+        enable_2fa:
+          type: boolean
+          description: Whether to require a one-time password for encryption sessions
+          example: false
 
     CreateProjectResponse:
       type: object
+      additionalProperties: false
       properties:
         id:
           type: string
@@ -703,9 +659,14 @@ components:
           type: string
           description: Generated encryption part (if requested)
           example: "generated_encryption_part"
+        enabled_2fa:
+          type: boolean
+          description: Whether encryption sessions require a one-time password
+          example: false
 
     GetProjectResponse:
       type: object
+      additionalProperties: false
       properties:
         id:
           type: string
@@ -715,22 +676,34 @@ components:
           type: string
           description: Project name
           example: "My Project"
+        enabled_2fa:
+          type: boolean
+          description: Whether encryption sessions require a one-time password
+          example: false
 
     AddProvidersRequest:
       type: object
+      additionalProperties: false
       properties:
         providers:
           type: object
+          additionalProperties: false
           properties:
             openfort:
               type: object
+              additionalProperties: false
               properties:
+                provider_id:
+                  type: string
+                  description: Provider identifier
+                  example: "openfort_provider_id"
                 publishable_key:
                   type: string
                   description: Openfort publishable key
                   example: "openfort_publishable_key"
             custom:
               type: object
+              additionalProperties: false
               properties:
                 jwk:
                   type: string
@@ -740,19 +713,25 @@ components:
                   type: string
                   description: PEM certificate for custom provider
                   example: "custom_pem"
+                cookie_field_name:
+                  type: string
+                  description: Cookie that carries the token when the provider authenticates by cookie
+                  example: "session_token"
                 key_type:
                   type: string
-                  enum: [rsa, ecdsa]
+                  enum: [rsa, ecdsa, ed25519]
                   description: Key type for custom provider
                   example: "rsa"
 
     AddProvidersResponse:
       type: object
+      additionalProperties: false
       properties:
         providers:
           type: array
           items:
             type: object
+            additionalProperties: false
             properties:
               provider_id:
                 type: string
@@ -760,45 +739,53 @@ components:
                 example: "openfort_provider_id"
               type:
                 type: string
-                enum: [openfort, custom]
+                enum: [OPENFORT, CUSTOM]
                 description: Provider type
-                example: "openfort"
+                example: "OPENFORT"
 
     GetProvidersResponse:
       type: object
+      additionalProperties: false
       properties:
         providers:
           type: array
           items:
             type: object
+            additionalProperties: false
             properties:
               provider_id:
                 type: string
                 example: "openfort_provider_id"
               type:
                 type: string
-                enum: [openfort, custom]
-                example: "openfort"
+                enum: [OPENFORT, CUSTOM]
+                example: "OPENFORT"
 
     GetProviderResponse:
       type: object
+      additionalProperties: false
       properties:
         provider_id:
           type: string
           example: "custom_provider_id"
         type:
           type: string
-          enum: [openfort, custom]
-          example: "custom"
+          enum: [OPENFORT, CUSTOM]
+          example: "CUSTOM"
         jwk:
           type: string
           example: "custom_jwk"
         pem:
           type: string
           example: "custom_pem"
+        cookie_field_name:
+          type: string
+          nullable: true
+          description: Cookie that carries the token. Null when the provider uses a bearer token.
+          example: "session_token"
         key_type:
           type: string
-          enum: [rsa, ecdsa]
+          enum: [rsa, ecdsa, ed25519]
           example: "rsa"
         publishable_key:
           type: string
@@ -806,6 +793,7 @@ components:
 
     UpdateProviderRequest:
       type: object
+      additionalProperties: false
       properties:
         publishable_key:
           type: string
@@ -819,14 +807,19 @@ components:
           type: string
           description: Updated PEM certificate for custom provider
           example: "new_pem"
+        cookie_field_name:
+          type: string
+          description: Cookie that carries the token when the provider authenticates by cookie
+          example: "session_token"
         key_type:
           type: string
-          enum: [rsa, ecdsa]
+          enum: [rsa, ecdsa, ed25519]
           description: Updated key type for custom provider
           example: "ecdsa"
 
     EncryptBodyRequest:
       type: object
+      additionalProperties: false
       required:
         - encryption_part
       properties:
@@ -837,6 +830,7 @@ components:
 
     RegisterEncryptionSessionRequest:
       type: object
+      additionalProperties: false
       required:
         - encryption_part
       properties:
@@ -844,9 +838,18 @@ components:
           type: string
           description: Encryption part for the session
           example: "encryption_part_value"
+        user_id:
+          type: string
+          description: User the session is opened for. Required when 2FA is enabled.
+          example: "usr_1"
+        otp_code:
+          type: string
+          description: One-time password for the user. Required when 2FA is enabled.
+          example: "123456"
 
     RegisterEncryptionSessionResponse:
       type: object
+      additionalProperties: false
       properties:
         session_id:
           type: string
@@ -855,6 +858,7 @@ components:
 
     RegisterEncryptionKeyResponse:
       type: object
+      additionalProperties: false
       properties:
         encryption_part:
           type: string
@@ -863,16 +867,18 @@ components:
 
     Error:
       type: object
+      additionalProperties: false
+      required:
+        - message
       properties:
-        error:
+        message:
           type: string
-          description: Error message
+          description: Human-readable error message
+          example: "Provider not found"
         code:
           type: string
-          description: Error code
-        details:
-          type: object
-          description: Additional error details
+          description: Stable machine-readable error code
+          example: "PV_NOT_FOUND"
 
   responses:
     BadRequest:

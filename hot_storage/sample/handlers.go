@@ -132,6 +132,19 @@ func decryptDeviceShare(w http.ResponseWriter, device Device) (string, bool) {
 	return share, true
 }
 
+// decodeJSON reads a JSON request body into dst. Bodies over 1 MiB and bodies
+// carrying a field the request type does not declare are rejected, so the
+// request schemas published in the OpenAPI spec are enforced, not advisory.
+func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) bool {
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(dst); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return false
+	}
+	return true
+}
+
 func handleRegisterDeviceV2(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -139,8 +152,7 @@ func handleRegisterDeviceV2(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req RegisterRequestV2
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -194,8 +206,7 @@ func handleRecoverDeviceV2(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req RecoverEmbeddedRequestV2
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -342,8 +353,7 @@ func handleCreateDeviceV2(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req CreateEmbeddedRequestV2
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -435,8 +445,7 @@ func handleInitDevice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req InitEmbeddedRequest
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -504,8 +513,7 @@ func handleRegisterDevice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req RegisterEmbeddedRequest
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -762,8 +770,7 @@ func handleImportShare(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req ImportShareRequest
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -913,14 +920,19 @@ func handleGetMigratedAccountData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	resp := MigratedAccountDataResponse{
+		ID:              data.ID,
+		Wallet:          data.Wallet,
+		FormerOwnerUser: data.FormerOwnerUser,
+	}
+
 	w.Header().Set(contentTypeHeader, contentTypeJSON)
-	json.NewEncoder(w).Encode(data)
+	json.NewEncoder(w).Encode(resp)
 }
 
 func handleCreateDevice(w http.ResponseWriter, r *http.Request) {
 	var req CreateDeviceRequest
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 

@@ -217,3 +217,61 @@ func TestUnauthenticatedRequestsAreRejectedNotThrottled(t *testing.T) {
 		}
 	}
 }
+
+// Request bodies are decoded strictly: a field the request type does not
+// declare is a 400, so the closed request schemas in the OpenAPI spec hold
+// for every operation that takes a body.
+func TestUnknownRequestFieldsAreRejected(t *testing.T) {
+	setupHandlerTest(t)
+	account, _ := seedAccount(t, "alice", "default", "0xaaa4")
+
+	cases := []struct{ path, body string }{
+		{"/v1/devices/init", `{"chainId":80002}`},
+		{"/v1/devices/register", `{"chainId":80002,"address":"0xaaa4","share":"s"}`},
+		{"/v1/devices", `{"accountId":"` + account.ID + `","address":"0xaaa4","chainId":80002,"share":"s"}`},
+		{"/v2/devices/create", `{"accountType":"eoa","chainType":"evm","chainId":80002,"address":"0xnew4","share":"s"}`},
+		{"/v2/devices/recover", `{"account":"` + account.ID + `"}`},
+		{"/v2/devices/register", `{"account":"` + account.ID + `","share":"s"}`},
+		{"/v2/accounts/import-share", `{"address":"0ximp4","share":"s","userId":"legacy","custody":"User"}`},
+	}
+	for _, c := range cases {
+		post := func(body string) int {
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodPost, c.path, strings.NewReader(body))
+			apiMux().ServeHTTP(w, asUser(r, "alice", "default"))
+			return w.Code
+		}
+		undeclared := strings.TrimSuffix(c.body, "}") + `,"unexpected":1}`
+		if code := post(undeclared); code != http.StatusBadRequest {
+			t.Fatalf("%s with an undeclared field got %d, want 400", c.path, code)
+		}
+		if code := post(c.body); code == http.StatusBadRequest {
+			t.Fatalf("%s with its documented body got 400", c.path)
+		}
+	}
+}
+
+// The migration metadata response is the documented three fields, not the
+// stored row with its GORM bookkeeping columns.
+func TestMigratedDataResponseHasOnlyDocumentedFields(t *testing.T) {
+	setupHandlerTest(t)
+	account, _ := seedAccount(t, "alice", "default", "0xaaa5")
+	row := MigratedAccountData{ID: account.ID, Wallet: "w1", FormerOwnerUser: "legacy"}
+	if err := db.Create(&row).Error; err != nil {
+		t.Fatalf("seed migrated data: %v", err)
+	}
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/v2/accounts/migrated-data?accountId="+account.ID, nil)
+	apiMux().ServeHTTP(w, asUser(r, "alice", "default"))
+	if w.Code != http.StatusOK {
+		t.Fatalf("migrated-data got %d, want 200", w.Code)
+	}
+	var got map[string]any
+	if err := json.NewDecoder(w.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(got) != 3 || got["id"] != account.ID || got["wallet"] != "w1" || got["former_user"] != "legacy" {
+		t.Fatalf("got %v, want exactly id, wallet and former_user", got)
+	}
+}

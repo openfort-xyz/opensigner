@@ -23,8 +23,10 @@ import { parse } from 'yaml'
 // belong here only when derived from the implementation.
 //
 // Runs in report-only mode while the specs are brought up to standard; flip ENFORCING once
-// the remaining gaps are either closed or recorded in ACCEPTED below.
+// the remaining gaps are either closed or recorded in ACCEPTED below. A rule that already
+// holds in every spec goes into ENFORCED_RULES so it cannot regress in the meantime.
 const ENFORCING = false
+const ENFORCED_RULES = new Set(['closed-objects'])
 
 // Gaps deliberately left open, kept visible rather than silently skipped. Each entry needs
 // a reason that would still convince someone reading it a year from now.
@@ -250,12 +252,13 @@ console.log(
     `${ACCEPTED.length > 0 ? `, ${ACCEPTED.length} accepted` : ''}`,
 )
 
-if (failures.length > 0 && ENFORCING) {
+const enforced = ENFORCING ? failures : failures.filter((f) => ENFORCED_RULES.has(f.rule))
+if (enforced.length > 0) {
   console.error('\ncheck-openapi: the specs above do not describe their own contract.')
   console.error('Close the gap, or add an entry to ACCEPTED with a reason.')
   Process.exit(1)
 }
 
-if (failures.length > 0) {
-  console.log('check-openapi: report-only mode, not failing the build (see ENFORCING)')
+if (failures.length > enforced.length) {
+  console.log('check-openapi: remaining gaps are report-only, not failing the build (see ENFORCING)')
 }

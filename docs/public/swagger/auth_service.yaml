@@ -17,6 +17,9 @@ info:
     today. Treat them as the contract a client should keep to, not as a promise
     that a longer value is rejected.
 
+    Responses carry only the properties listed here. Better Auth ignores a
+    request field it does not declare instead of rejecting it.
+
 servers:
   - url: http://localhost:7052
     description: Local development (docker-compose)
@@ -75,7 +78,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SessionResponse"
+                $ref: "#/components/schemas/SignUpResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -109,7 +112,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SessionResponse"
+                $ref: "#/components/schemas/SignInResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -146,7 +149,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SessionResponse"
+                $ref: "#/components/schemas/SignInResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -610,16 +613,36 @@ components:
           pattern: "^[a-z]+$"
           example: ok
 
+    SignUpResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        token:
+          $ref: "#/components/schemas/SessionToken"
+        user:
+          $ref: "#/components/schemas/User"
+
+    SignInResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        redirect:
+          type: boolean
+          description: Always false for password sign-in.
+          example: false
+        token:
+          $ref: "#/components/schemas/SessionToken"
+        user:
+          $ref: "#/components/schemas/User"
+
     SessionResponse:
       type: object
       additionalProperties: false
       properties:
-        user:
-          $ref: "#/components/schemas/User"
         session:
           $ref: "#/components/schemas/Session"
-        token:
-          $ref: "#/components/schemas/SessionToken"
+        user:
+          $ref: "#/components/schemas/User"
 
     User:
       type: object
@@ -633,6 +656,14 @@ components:
           $ref: "#/components/schemas/DisplayName"
         username:
           $ref: "#/components/schemas/Username"
+        displayUsername:
+          $ref: "#/components/schemas/Username"
+        image:
+          type: string
+          nullable: true
+          description: Profile image URL; null when the account has none.
+          maxLength: 2048
+          pattern: "^[^\\x00-\\x1f\\x7f]*$"
         emailVerified:
           type: boolean
         createdAt:
@@ -650,8 +681,22 @@ components:
           $ref: "#/components/schemas/Identifier"
         expiresAt:
           $ref: "#/components/schemas/Timestamp"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        updatedAt:
+          $ref: "#/components/schemas/Timestamp"
         token:
           $ref: "#/components/schemas/SessionToken"
+        ipAddress:
+          type: string
+          description: Client address recorded at sign-in; empty when not known.
+          maxLength: 45
+          pattern: "^[0-9A-Fa-f.:]*$"
+        userAgent:
+          type: string
+          description: Client User-Agent recorded at sign-in; empty when not sent.
+          maxLength: 1024
+          pattern: "^[^\\x00-\\x1f\\x7f]*$"
 
     JWKSResponse:
       type: object
