@@ -218,9 +218,8 @@ func TestUnauthenticatedRequestsAreRejectedNotThrottled(t *testing.T) {
 	}
 }
 
-// Request bodies are decoded strictly: a field the request type does not
-// declare is a 400, so the closed request schemas in the OpenAPI spec hold
-// for every operation that takes a body.
+// Every operation that takes a body rejects an undeclared field with 400, so
+// the closed request schemas in the OpenAPI spec hold.
 func TestUnknownRequestFieldsAreRejected(t *testing.T) {
 	setupHandlerTest(t)
 	account, _ := seedAccount(t, "alice", "default", "0xaaa4")
@@ -251,8 +250,7 @@ func TestUnknownRequestFieldsAreRejected(t *testing.T) {
 	}
 }
 
-// The migration metadata response is the documented three fields, not the
-// stored row with its GORM bookkeeping columns.
+// migrated-data returns the three documented fields, not the stored row.
 func TestMigratedDataResponseHasOnlyDocumentedFields(t *testing.T) {
 	setupHandlerTest(t)
 	account, _ := seedAccount(t, "alice", "default", "0xaaa5")

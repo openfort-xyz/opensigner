@@ -82,8 +82,7 @@ type MigratedAccountData struct {
 	FormerOwnerUser string `json:"former_user"` // used as a PRF seed for passkeys at Openfort
 }
 
-// MigratedAccountDataResponse is the wire shape of migration metadata; the
-// stored row carries GORM bookkeeping columns that must not be exposed.
+// MigratedAccountDataResponse leaves out the GORM columns of the stored row.
 type MigratedAccountDataResponse struct {
 	ID              string `json:"id"`
 	Wallet          string `json:"wallet"`
@@ -184,8 +183,8 @@ type ImportShareRequest struct {
 	Share    string `json:"share"`
 	SignerId string `json:"signerId,omitempty"`
 	UserId   string `json:"userId"`
-	// Present in Openfort's export payload; accepted so a pasted export decodes
-	// under strict decoding, not used (only User-custody shares are exportable).
+	// Part of Openfort's export payload. Accepted so a pasted export decodes,
+	// otherwise unused.
 	Custody string `json:"custody,omitempty"`
 }
 

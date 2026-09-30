@@ -132,9 +132,9 @@ func decryptDeviceShare(w http.ResponseWriter, device Device) (string, bool) {
 	return share, true
 }
 
-// decodeJSON reads a JSON request body into dst. Bodies over 1 MiB and bodies
-// carrying a field the request type does not declare are rejected, so the
-// request schemas published in the OpenAPI spec are enforced, not advisory.
+// decodeJSON decodes a JSON body into dst. It rejects bodies over 1 MiB and
+// bodies with a field dst does not declare, so the OpenAPI request schemas
+// stay true.
 func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) bool {
 	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
 	dec.DisallowUnknownFields()
