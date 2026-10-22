@@ -1,6 +1,6 @@
 module sample
 
-go 1.27.1
+go 1.27.3
 
 require (
 	github.com/MicahParks/keyfunc/v3 v3.8.2
