@@ -81,6 +81,19 @@
 	</div>
 
 	<div class="section">
+		<h2>Rotate Cold Storage (Shield) Credentials</h2>
+		<div id="rotate-shield-credentials">
+			<button onclick="rotateShieldApiKey()" id="rotateShieldApiKeyBtn">
+				Rotate API Key
+			</button>
+			<button onclick="rotateShieldEncryptionKey()" id="rotateShieldEncryptionKeyBtn">
+				Rotate Encryption Key
+			</button>
+		</div>
+		<div id="shieldRotateStatus"></div>
+	</div>
+
+	<div class="section">
 		<h2>Setup Cold Storage (Shield) Auth Provider</h2>
 		<div id="setup-shield-auth-provider">
 			<button onclick="setupShieldAuthProvider()" id="setupShieldAuthProviderBtn">
@@ -592,6 +605,80 @@
 					"shieldProjectStatus"
 				);
 			}
+		}
+
+		// Rotation is two calls: prepare returns the new credential, commit
+		// proves it was received. Nothing is replaced until commit, and a
+		// repeated commit is a no-op, so a lost response is retried safely.
+		async function rotateShieldApiKey() {
+			if (!shieldProjectApiKey || !shieldProjectApiSecret) {
+				showStatus("Please create a cold storage project first", "error", "shieldRotateStatus");
+				return;
+			}
+
+			const prepared = await fetch(`${COLD_STORAGE_SERVER}/project/rotate-api-key/prepare`, {
+				method: "POST",
+				headers: { "X-API-Key": shieldProjectApiKey, "X-API-Secret": shieldProjectApiSecret },
+			});
+			const preparedData = await prepared.json();
+			if (!prepared.ok) {
+				showStatus(`API key rotation failed at prepare: ${preparedData.message || "Unknown error"}`, "error", "shieldRotateStatus");
+				return;
+			}
+			const pendingKey = preparedData.api_key;
+
+			const committed = await fetch(`${COLD_STORAGE_SERVER}/project/rotate-api-key/commit`, {
+				method: "POST",
+				headers: { "X-API-Key": pendingKey, "X-API-Secret": shieldProjectApiSecret },
+			});
+			const committedData = await committed.json();
+			if (!committed.ok) {
+				showStatus(`API key rotation failed at commit: ${committedData.message || "Unknown error"}`, "error", "shieldRotateStatus");
+				return;
+			}
+
+			shieldProjectApiKey = committedData.api_key;
+			showStatus(`API key rotated (${committedData.status}).\nNew API Key: ${shieldProjectApiKey}`, "success", "shieldRotateStatus");
+			log(`Cold storage API key rotated: ${committedData.status}`);
+		}
+
+		async function rotateShieldEncryptionKey() {
+			if (!shieldProjectApiKey || !shieldProjectApiSecret || !shieldProjectEncryptionShare) {
+				showStatus("Please create a cold storage project first", "error", "shieldRotateStatus");
+				return;
+			}
+			const headers = {
+				"Content-Type": "application/json",
+				"X-API-Key": shieldProjectApiKey,
+				"X-API-Secret": shieldProjectApiSecret,
+			};
+
+			const prepared = await fetch(`${COLD_STORAGE_SERVER}/project/rotate-encryption-key/prepare`, {
+				method: "POST",
+				headers,
+				body: JSON.stringify({ encryption_part: shieldProjectEncryptionShare }),
+			});
+			const preparedData = await prepared.json();
+			if (!prepared.ok) {
+				showStatus(`Encryption key rotation failed at prepare: ${preparedData.message || "Unknown error"}`, "error", "shieldRotateStatus");
+				return;
+			}
+			const newShare = preparedData.encryption_part;
+
+			const committed = await fetch(`${COLD_STORAGE_SERVER}/project/rotate-encryption-key/commit`, {
+				method: "POST",
+				headers,
+				body: JSON.stringify({ encryption_part: shieldProjectEncryptionShare, new_encryption_part: newShare }),
+			});
+			const committedData = await committed.json();
+			if (!committed.ok) {
+				showStatus(`Encryption key rotation failed at commit: ${committedData.message || "Unknown error"}`, "error", "shieldRotateStatus");
+				return;
+			}
+
+			shieldProjectEncryptionShare = newShare;
+			showStatus(`Encryption key rotated (${committedData.status}).\nNew Encryption Share: ${shieldProjectEncryptionShare}`, "success", "shieldRotateStatus");
+			log(`Cold storage encryption key rotated: ${committedData.status}`);
 		}
 
 		function showTab(tabName) {

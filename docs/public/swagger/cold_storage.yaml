@@ -408,6 +408,126 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /project/rotate-api-key/prepare:
+    post:
+      tags:
+        - Projects
+      summary: Prepare API Key Rotation
+      description: |
+        Generates a pending API key and returns it. The current key keeps
+        working until the rotation is committed with the pending key.
+        Preparing again replaces the pending key. A pending key expires after
+        15 minutes.
+      security:
+        - ApiKeyAuth: []
+          ApiSecretAuth: []
+      responses:
+        '200':
+          description: Pending API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RotateAPIKeyPrepareResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /project/rotate-api-key/commit:
+    post:
+      tags:
+        - Projects
+      summary: Commit API Key Rotation
+      description: |
+        Send the **pending** key from prepare in `X-API-Key`, with the API
+        secret. The pending key becomes current and the previous key stops
+        working. Repeating the commit with the now-current key returns
+        `status: current`, so a lost response is safe to retry.
+      security:
+        - ApiKeyAuth: []
+          ApiSecretAuth: []
+      responses:
+        '200':
+          description: Rotation committed, or already current
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RotateAPIKeyCommitResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /project/rotate-encryption-key/prepare:
+    post:
+      tags:
+        - Encryption
+      summary: Prepare Encryption Key Rotation
+      description: |
+        Verifies the current encryption part and returns the project's half of
+        a new key. Nothing changes until commit. Preparing again replaces the
+        pending key. A pending key expires after 15 minutes.
+      security:
+        - ApiKeyAuth: []
+          ApiSecretAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RotateEncryptionKeyPrepareRequest'
+      responses:
+        '200':
+          description: New encryption part
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RotateEncryptionKeyPrepareResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /project/rotate-encryption-key/commit:
+    post:
+      tags:
+        - Encryption
+      summary: Commit Encryption Key Rotation
+      description: |
+        Re-encrypts every project-entropy share under the prepared key and
+        makes it current. Repeating the commit returns
+        `status: already_committed`, so a lost response is safe to retry.
+      security:
+        - ApiKeyAuth: []
+          ApiSecretAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RotateEncryptionKeyCommitRequest'
+      responses:
+        '200':
+          description: Rotation committed, or already committed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RotateEncryptionKeyCommitResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /project/otp:
     post:
       summary: Request OTP
@@ -865,6 +985,60 @@ components:
           description: Generated encryption part
           example: "generated_encryption_part"
 
+    RotateAPIKeyPrepareResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        api_key:
+          type: string
+          description: Pending API key; send it in X-API-Key to commit
+    RotateAPIKeyCommitResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        api_key:
+          type: string
+          description: The project's current API key
+        status:
+          type: string
+          enum: [committed, current]
+    RotateEncryptionKeyPrepareRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - encryption_part
+      properties:
+        encryption_part:
+          type: string
+          description: The project's current encryption part
+    RotateEncryptionKeyPrepareResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        encryption_part:
+          type: string
+          description: The project's half of the new key; nothing changes until commit
+    RotateEncryptionKeyCommitRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - encryption_part
+        - new_encryption_part
+      properties:
+        encryption_part:
+          type: string
+          description: The project's current encryption part
+        new_encryption_part:
+          type: string
+          description: The encryption part returned by prepare
+    RotateEncryptionKeyCommitResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [committed, already_committed]
+
     Error:
       type: object
       additionalProperties: false
@@ -895,6 +1069,12 @@ components:
             $ref: '#/components/schemas/Error'
     NotFound:
       description: Not Found - The requested resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: Conflict - the request does not match the project's current state (see the error code)
       content:
         application/json:
           schema:
