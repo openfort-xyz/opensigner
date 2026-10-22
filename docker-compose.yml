@@ -148,6 +148,9 @@ services:
       # defaults it to `disable`, so a near-miss here is not a misconfiguration
       # that surfaces -- it is an unencrypted connection that reports success.
       DB_SSL_MODE: ${COLD_STORAGE_DB_SSLMODE:-require}
+      # Custom-provider JWK URLs must be https on a public host unless the
+      # host is listed here. The bundled auth service is internal plain HTTP.
+      JWK_ALLOWED_HOSTS: ${COLD_STORAGE_JWK_ALLOWED_HOSTS:-authservice:3000}
     networks:
       - frontend_network
       - backend_network
