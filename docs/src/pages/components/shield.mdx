@@ -91,10 +91,10 @@ CORS_EXTRA_ALLOWED_HEADERS=
 
 ## Versioning
 
-The provided `docker-compose.yml` pins Shield to a specific release image. The current version is `v0.3.2`:
+The provided `docker-compose.yml` pins Shield to a specific release image. The current version is `v0.3.6`:
 
 ```yaml
-image: ghcr.io/openfort-xyz/shield:v0.3.2
+image: ghcr.io/openfort-xyz/shield:v0.3.6
 ```
 
 Shield dropped MySQL support in `v0.3.0` and speaks only the PostgreSQL wire
@@ -224,6 +224,82 @@ Shield stores the encrypted contents of the cold share along with the internal p
 By *internal passkey ID* we mean the identifier the passkey authenticator gave to that particular passkey.
 OpenSigner also stores the environment in which the passkey was created. This information is mainly extracted from the `User-Agent` token and is meant for both hinting and tracking purposes.
 
+## Rotating project credentials
+
+A project's encryption key and API key can each be replaced without
+downtime. Both rotations take two calls:
+
+1. **Prepare** returns the new credential and changes nothing else. The old
+   credential keeps working.
+2. **Commit** proves the new credential was received and makes it current.
+   The old credential stops working.
+
+The prepare response is the only copy of the new credential, which is why
+nothing is replaced until the commit sends it back. Both calls are safe to
+retry: preparing again replaces the pending credential, and repeating a
+successful commit returns `already_committed` (encryption key) or `current`
+(API key). A pending credential expires after 15 minutes.
+
+### Encryption key
+
+```bash
+# 1. Prepare: send the current part, receive the new one
+curl -X POST "$SHIELD/project/rotate-encryption-key/prepare" \
+  -H "X-API-Key: $API_KEY" -H "X-API-Secret: $API_SECRET" \
+  -d '{"encryption_part": "'"$CURRENT_PART"'"}'
+# -> {"encryption_part": "<new part>"}
+
+# 2. Commit: send both parts
+curl -X POST "$SHIELD/project/rotate-encryption-key/commit" \
+  -H "X-API-Key: $API_KEY" -H "X-API-Secret: $API_SECRET" \
+  -d '{"encryption_part": "'"$CURRENT_PART"'", "new_encryption_part": "'"$NEW_PART"'"}'
+# -> {"status": "committed"}
+```
+
+Commit re-encrypts every share that uses automatic recovery (project
+entropy) in one database transaction. Password and passkey shares are
+encrypted client-side and are not touched. After the commit:
+
+- The old part, and any encryption session registered with it, is rejected
+  with `400 EC_INVALID`. Update every place that stores the part, such as
+  your backend's configuration, before or right after committing.
+- A share write that started before the commit and finishes after it is
+  rejected with `409 EC_ROTATED`. Retry it with the new part.
+
+Shield stores a check value of each project key and rejects a part that does
+not reconstruct it, so a stale part can never encrypt a share under a key
+nobody holds. Keys created before this check existed get one on their first
+prepare, which verifies the part by decrypting the project's shares; a project
+with such a key and no project share yet cannot be rotated
+(`409 EC_UNVERIFIABLE`) until it has one.
+
+Rotate only once every Shield replica runs a release with rotation: an older
+replica writes shares without the rotation guard.
+
+Commit runs in a single transaction. For projects with many shares, make sure
+`WRITE_TIMEOUT` covers it; if a commit's response is lost, repeating the same
+commit completes it.
+
+### API key
+
+```bash
+# 1. Prepare with the current key
+curl -X POST "$SHIELD/project/rotate-api-key/prepare" \
+  -H "X-API-Key: $API_KEY" -H "X-API-Secret: $API_SECRET"
+# -> {"api_key": "<pending key>"}
+
+# 2. Commit with the PENDING key
+curl -X POST "$SHIELD/project/rotate-api-key/commit" \
+  -H "X-API-Key: $PENDING_KEY" -H "X-API-Secret: $API_SECRET"
+# -> {"api_key": "<pending key>", "status": "committed"}
+```
+
+The API key is also configured in the iframe (`shieldAPIKey`), so redeploy it
+with the new key when you commit. Project endpoints reject the old key
+immediately. Share endpoints cache API-key lookups for 60 seconds per Shield
+instance, so with several replicas the old key can keep working there for up
+to a minute.
+
 ## API error codes
 
 Shield returns an HTTP status, an error code, and a descriptive message on
@@ -260,6 +336,11 @@ failure:
 | 409 | `EC_MISSING` | The requested share have project entropy and encryption part is required |
 | 400 | `EC_INVALID` | Invalid encryption part |
 | 400 | `EC_INVALID` | Invalid encryption session |
+| 409 | `EC_ROTATED` | Encryption key was rotated during the request, retry with the current encryption part |
+| 409 | `EC_NO_PENDING` | No pending encryption key rotation; call prepare first |
+| 409 | `EC_ROTATION_EXPIRED` | Pending encryption key rotation expired; call prepare again |
+| 409 | `EC_UNVERIFIABLE` | Encryption part cannot be verified: the project has no key check and no project share |
+| 409 | `EC_NOT_MIGRATED` | Encryption key is not migrated yet; read any share with the current part, then retry |
 
 ### Share errors
 
@@ -267,6 +348,7 @@ failure:
 |-------------|------------|---------|
 | 404 | `SH_NOT_FOUND` | Share not found |
 | 409 | `SH_EXISTS` | Share already exists |
+| 400 | `SH_INVALID` | Project-entropy shares cannot be imported |
 
 ### User errors
 
@@ -303,6 +385,9 @@ failure:
 | 401 | `A_INVALID` | Invalid API key or API secret |
 | 401 | `A_INVALID` | Invalid token |
 | 401 | `A_INVALID` | Invalid auth provider |
+| 409 | `A_PENDING_NOT_PROVEN` | Commit the API key rotation with the pending key from prepare |
+| 409 | `A_ROTATION_EXPIRED` | Pending API key rotation expired; call prepare again |
+| 409 | `A_NO_PENDING` | No pending API key rotation for this key; call prepare again |
 
 ### General errors
 
