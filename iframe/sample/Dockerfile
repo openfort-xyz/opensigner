@@ -1,5 +1,5 @@
 # Pinned by digest: a tag can be repointed at a different image at any time.
-FROM node:24-alpine3.22@sha256:191c9f0080fcbbc6547a85dc0ff7988072214a355aabdc1d2ec55a7dae5eea8a
+FROM node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c52644ab818af6176b1c70a026137dc92a2
 
 RUN npm install -g http-server
 
