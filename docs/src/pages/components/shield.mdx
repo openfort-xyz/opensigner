@@ -102,10 +102,10 @@ plain HTTP on the internal network, so `docker-compose.yml` sets
 
 ## Versioning
 
-The provided `docker-compose.yml` pins Shield to a specific release image. The current version is `v0.4.0`:
+The provided `docker-compose.yml` pins Shield to a specific release image. The current version is `v0.4.1`:
 
 ```yaml
-image: ghcr.io/openfort-xyz/shield:v0.4.0
+image: ghcr.io/openfort-xyz/shield:v0.4.1
 ```
 
 Shield dropped MySQL support in `v0.3.0` and speaks only the PostgreSQL wire
@@ -237,8 +237,8 @@ OpenSigner also stores the environment in which the passkey was created. This in
 
 ## Rotating project credentials
 
-A project's encryption key and API key can each be replaced without
-downtime. Both rotations take two calls:
+A project's encryption key, API key and API secret can each be replaced
+without downtime. Each rotation takes two calls:
 
 1. **Prepare** returns the new credential and changes nothing else. The old
    credential keeps working.
@@ -249,7 +249,7 @@ The prepare response is the only copy of the new credential, which is why
 nothing is replaced until the commit sends it back. Both calls are safe to
 retry: preparing again replaces the pending credential, and repeating a
 successful commit returns `already_committed` (encryption key) or `current`
-(API key). A pending credential expires after 15 minutes.
+(API key and API secret). A pending credential expires after 15 minutes.
 
 ### Encryption key
 
@@ -310,6 +310,26 @@ with the new key when you commit. Project endpoints reject the old key
 immediately. Share endpoints cache API-key lookups for 60 seconds per Shield
 instance, so with several replicas the old key can keep working there for up
 to a minute.
+
+### API secret
+
+```bash
+# 1. Prepare with the current secret
+curl -X POST "$SHIELD/project/rotate-api-secret/prepare" \
+  -H "X-API-Key: $API_KEY" -H "X-API-Secret: $API_SECRET"
+# -> {"api_secret": "<pending secret>"}
+
+# 2. Commit with the PENDING secret
+curl -X POST "$SHIELD/project/rotate-api-secret/commit" \
+  -H "X-API-Key: $API_KEY" -H "X-API-Secret: $PENDING_SECRET"
+# -> {"status": "committed"}
+```
+
+Update the secret wherever your backend calls Shield with it (for example
+`SHIELD_API_SECRET`) when you commit. The old secret is rejected immediately
+on every endpoint and every replica. The pending secret authenticates only
+the commit. An API key and an API secret rotation can be in flight at once;
+commit the secret with whichever key is current.
 
 ## API error codes
 
@@ -397,7 +417,7 @@ failure:
 | 401 | `A_INVALID` | Invalid API key or API secret |
 | 401 | `A_INVALID` | Invalid token |
 | 401 | `A_INVALID` | Invalid auth provider |
-| 409 | `A_PENDING_NOT_PROVEN` | Commit the API key rotation with the pending key from prepare |
+| 409 | `A_PENDING_NOT_PROVEN` | Commit the API key (or secret) rotation with the pending key (or secret) from prepare |
 | 409 | `A_ROTATION_EXPIRED` | Pending API key rotation expired; call prepare again |
 | 409 | `A_NO_PENDING` | No pending API key rotation for this key; call prepare again |
 
