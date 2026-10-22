@@ -85,7 +85,18 @@ IDLE_TIMEOUT=
 CORS_MAX_AGE=
 # CORS extra allowed headers, empty by default
 CORS_EXTRA_ALLOWED_HEADERS=
+# Hosts (host or host:port, comma separated) that custom-provider JWK URLs may
+# use even though they are internal or plain HTTP. Empty by default.
+JWK_ALLOWED_HOSTS=
 ```
+
+Custom-provider JWK URLs must be `https` on a public host. Shield resolves the
+host itself, refuses private, loopback, link-local (including cloud metadata)
+and other non-public addresses, and re-checks every redirect, so a tenant
+cannot point it at internal services. The bundled auth service is reached over
+plain HTTP on the internal network, so `docker-compose.yml` sets
+`JWK_ALLOWED_HOSTS=authservice:3000` (override with
+`COLD_STORAGE_JWK_ALLOWED_HOSTS`).
 
 `OPENFORT_BASE_URL` refers to the **Hot Storage**. Shield learns about the authentication service once an Authentication Provider is configured for a certain project.
 
@@ -372,6 +383,7 @@ failure:
 | 400 | `PV_CFG_INVALID` | Missing key type |
 | 400 | `PV_CFG_INVALID` | Invalid PEM certificate |
 | 409 | `PV_CFG_INVALID` | JWK and PEM cannot be set at the same time |
+| 400 | `PV_CFG_INVALID` | JWK URL not allowed: use https on a public host, or ask the operator to allowlist the host in JWK_ALLOWED_HOSTS |
 | 409 | `PV_EXISTS` | Custom authentication already registered for this project |
 
 ### Authentication errors
