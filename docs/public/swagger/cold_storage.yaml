@@ -988,6 +988,8 @@ components:
     RotateAPIKeyPrepareResponse:
       type: object
       additionalProperties: false
+      required:
+        - api_key
       properties:
         api_key:
           type: string
@@ -995,6 +997,9 @@ components:
     RotateAPIKeyCommitResponse:
       type: object
       additionalProperties: false
+      required:
+        - api_key
+        - status
       properties:
         api_key:
           type: string
@@ -1014,6 +1019,8 @@ components:
     RotateEncryptionKeyPrepareResponse:
       type: object
       additionalProperties: false
+      required:
+        - encryption_part
       properties:
         encryption_part:
           type: string
@@ -1034,6 +1041,8 @@ components:
     RotateEncryptionKeyCommitResponse:
       type: object
       additionalProperties: false
+      required:
+        - status
       properties:
         status:
           type: string
