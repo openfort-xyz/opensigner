@@ -1,7 +1,7 @@
 # Base images are pinned by digest, not tag. Tags are mutable, so a tag alone
 # means the image a build produces today need not match the one it produced
 # yesterday.
-FROM golang:1.27.1-alpine3.23@sha256:c8500dc1e6c8d8db60a2c6986bc591517c3be360ca448b9df43449dec430cc34 AS builder
+FROM golang:1.27.3-alpine3.23@sha256:7fd63dd7c37f5ddaef15bd8fd3f3e4f90f0d50cd9cae255c7cf73887a494d8df AS builder
 
 WORKDIR /src
 

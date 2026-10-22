@@ -31,7 +31,7 @@
     "react-server-dom-webpack": "19.2.8",
     "rollup": "4.62.5",
     "typescript": "5.9.3",
-    "vite": "8.1.5",
+    "vite": "8.1.6",
     "yaml": "2.9.0"
   }
 }
