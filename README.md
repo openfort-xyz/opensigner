@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <i>OpenSigner is currently being audited by Quantstamp.</i>
+  <i>OpenSigner is audited by Quantstamp.</i>
 </p>
 
 ---
