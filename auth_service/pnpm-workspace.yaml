@@ -1,8 +1,21 @@
 packages: []
 
+# Security releases are pinned same-day deliberately: the 2026-11-03 better-auth
+# security release (12 advisories incl. a critical) is newer than the 7-day window.
+# "Update every Better Auth package together" per
+# https://better-auth.com/blog/security-release-2026-11-03
+minimumReleaseAgeExclude:
+  - better-auth
+  - "@better-auth/*"
+  - better-call
+
 # pnpm 10 reads overrides from here; the `pnpm` block in package.json is ignored.
 overrides:
   path-to-regexp: ">=8.4.0"
   drizzle-orm: ">=0.45.2"
   # GHSA-2v37-7h3g-55p8, reached via vitest > vite > postcss.
   nanoid: ">=3.3.18 <4"
+  # 2026-11 security round (express chain)
+  "body-parser@>=2.0.0 <2.4.0": 2.4.0
+  "qs@<6.16.1": 6.16.1
+  "zod@<4.6.6": 4.6.7
