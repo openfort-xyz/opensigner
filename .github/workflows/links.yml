@@ -33,17 +33,17 @@ jobs:
 
     steps:
       - name: Clone repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
       - name: Set up Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@v7.0.0
         with:
           node-version: 24
 
       - name: Restore lychee cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache@v6.1.0
         with:
           path: .lycheecache
           key: lychee-${{ github.sha }}
@@ -53,7 +53,7 @@ jobs:
       # route is not reported as a missing file.
       - name: Run lychee
         id: lychee
-        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        uses: lycheeverse/lychee-action@v2.9.0
         with:
           args: >-
             --preprocess docs/scripts/filter-external-links.mjs
@@ -68,7 +68,7 @@ jobs:
       # links; gate on lychee's own exit code rather than on failure().
       - name: Open issue on scheduled failure
         if: github.event_name == 'schedule' && steps.lychee.outputs.exit_code != 0
-        uses: peter-evans/create-issue-from-file@fca9117c27cdc29c6c4db3b86c48e4115a786710 # v6.0.0
+        uses: peter-evans/create-issue-from-file@v6.0.0
         with:
           title: "Broken external links detected"
           content-filepath: ./lychee/out.md
