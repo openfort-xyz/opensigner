@@ -206,7 +206,7 @@ jobs:
         run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 -color
 
       - name: zizmor
-        run: pipx run zizmor==1.28.0 .github/workflows/
+        run: pipx run zizmor==1.32.0 .github/workflows/
 
   e2e:
     name: API end-to-end
