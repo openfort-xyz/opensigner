@@ -14,7 +14,7 @@ workflows:
         - 'peter-evans/create-issue-from-file@v6.0.0'
     '.github/workflows/spelling.yml':
         - 'actions/checkout@v7.0.1'
-        - 'reviewdog/action-misspell@v1.30.0'
+        - 'reviewdog/action-misspell@v1.30.4'
     '.github/workflows/verify-lockfile.yml':
         - 'actions/checkout@v7.0.1'
     '.github/workflows/verify.yml':
@@ -58,8 +58,8 @@ dependencies:
         commit: 'sha1-ea17c68df8912ef543352723c149a84f56e3d413'
         owner_id: 21320719
         repo_id: 262289747
-    'reviewdog/action-misspell@v1.30.0':
-        ref: 'v1.30.0'
-        commit: 'sha1-5f62a0ac088400bd1a3283bbb109efc5a22e8171'
+    'reviewdog/action-misspell@v1.30.4':
+        ref: 'v1.30.4'
+        commit: 'sha1-840bfbe9f804da9afb0bd739dc4689012f3fdd2d'
         owner_id: 48765237
         repo_id: 208637003
