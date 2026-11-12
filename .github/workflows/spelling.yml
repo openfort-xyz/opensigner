@@ -25,12 +25,12 @@ jobs:
 
     steps:
       - name: Clone repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
       - name: misspell
-        uses: reviewdog/action-misspell@5f62a0ac088400bd1a3283bbb109efc5a22e8171 # v1.30.0
+        uses: reviewdog/action-misspell@v1.30.0
         with:
           github_token: ${{ secrets.github_token }}
           locale: US
