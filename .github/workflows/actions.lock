@@ -5,11 +5,11 @@ version: 'v0.0.3'
 workflows:
     '.github/workflows/docs-route-guard.yml':
         - 'actions/checkout@v7.0.1'
-        - 'actions/setup-node@v7.0.0'
+        - 'actions/setup-node@v7.1.0'
     '.github/workflows/links.yml':
         - 'actions/cache@v6.1.0'
         - 'actions/checkout@v7.0.1'
-        - 'actions/setup-node@v7.0.0'
+        - 'actions/setup-node@v7.1.0'
         - 'lycheeverse/lychee-action@v2.9.0'
         - 'peter-evans/create-issue-from-file@v6.0.0'
     '.github/workflows/spelling.yml':
@@ -20,7 +20,7 @@ workflows:
     '.github/workflows/verify.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/setup-go@v7.0.0'
-        - 'actions/setup-node@v7.0.0'
+        - 'actions/setup-node@v7.1.0'
         - 'pnpm/action-setup@v6.1.0'
 dependencies:
     'actions/cache@v6.1.0':
@@ -38,9 +38,9 @@ dependencies:
         commit: 'sha1-b7ad1dad31e06c5925ef5d2fc7ad053ef454303e'
         owner_id: 44036562
         repo_id: 192624594
-    'actions/setup-node@v7.0.0':
-        ref: 'v7.0.0'
-        commit: 'sha1-820762786026740c76f36085b0efc47a31fe5020'
+    'actions/setup-node@v7.1.0':
+        ref: 'v7.1.0'
+        commit: 'sha1-949feb2413d6458794dcd2491c4babbbce0c15c1'
         owner_id: 44036562
         repo_id: 189476904
     'lycheeverse/lychee-action@v2.9.0':
