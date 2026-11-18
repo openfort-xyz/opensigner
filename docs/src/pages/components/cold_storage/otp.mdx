@@ -127,6 +127,8 @@ The `session_id` can then be used with the `X-Encryption-Session` header when re
 - **Contact Verification**: Shield verifies and stores hashed contact information (email or phone) to ensure consistency across requests
 - **Rate Limiting**: Project-level rate limits prevent abuse of OTP generation
 - **Session Expiry**: Encryption sessions are time-limited for security
+- **Session Binding**: An encryption session works only for the `user_id` it was created for
+- **Session-Only Reads**: When OTP is enabled, reading a share requires an encryption session; a read with `X-Encryption-Part` returns `428 OTP_MISSING`
 
 ## Example workflows
 
