@@ -55,11 +55,9 @@ the system becomes custodial, as the entity can access the recovery share.
 
 ### OTP with automatic recovery
 
-You can enable OTP verification for your Shield project to enhance the security of automatic recovery shares.
-The diagram above remains valid. The key difference is that during key reconstruction,
-Shield requires an OTP when creating a new encrypted session.
-The OTP is sent to the user via SMS or email.
-This ensures that the cold share cannot be accessed for key reconstruction without user interaction.
+On a 2FA project, your backend can create a one-time signup session without asking the user for a code.
+Use the [signup steps in the OTP guide](/components/cold_storage/otp#new-user-signup-skip-verification), then pass the session ID to the iframe.
+To recover a project-encrypted share later, the user must verify an OTP.
 
 ## Passkey recovery
 

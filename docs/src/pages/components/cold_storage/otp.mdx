@@ -31,11 +31,11 @@ To enable OTP for a project, use the following endpoint:
 
 ## How OTP works
 
-When OTP is enabled for a project, users must go through an OTP verification flow when creating an encrypted session. Here's the typical flow:
+On a 2FA project, users verify an OTP to recover or update a project-encrypted share. For wallet signup, the project backend can request a one-time session that can only register a share.
 
 ### 1. Request OTP
 
-Before creating an encrypted session, users must request an OTP code.
+Request an OTP from your project backend. Use the project API secret on the backend.
 
 **Endpoint:** `POST /project/otp`
 
@@ -64,33 +64,19 @@ Before creating an encrypted session, users must request an OTP code.
 
 **Parameters:**
 - `user_id` (required): The external user ID
+- `auth_provider`: Use `custom` or `openfort` when more than one provider is configured. Use the same provider for the OTP request and session creation.
 - `email` (optional): User's email address to receive OTP via email
 - `phone` (optional): User's phone number to receive OTP via SMS
-- `dangerously_skip_verification` (optional, default: false): If set to `true`, skips OTP verification
+- `dangerously_skip_verification` (optional, default: `false`): Set to `true` to request a signup session without sending an OTP.
 
-**Note:** You must provide either `email` or `phone`, but not both.
-
-**The `dangerously_skip_verification` Flag:**
-
-This flag can be used to simplify onboarding for new users. For example:
-- When **creating a new wallet**: Set this flag to `true` to skip OTP verification and streamline the signup process
-- When **recovering an existing wallet**: Set this flag to `false` to require OTP verification for additional security
-
-When this flag is set to `true`, an OTP is generated but not sent to the user, and the OTP verification step can be skipped when creating an encryption session.
-
-**OTP Delivery Methods:**
-
-Shield supports two delivery methods for OTP codes:
-
-1. **Email OTP**: When an email address is provided, the OTP is sent to the user's email
-2. **SMS OTP**: When a phone number is provided, the OTP is sent via SMS to the user's phone
+For OTP delivery, send exactly one of `email` or `phone`. For signup without an OTP, omit both contact fields.
 
 **Response:**
-- `200 OK`: OTP generated and sent successfully
+- `200 OK`: Shield sent the OTP or accepted the signup request.
 
-### 2. Create encryption session with OTP
+### 2. Create an encryption session
 
-After receiving the OTP, users create an encrypted session by providing the OTP code.
+For an OTP-verified session, send the code the user received. For a signup session, omit `otp_code`.
 
 **Endpoint:** `POST /project/encryption-session`
 
@@ -110,6 +96,7 @@ After receiving the OTP, users create an encrypted session by providing the OTP 
 **Parameters:**
 - `encryption_part` (required): The encryption part for the project
 - `user_id` (required): The external user ID
+- `auth_provider`: Use `custom` or `openfort` when more than one provider is configured. Use the same provider for the OTP request and session creation.
 - `otp_code` (optional): The OTP code received via email or SMS. Required if `dangerously_skip_verification` was `false`
 
 **Response:**
@@ -119,7 +106,26 @@ After receiving the OTP, users create an encrypted session by providing the OTP 
 }
 ```
 
-The `session_id` can then be used with the `X-Encryption-Session` header when registering, updating, or retrieving shares.
+### 3. Use the session
+
+Use these session types for project-encrypted shares on a 2FA project.
+
+| Operation | Where to send the session ID | Accepted session |
+|-----------|------------------------------|------------------|
+| Register a share with `POST /shares` | `encryption_session` in the JSON body | OTP-verified or signup |
+| Write a share with project encryption using `PUT /shares` | `encryption_session` in the JSON body | OTP-verified |
+| Switch an existing share from project encryption using `PUT /shares` | `X-Encryption-Session` header | Approval from the verified read of that share |
+| Retrieve a share with `GET /shares` | `X-Encryption-Session` header | OTP-verified |
+
+:::info
+The write requirements apply to Shield versions that support signup-only sessions. Shield v0.5.4 and earlier accept a raw encryption part for share writes.
+:::
+
+Shield returns `428 OTP_MISSING` when a 2FA user sends a raw encryption part in place of a session or uses a signup session for a read or update.
+
+## Change recovery methods
+
+Read the project-encrypted share with an OTP-verified session before switching to password or passkey recovery. Shield consumes the read session and records a separate approval for that share version and user. Send the same session ID in the `X-Encryption-Session` header of the update within one minute. The approval works once. If the share changed since the read, start again with a new session.
 
 ## OTP security features
 
@@ -127,25 +133,22 @@ The `session_id` can then be used with the `X-Encryption-Session` header when re
 - **Contact Verification**: Shield verifies and stores hashed contact information (email or phone) to ensure consistency across requests
 - **Rate Limiting**: Project-level rate limits prevent abuse of OTP generation
 - **Session Expiry**: Encryption sessions are time-limited for security
-- **Session Binding**: An encryption session works only for the `user_id` it was created for
-- **Session-Only Reads**: When OTP is enabled, reading a share requires an encryption session; a read with `X-Encryption-Part` returns `428 OTP_MISSING`
+- **Session Binding**: An encryption session works once for its project, authentication provider, and user
 
 ## Example workflows
 
 ### New user signup (skip verification)
-```
-1. POST /project/otp with dangerously_skip_verification: true
-2. POST /project/encryption-session (no OTP code needed)
-3. Use session_id to register shares
-```
+
+1. Call `POST /project/otp` with the external `user_id` and `dangerously_skip_verification: true`. Omit `email` and `phone`.
+2. Call `POST /project/encryption-session` with the same `user_id` and the `encryption_part`. Omit `otp_code`.
+3. Pass the returned `session_id` to the iframe as `encryptionSession`. If you call `POST /shares` directly, send it as `encryption_session` in the JSON body.
 
 ### Existing user recovery (with verification)
-```
-1. POST /project/otp with dangerously_skip_verification: false
-2. User receives OTP via email or SMS
-3. POST /project/encryption-session with OTP code
-4. Use session_id to retrieve shares
-```
+
+1. Call `POST /project/otp` with the external `user_id` and an email address or phone number.
+2. Ask the user for the OTP they receive.
+3. Call `POST /project/encryption-session` with the same `user_id`, the `encryption_part`, and the `otp_code`.
+4. Pass the returned `session_id` to the iframe as `encryptionSession`. If you call `GET /shares` directly, send it in the `X-Encryption-Session` header.
 
 ## OTP errors
 
