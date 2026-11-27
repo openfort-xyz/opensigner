@@ -39,7 +39,11 @@ paths:
       tags:
         - Shares
       summary: Register Share
-      description: Registers a new share for the authenticated user
+      description: |
+        Registers a new share for the authenticated user.
+        For a project-encrypted share on a 2FA project, send an OTP-verified
+        session or a one-time signup session as `encryption_session` in the JSON
+        body. This requirement applies to Shield versions that support signup-only sessions.
       security:
         - BearerAuth: []
           ApiKeyAuth: []
@@ -47,9 +51,6 @@ paths:
         - $ref: '#/components/parameters/AuthProvider'
         - $ref: '#/components/parameters/OpenfortProvider'
         - $ref: '#/components/parameters/OpenfortTokenType'
-        - $ref: '#/components/parameters/EncryptionPart'
-        - $ref: '#/components/parameters/EncryptionSession'
-        - $ref: '#/components/parameters/UserId'
       requestBody:
         required: true
         content:
@@ -63,6 +64,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '428':
+          $ref: '#/components/responses/OTPRequired'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -70,7 +73,11 @@ paths:
       tags:
         - Shares
       summary: Update Share
-      description: Updates an existing share for the authenticated user
+      description: |
+        Updates an existing share for the authenticated user.
+        For a project-encrypted share on a 2FA project, send an OTP-verified
+        session as `encryption_session` in the JSON body. This requirement
+        applies to Shield versions that support signup-only sessions.
       security:
         - BearerAuth: []
           ApiKeyAuth: []
@@ -78,8 +85,6 @@ paths:
         - $ref: '#/components/parameters/AuthProvider'
         - $ref: '#/components/parameters/OpenfortProvider'
         - $ref: '#/components/parameters/OpenfortTokenType'
-        - $ref: '#/components/parameters/EncryptionPart'
-        - $ref: '#/components/parameters/EncryptionSession'
       requestBody:
         required: true
         content:
@@ -97,6 +102,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '428':
+          $ref: '#/components/responses/OTPRequired'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -104,7 +111,10 @@ paths:
       tags:
         - Shares
       summary: Get Share
-      description: Retrieves share details for the authenticated user
+      description: |
+        Retrieves share details for the authenticated user.
+        For a project-encrypted share on a 2FA project, send an OTP-verified
+        session in the `X-Encryption-Session` header.
       security:
         - BearerAuth: []
           ApiKeyAuth: []
@@ -125,6 +135,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '428':
+          $ref: '#/components/responses/OTPRequired'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -140,8 +152,6 @@ paths:
         - $ref: '#/components/parameters/AuthProvider'
         - $ref: '#/components/parameters/OpenfortProvider'
         - $ref: '#/components/parameters/OpenfortTokenType'
-        - $ref: '#/components/parameters/EncryptionPart'
-        - $ref: '#/components/parameters/EncryptionSession'
       responses:
         '204':
           description: Share deleted successfully
@@ -531,7 +541,7 @@ paths:
   /project/otp:
     post:
       summary: Request OTP
-      description: Generate and send a one-time password (OTP) to a user via email or phone
+      description: Sends an OTP by email or SMS, or accepts a signup request without OTP delivery
       tags:
         - Projects
       security:
@@ -552,7 +562,7 @@ paths:
                   description: The unique identifier of the user
                 dangerously_skip_verification:
                   type: boolean
-                  description: Skip verification checks (use with caution)
+                  description: Request a signup session without OTP verification
                   default: false
                 email:
                   type: string
@@ -561,10 +571,10 @@ paths:
                 phone:
                   type: string
                   description: Phone number to send OTP (mutually exclusive with email)
-              description: Either email or phone must be provided, but not both
+              description: Send exactly one of email or phone for OTP delivery. Omit both when dangerously_skip_verification is true.
       responses:
         '200':
-          description: OTP generated and sent successfully
+          description: OTP sent or signup request accepted
         '400':
           description: Bad Request - Invalid parameters or request body
           content:
@@ -642,14 +652,7 @@ components:
       name: X-Encryption-Session
       in: header
       required: false
-      description: Encryption session ID for secure operations
-      schema:
-        type: string
-    UserId:
-      name: X-User-ID
-      in: header
-      required: false
-      description: User ID for admin operations (when using API Key/Secret auth)
+      description: Encryption session ID for reading shares
       schema:
         type: string
 
@@ -695,7 +698,7 @@ components:
           example: "part_value"
         encryption_session:
           type: string
-          description: Session ID for encryption operations
+          description: Encryption session ID for share registration or update
           example: "session_value"
         reference:
           type: string
@@ -964,7 +967,7 @@ components:
           example: "usr_1"
         otp_code:
           type: string
-          description: One-time password for the user. Required when 2FA is enabled.
+          description: OTP from email or SMS. Omit this field for a signup session when the OTP request skipped verification.
           example: "123456"
 
     RegisterEncryptionSessionResponse:
@@ -1084,6 +1087,12 @@ components:
             $ref: '#/components/schemas/Error'
     Conflict:
       description: Conflict - the request does not match the project's current state (see the error code)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    OTPRequired:
+      description: The operation requires an eligible encryption session (OTP_MISSING)
       content:
         application/json:
           schema:
