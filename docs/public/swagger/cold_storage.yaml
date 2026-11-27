@@ -78,6 +78,8 @@ paths:
         For a project-encrypted share on a 2FA project, send an OTP-verified
         session as `encryption_session` in the JSON body. This requirement
         applies to Shield versions that support signup-only sessions.
+        To switch away from project encryption, send the session used for a
+        verified read of that share in the `X-Encryption-Session` header.
       security:
         - BearerAuth: []
           ApiKeyAuth: []
@@ -85,6 +87,12 @@ paths:
         - $ref: '#/components/parameters/AuthProvider'
         - $ref: '#/components/parameters/OpenfortProvider'
         - $ref: '#/components/parameters/OpenfortTokenType'
+        - name: X-Encryption-Session
+          in: header
+          required: false
+          description: One-time approval from a verified read when switching away from project encryption.
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -102,6 +110,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '428':
           $ref: '#/components/responses/OTPRequired'
         '500':
@@ -560,6 +570,10 @@ paths:
                 user_id:
                   type: string
                   description: The unique identifier of the user
+                auth_provider:
+                  type: string
+                  enum: [custom, openfort]
+                  description: Required when the 2FA project has more than one provider.
                 dangerously_skip_verification:
                   type: boolean
                   description: Request a signup session without OTP verification
@@ -965,6 +979,10 @@ components:
           type: string
           description: User the session is opened for. Required when 2FA is enabled.
           example: "usr_1"
+        auth_provider:
+          type: string
+          enum: [custom, openfort]
+          description: Provider used to request the OTP. Required for 2FA projects with more than one provider.
         otp_code:
           type: string
           description: OTP from email or SMS. Omit this field for a signup session when the OTP request skipped verification.
