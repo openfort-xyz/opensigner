@@ -103,7 +103,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Go
-        uses: actions/setup-go@v7.0.0
+        uses: actions/setup-go@v7.1.0
         with:
           go-version-file: hot_storage/sample/go.mod
           cache-dependency-path: hot_storage/sample/go.sum
