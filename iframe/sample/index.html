@@ -885,7 +885,22 @@
 			}
 		}
 
-		function logout() {
+		async function logout() {
+			let signOutError = null;
+			if (authToken) {
+				try {
+					const response = await fetch(
+						`${AUTH_SERVER}/api/auth/sign-out`,
+						{
+							method: "POST",
+							headers: { Authorization: `Bearer ${authToken}` },
+						},
+					);
+					if (!response.ok) signOutError = `HTTP ${response.status}`;
+				} catch (error) {
+					signOutError = error.message;
+				}
+			}
 			authToken = null;
 			jwtToken = null;
 			userId = null;
@@ -903,6 +918,11 @@
 			document.getElementById("recoverIframeBtn").disabled = true;
 			document.getElementById("registerPasskeyBtn").disabled = true;
 
+			if (signOutError) {
+				showStatus(`Logged out locally; sign-out failed: ${signOutError}`, "error");
+				log(`Sign-out error: ${signOutError}`);
+				return;
+			}
 			showStatus("Logged out successfully");
 			log("User logged out");
 		}
